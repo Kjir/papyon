@@ -1,0 +1,33 @@
+pymsn - Python msn client library
+=================================
+
+pymsn is a rewrite of libivy (http://hybrid.tuxfamily.org/ivy), during this
+rewrite the usage of python asyncore and asynchat were droped in favor of
+the pymsn.gio library based on glib GIOChannel. This change enabled easy
+integration with the glib main loop.
+
+pymsn also gained msnp2p support for display pictures and custom smileys as
+well a Http Polling transport and proxy support.
+
+dependencies
+============
+pymsn requires python-gobject in order to be used.
+
+installation
+============
+to install pymsn, simply type:
+$ python setup.py install
+
+documentation
+=============
+to build documentation for (you will need to install epydoc):
+
+- gio
+$ python setup.py build_doc_gio
+
+- pymsn
+$ python setup.py build_doc_pymsn
+
+- both
+$ python setup.py build_doc
+
