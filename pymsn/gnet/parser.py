@@ -80,8 +80,8 @@ class DelimiterParser(AbstractParser):
 
     def _on_status_change(self, transport, param):
         status = transport.get_property("status")
-        if status == STATUS_OPEN:
-            self.__init_state()
+        if status == IoStatus.OPEN:
+            self._reset_state()
 
     def _on_received(self, transport, buf, length):
         self._recv_cache += buf
@@ -101,9 +101,9 @@ class DelimiterParser(AbstractParser):
                 self.emit ("received", self._recv_cache[:required])
                 self._recv_cache = self._recv_cache[required:]
         else:
-            s = self._recv_cache.split(self._chunk_delimiter,1)
+            s = self._recv_cache.split(self._chunk_delimiter, 1)
             if len(s) > 1:
-                self.emit ("received", s[0])
+                self.emit("received", s[0])
                 self._recv_cache = s[1]
             else:
                 self._recv_cache = s[0]

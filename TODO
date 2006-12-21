@@ -1,0 +1,13 @@
+GNet
+=====
+
+* Add SSL sockets support to io.py
+* Add HTTP and HTTPS to protocol/
+* Add Socks4 and Socks5 Sockets to io.py
+
+pymsn
+======
+
+* Write a new transport system based on the new GNet library
+* Architeture the library as a set of independant services
+* Port Oleavr's code to login and authenticate to the MSN service

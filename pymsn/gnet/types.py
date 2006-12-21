@@ -20,7 +20,8 @@
 
 """Various Data types used in GNet.
 
-@group Proxy: Proxy*"""
+@group Proxy: Proxy*
+@group HTTP: HTTP*"""
 
 from gnet.constants import *
 
@@ -113,4 +114,104 @@ class ProxyInfos(object):
             host = auth + '@' + host
         return self.type + '://' + host + '/'
 
+class HTTPMessage(object):
+    """Http message
+
+    header: value\r\n
+    header: value\r\n
+    header: value\r\n
+    \r\n
+    body
+    """
+    def __init__(self):
+        self.clear()
+        
+    def add_header(self, name, value):
+        value = str(value)
+        self.headers[name] = value
+
+    def clear(self):
+        self.headers = {}
+        self.body = ""
+        
+    def parse(self, chunk):
+        self.clear()
+
+        sections = chunk.split("\r\n\r\n", 1)
+
+        if len(sections) > 1:
+            self.body = sections[1]
+        else:
+            self.body = ""
+
+        lines = sections[0].split("\r\n")
+        for line in lines:
+
+            line = line.split(":", 1)
+            name = line[0].strip()
+            value = line[1].strip()
+            self.add_header(name, value)
+
+    def __str__(self):
+        result = []
+        for name in self.headers:
+            result.append(": ".join((name, self.headers[name])))
+        result.append("")
+        result.append(self.body)
+        return "\r\n".join(result)
+
+class HTTPResponse(HTTPMessage):
+    def __init__(self, headers=None, body="", status=200, reason="OK", version="1.1"):
+        if headers is None:
+            headers = {}
+        HTTPMessage.__init__(self)
+        for header, value in headers.iteritems():
+            self.add_header(header, value)
+        self.body = body
+        self.status = status
+        self.reason = reason
+        self.version = version
+
+    def parse(self, chunk):
+        start_line, message = chunk.split("\r\n", 1)
+        
+        version, status, reason  = start_line.split(" ", 2)
+        self.status = int(status)
+        self.reason = reason
+        self.version = version.split("/",1)[1]
+
+        HTTPMessage.parse(self, message)
+
+    def __str__(self):
+        message = HTTPMessage.__str__(self)
+        start_line = "HTTP/%s %d %s" % (self.version, self.status, self.reason)
+        return start_line + "\r\n" + message
+
+class HTTPRequest(HTTPMessage):
+    def __init__(self, headers=None, body="", method="GET", resource="/", version="1.1"):
+        if headers is None:
+            headers = {}
+        HTTPMessage.__init__(self)
+        for header, value in headers.iteritems():
+            self.add_header(header, value)
+        self.body = body
+        self.method = method
+        self.resource = resource
+        self.version = version
+
+    def parse(self, chunk):
+        start_line, message = chunk.split("\r\n", 1)
+        
+        method, resource, version = start_line.split(" ")
+        self.method = method
+        self.resource = resource
+        self.version = version.split("/",1)[1]
+
+        HTTPMessage.parse(self, message)
+
+    def __str__(self):
+        message = HTTPMessage.__str__(self)
+        start_line = "%s %s HTTP/%s" % (self.method,
+                self.resource, self.version)
+        return start_line + "\r\n" + message
 

@@ -26,7 +26,7 @@ This module provides asynchronous network I/O.
 
 from gnet.constants import *
 from gnet.types import ProxyInfos
-from gnet.parsers import DelimiterParser
+from gnet.parser import DelimiterParser
 
 import gobject
 import socket
@@ -197,7 +197,7 @@ class SocketClient(AbstractClient):
 
         self.__source_id = None
         self.__source_condition = 0
-        self.__sending_queue = []
+        self.__outgoing_queue = []
     
     def open(self):
         if len(self._host) == 0 or self._port < 0 or self._port > 65535:
@@ -234,7 +234,7 @@ class SocketClient(AbstractClient):
     
     def send(self, buffer, callback=None, *args):
         assert(self._status == IoStatus.OPEN)
-        self.__outgoing_queue.append([buf, False, callback, args])
+        self.__outgoing_queue.append([buffer, False, callback, args])
         self.__watch_add_cond(gobject.IO_OUT)
     send.__doc__ = AbstractClient.send.__doc__
 
@@ -245,9 +245,9 @@ class SocketClient(AbstractClient):
             self.__source_id = None
             self.__source_condition = 0
 
-    def __watch_set_cond(self, condition, handler=None):
+    def __watch_set_cond(self, cond, handler=None):
         self.__watch_remove()
-        self.__source_condition = condition
+        self.__source_condition = cond
         if handler is None:
             handler = self.__io_channel_handler
         self.__source_id = self.__channel.add_watch(cond, handler)
@@ -407,4 +407,4 @@ class _HTTPConnectClient(AbstractClient):
         if transport is not None and error_code == IoError.CONNECTION_FAILED:
             error_code = IoError.PROXY_CONNECTION_FAILED
         self.emit("error", error_code)
-gobject.type_register(HttpConnectClient)
+#gobject.type_register(HTTPConnectClient)
