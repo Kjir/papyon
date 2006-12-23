@@ -30,8 +30,18 @@ from gnet.parser import DelimiterParser
 
 import gobject
 import socket
+import M2Crypto.m2 as OpenSSL
+import M2Crypto.SSL
 
-__all__ = ['AbstractClient', 'SocketClient', 'TCPClient']
+OpenSSL.SSL_ERROR_NONE = OpenSSL.ssl_error_none
+OpenSSL.SSL_ERROR_ZERO_RETURN = OpenSSL.ssl_error_zero_return
+OpenSSL.SSL_ERROR_WANT_READ = OpenSSL.ssl_error_want_read
+OpenSSL.SSL_ERROR_WANT_WRITE = OpenSSL.ssl_error_want_write
+OpenSSL.SSL_ERROR_WANT_X509_LOOKUP = OpenSSL.ssl_error_want_x509_lookup
+OpenSSL.SSL_ERROR_SSL = OpenSSL.ssl_error_ssl
+
+__all__ = ['AbstractClient', 'SocketClient', 'SSLSocketClient', 'TCPClient',
+        'SSLTCPClient']
 
 class AbstractClient(gobject.GObject):
     """Abstract client base class.
@@ -156,7 +166,7 @@ class SocketClient(AbstractClient):
         
         @note: doesn't support proxy
         @sort: __init__, open, send, close
-        @undocumented: do_*, __reset_state, __watch_*, __io_*, __connect_done_handler
+        @undocumented: do_*, _reset_state, _watch_*, __io_*, _connect_done_handler
 
         @since: 0.1"""
     
@@ -181,9 +191,9 @@ class SocketClient(AbstractClient):
         self._domain = domain
         self._type = type
         self._socket = None
-        self.__reset_state()
+        self._reset_state()
     
-    def __reset_state(self):
+    def _reset_state(self):
         sock = socket.socket(self._domain, self._type)
         sock.setblocking(0)
 
@@ -193,11 +203,11 @@ class SocketClient(AbstractClient):
         channel.set_buffered(False)
         
         self._socket = sock
-        self.__channel = channel
+        self._channel = channel
 
-        self.__source_id = None
-        self.__source_condition = 0
-        self.__outgoing_queue = []
+        self._source_id = None
+        self._source_condition = 0
+        self._outgoing_queue = []
     
     def open(self):
         if len(self._host) == 0 or self._port < 0 or self._port > 65535:
@@ -211,65 +221,65 @@ class SocketClient(AbstractClient):
             self._socket.connect((self._host, self._port))
         except socket.error, e:
             pass
-        self.__watch_set_cond(gobject.IO_PRI |
+        self._watch_set_cond(gobject.IO_PRI |
                 gobject.IO_IN | gobject.IO_OUT |
                 gobject.IO_HUP | gobject.IO_ERR | gobject.IO_NVAL,
-                self.__connect_done_handler)
+                self._connect_done_handler)
     open.__doc__ = AbstractClient.open.__doc__
 
     def close(self):
         if self._status in (IoStatus.CLOSING, IoStatus.CLOSED):
             return
         self._change_status(IoStatus.CLOSING)
-        self.__watch_remove()
-        self.__channel.close()
+        self._watch_remove()
+        self._channel.close()
         try:
             self._socket.shutdown(socket.SHUT_RDWR)
         except:
             pass
         self._socket.close()        
-        self.__reset_state()
+        self._reset_state()
         self._change_status(IoStatus.CLOSED)
     close.__doc__ = AbstractClient.close.__doc__
     
     def send(self, buffer, callback=None, *args):
         assert(self._status == IoStatus.OPEN)
-        self.__outgoing_queue.append([buffer, False, callback, args])
-        self.__watch_add_cond(gobject.IO_OUT)
+        self._outgoing_queue.append([buffer, False, callback, args])
+        self._watch_add_cond(gobject.IO_OUT)
     send.__doc__ = AbstractClient.send.__doc__
 
     ### convenience methods
-    def __watch_remove(self):
-        if self.__source_id is not None:
-            gobject.source_remove(self.__source_id)
-            self.__source_id = None
-            self.__source_condition = 0
+    def _watch_remove(self):
+        if self._source_id is not None:
+            gobject.source_remove(self._source_id)
+            self._source_id = None
+            self._source_condition = 0
 
-    def __watch_set_cond(self, cond, handler=None):
-        self.__watch_remove()
-        self.__source_condition = cond
+    def _watch_set_cond(self, cond, handler=None):
+        self._watch_remove()
+        self._source_condition = cond
         if handler is None:
-            handler = self.__io_channel_handler
-        self.__source_id = self.__channel.add_watch(cond, handler)
+            handler = self._io_channel_handler
+        self._source_id = self._channel.add_watch(cond, handler)
     
-    def __watch_add_cond(self, cond):
-        if self.__source_condition & cond:
+    def _watch_add_cond(self, cond):
+        if self._source_condition & cond:
             return
-        self.__source_condition |= cond
-        self.__watch_set_cond(self.__source_condition)
+        self._source_condition |= cond
+        self._watch_set_cond(self._source_condition)
 
-    def __watch_remove_cond(self, cond):
-        if not self.__source_condition & cond:
+    def _watch_remove_cond(self, cond):
+        if not self._source_condition & cond:
             return
-        self.__source_condition ^= cond
-        self.__watch_set_cond(self.__source_condition)
+        self._source_condition ^= cond
+        self._watch_set_cond(self._source_condition)
     
     ### asynchronous callbacks
-    def __connect_done_handler(self, chan, cond):
-        self.__watch_remove()
+    def _connect_done_handler(self, chan, cond):
+        self._watch_remove()
         opts = self._socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
         if opts == 0:
-            self.__watch_set_cond(gobject.IO_IN | gobject.IO_PRI |
+            self._watch_set_cond(gobject.IO_IN | gobject.IO_PRI |
                                gobject.IO_ERR | gobject.IO_HUP)
             self._change_status(IoStatus.OPEN)
         else:
@@ -277,7 +287,7 @@ class SocketClient(AbstractClient):
             self._change_status(IoStatus.CLOSED)
         return False
     
-    def __io_channel_handler(self, chan, cond):
+    def _io_channel_handler(self, chan, cond):
         if self._status == IoStatus.CLOSED:
             return False
         # Check for error/EOF
@@ -286,34 +296,172 @@ class SocketClient(AbstractClient):
             return False
         # Incoming
         if cond & (gobject.IO_IN | gobject.IO_PRI):
-            buf = self.__channel.read()
+            buf = self._channel.read()
             if buf == "":
                 self.close()
                 return False
             self.emit("received", buf, len(buf))
         # Outgoing
         if cond & gobject.IO_OUT:            
-            item = self.__outgoing_queue[0]
+            item = self._outgoing_queue[0]
             if item[1]: # sent item
                 self.emit("sent", item[0], len(item[0]))
-                del self.__outgoing_queue[0]
+                del self._outgoing_queue[0]
                 if item[2]: # callback
                     item[2](*item[3])
-            if len(self.__outgoing_queue) > 0: # send next item
-                item = self.__outgoing_queue[0]
-                self.__channel.write(item[0])
+            if len(self._outgoing_queue) > 0: # send next item
+                item = self._outgoing_queue[0]
+                self._channel.write(item[0])
                 item[1] = True
             else:
-                self.__watch_remove_cond(gobject.IO_OUT)
+                self._watch_remove_cond(gobject.IO_OUT)
         return True
 gobject.type_register(SocketClient)
+
+class SSLSocketClient(SocketClient):
+    """Asynchronous SSL Socket client class.
+        
+        @note: doesn't support proxy
+        @sort: __init__, open, send, close
+        @undocumented: do_*, _reset_state, _watch_*, __io_*, _connect_done_handler
+
+        @since: 0.1"""
+    def __init__(self, host, port, domain=AF_INET, type=SOCK_STREAM):
+        """Initializer
+
+            @param host: the hostname to connect to.
+            @type host: string
+            
+            @param port: the port number to connect to.
+            @type port: integer > 0 and < 65536
+
+            @param domain: the communication domain.
+            @type domain: integer
+            @see socket module
+
+            @param type: the communication semantics
+            @type type: integer
+            @see socket module"""
+        SocketClient.__init__(self, host, port, domain, type)
+
+    def _reset_state(self):
+        SocketClient._reset_state(self)
+        context = OpenSSL.ssl_ctx_new(OpenSSL.sslv3_method())
+        #OpenSSL.ssl_ctx_set_default_verify_paths(context)
+        #OpenSSL.ssl_ctx_load_verify_locations(context, ca_cert, ca_directory)
+        OpenSSL.ssl_ctx_set_verify(context, OpenSSL.SSL_VERIFY_NONE,
+                M2Crypto.SSL.cb.ssl_verify_callback_allow_unknown_ca)
+
+        self._ssl_context = context
+        self._ssl_socket = OpenSSL.ssl_new(self._ssl_context)
+        OpenSSL.ssl_set_fd(self._ssl_socket, self._socket.fileno())
+        OpenSSL.ssl_set_mode (self._ssl_socket,
+                OpenSSL.SSL_MODE_ENABLE_PARTIAL_WRITE |
+                OpenSSL.SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER)
+
+    def close(self):
+        if self._status in (IoStatus.CLOSING, IoStatus.CLOSED):
+            return
+        self._change_status(IoStatus.CLOSING)
+        self._watch_remove()
+        self._channel.close()
+        try:
+            self._socket.shutdown(socket.SHUT_RDWR)
+            OpenSSL.ssl_free(self._ssl_socket)
+            OpenSSL.ssl_ctx_free(self._ssl_context)
+        except:
+            pass
+        self._reset_state()
+        self._change_status(IoStatus.CLOSED)
+    close.__doc__ = SocketClient.close.__doc__
+    
+    ### asynchronous callbacks
+    def _connect_done_handler(self, chan, cond):
+        # underlying socket is connected, now connect the SSL transport
+        self._watch_remove()
+        opts = self._socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+        if opts == 0:
+            self._watch_set_cond(gobject.IO_IN | gobject.IO_OUT |
+                    gobject.IO_PRI | gobject.IO_ERR | gobject.IO_HUP)
+            if OpenSSL.ssl_connect(self._ssl_socket) == 1:
+                self._change_status(IoStatus.OPEN)
+        else:
+            self.emit("error", IoError.CONNECTION_FAILED)
+            self._change_status(IoStatus.CLOSED)
+        return False
+    
+    def _io_channel_handler(self, chan, cond):
+        if self._status == IoStatus.OPENING: # Handshaking
+            ret = OpenSSL.ssl_do_handshake(self._ssl_socket)
+            err = OpenSSL.ssl_get_error(self._ssl_socket, ret)
+            if err == OpenSSL.SSL_ERROR_NONE:
+                self._change_status(IoStatus.OPEN)
+            elif err in (OpenSSL.SSL_ERROR_WANT_READ,
+                    OpenSSL.SSL_ERROR_WANT_WRITE,
+                    OpenSSL.SSL_ERROR_WANT_X509_LOOKUP):
+                pass
+            elif err == OpenSSL.SSL_ERROR_ZERO_RETURN:
+                self.emit("error", IoError.SSL_CONNECTION_FAILED)
+                self.close()
+                return False
+            elif err == OpenSSL.SSL_ERROR_SSL:
+                self.emit("error", IoError.SSL_PROTOCOL_ERROR)
+                self.close()
+                return False
+            else:
+                self.emit("error", IoError.UNKNOWN_ERROR)
+                self.close()
+                return False
+        elif self._status == IoStatus.OPEN:
+            if cond & (gobject.IO_ERR | gobject.IO_HUP):
+                self.close()
+                return False
+
+            if cond & (gobject.IO_IN | gobject.IO_PRI):
+                try:
+                    buf = OpenSSL.ssl_read(self._ssl_socket, 1024)
+                except M2Crypto.SSL.SSLError:
+                    buf = ""
+                if buf is None: # SSL_ERROR_WANT_READ | SSL_ERROR_WANT_WRITE
+                    return
+                elif buf == "":
+                    self.close()
+                    return False
+                else:
+                    self.emit("received", buf, len(buf))
+            elif cond & gobject.IO_OUT:
+                if len(self._outgoing_queue) > 0: 
+                    item = self._outgoing_queue[0]
+                    try:
+                        ret = OpenSSL.ssl_write(self._ssl_socket, item[0])
+                    except M2Crypto.SSL.SSLError:
+                        self.close()
+                        return False
+                    if ret >= 0:
+                        item[1] = True
+                        self.emit("sent", item[0], len(item[0])) #FIXME: the sent signal is not 100% correct here
+                        del self._outgoing_queue[0]
+                        if item[2]: # callback
+                            item[2](*item[3])
+                    else:
+                        err = OpenSSL.ssl_get_error(self._ssl_socket, ret)
+                        if err == OpenSSL.SSL_ERROR_SSL:
+                            self.emit("error", IoError.SSL_PROTOCOL_ERROR)
+                            self.close()
+                            return False
+                        else:
+                            self.emit("error", IoError.UNKNOWN_ERROR)
+                            self.close()
+                            return False
+        return True
+gobject.type_register(SSLSocketClient)
 
 
 class TCPClient(SocketClient):
     """Asynchronous TCP client class.
         
         @sort: __init__, open, send, close
-        @undocumented: do_*, __reset_state, __watch_*, __io_*, __connect_done_handler
+        @undocumented: do_*, _reset_state, _watch_*, __io_*, _connect_done_handler
 
         @since: 0.1"""
 
@@ -328,11 +476,30 @@ class TCPClient(SocketClient):
         SocketClient.__init__(self, host, port, AF_INET, SOCK_STREAM)
 gobject.type_register(TCPClient)
 
+class SSLTCPClient(SSLSocketClient):
+    """Asynchronous SSL TCP client class.
+        
+        @sort: __init__, open, send, close
+        @undocumented: do_*, _reset_state, _watch_*, __io_*, _connect_done_handler
 
-class _HTTPConnectClient(AbstractClient):
+        @since: 0.1"""
+
+    def __init__(self, host, port):
+        """initializer
+
+            @param host: the hostname to connect to.
+            @type host: string
+            
+            @param port: the port number to connect to.
+            @type port: integer > 0 and < 65536"""
+        SSLSocketClient.__init__(self, host, port, AF_INET, SOCK_STREAM)
+gobject.type_register(SSLTCPClient)
+
+
+class HTTPConnectClient(AbstractClient):
     """HTTP CONNECT based client.
         
-        @undocumented: do_*, __reset_state, __on_*
+        @undocumented: do_*, _reset_state, __on_*
 
         @since: 0.1"""
 
@@ -348,10 +515,10 @@ class _HTTPConnectClient(AbstractClient):
 
         self._input_parser = DelimiterParser(self._transport)
         self._input_parser.connect("received", self.__on_received)
-        self.__reset_state()
+        self._reset_state()
     __init__.__doc__ = AbstractClient.__init__.__doc__
         
-    def __reset_state(self):
+    def _reset_state(self):
         self._input_parser.delimiter = "\r\n\r\n"
         self._status = IoStatus.CLOSED
 
@@ -371,7 +538,7 @@ class _HTTPConnectClient(AbstractClient):
     def __on_status_change(self,  transport, param):
         status = transport.get_property("status")
         if status == STATUS_OPEN:
-            proxy_protocol  = 'CONNECT %s:%s HTTP/1.0\r\n' % (self._host, self._port)
+            proxy_protocol  = 'CONNECT %s:%s HTTP/1.1\r\n' % (self._host, self._port)
             proxy_protocol += 'Proxy-Connection: Keep-Alive\r\n'
             proxy_protocol += 'Pragma: no-cache\r\n'
             proxy_protocol += 'Host: %s:%s\r\n' % (self._host, self._port),
@@ -407,4 +574,4 @@ class _HTTPConnectClient(AbstractClient):
         if transport is not None and error_code == IoError.CONNECTION_FAILED:
             error_code = IoError.PROXY_CONNECTION_FAILED
         self.emit("error", error_code)
-#gobject.type_register(HTTPConnectClient)
+gobject.type_register(HTTPConnectClient)
