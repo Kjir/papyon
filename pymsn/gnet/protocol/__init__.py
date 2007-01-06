@@ -20,3 +20,4 @@
 """GNect protocol support"""
 
 from gnet.protocol.HTTP import *
+from gnet.protocol.HTTPS import *

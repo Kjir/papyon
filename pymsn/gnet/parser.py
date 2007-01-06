@@ -21,6 +21,7 @@
 """Incomming data parsers."""
 
 from gnet.constants import *
+from gnet.types import HTTPResponse
 
 import gobject
 
@@ -33,17 +34,18 @@ class AbstractParser(gobject.GObject):
     __gsignals__ = {
             "received": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (gobject.TYPE_STRING,))
+                (object,))
             }
-    def __init__(self, transport):
+    def __init__(self, transport, connect_signals=True):
         """Initializer
         
             @param transport: the transport used to receive data
             @type transport: an object derived from
                 L{network.AbstractClient}"""
         gobject.GObject.__init__(self)
-        transport.connect("received", self._on_received)
-        transport.connect("notify::status", self._on_status_change)
+        if connect_signals:
+            transport.connect("received", self._on_received)
+            transport.connect("notify::status", self._on_status_change)
         self._transport = transport
         self._reset_state()
 
@@ -53,7 +55,9 @@ class AbstractParser(gobject.GObject):
         raise NotImplementedError
 
     def _on_status_change(self, transport, param):
-        raise NotImplementedError
+        status = transport.get_property("status")
+        if status == IoStatus.OPEN:
+            self._reset_state()
 
     def _on_received(self, transport, buf, length):
         raise NotImplementedError
@@ -77,11 +81,6 @@ class DelimiterParser(AbstractParser):
         
     def _reset_state(self):
         self._recv_cache = ""
-
-    def _on_status_change(self, transport, param):
-        status = transport.get_property("status")
-        if status == IoStatus.OPEN:
-            self._reset_state()
 
     def _on_received(self, transport, buf, length):
         self._recv_cache += buf
@@ -121,3 +120,75 @@ class DelimiterParser(AbstractParser):
         doc="""The chunk delimiter, can be either a string or
         an integer that specify the number of bytes for each chunk""")
 gobject.type_register(DelimiterParser)
+
+
+class HTTPParser(AbstractParser):
+    """Receiver class that emit received signal when an HTTP response is
+    received.    
+
+    @since: 0.1"""
+
+    CHUNK_START_LINE = 0
+    CHUNK_HEADERS = 1
+    CHUNK_BODY = 2
+
+    def __init__(self, transport):
+        self._parser = DelimiterParser(transport)
+        self._parser.connect("received", self._on_chunk_received)
+        transport.connect("notify::status", self._on_status_change)
+        AbstractParser.__init__(self, transport, connect_signals=False)
+
+    def _reset_state(self):
+        self._next_chunk = self.CHUNK_START_LINE
+        self._receive_buffer = ""
+        self._content_length = -1
+        self._parser.delimiter = "\r\n"
+    
+    def _on_status_change(self, transport, param):
+        status = transport.get_property("status")
+        if status == IoStatus.OPEN:
+            self._reset_state()
+        elif status == IoStatus.CLOSING and self._content_length is None:
+            self.__emit_result()
+
+    def _on_chunk_received(self, parser, chunk):
+        complete = False
+        if self._next_chunk == self.CHUNK_START_LINE:
+            self._receive_buffer += chunk + "\r\n"
+            self._next_chunk = self.CHUNK_HEADERS
+        elif self._next_chunk == self.CHUNK_HEADERS:
+            self._receive_buffer += chunk + "\r\n"
+            if chunk == "":
+                if self._content_length is not None and \
+                        self._content_length <= 0:
+                    complete = True
+                elif self._content_length is None:
+                    self._parser.delimiter = 0
+                    self._next_chunk = self.CHUNK_BODY
+                else:
+                    self._parser.delimiter = self._content_length
+                    self._next_chunk = self.CHUNK_BODY
+            else:
+                header, value = chunk.split(":", 1)
+                header, value = header.strip(), value.strip()
+                if header == "Content-Length":
+                    self._content_length = int(value)
+                elif (header, value) == ("Connection", "close") and \
+                        self._content_length < 0:
+                    self._content_length = None # read up until the connection is closed
+        elif self._next_chunk == self.CHUNK_BODY:
+            self._receive_buffer += chunk
+            if self._content_length is not None:
+                complete = True
+
+        if complete:
+            self.__emit_result()
+
+    def __emit_result(self):
+        if self._receive_buffer == "":
+            return
+        response = HTTPResponse()
+        response.parse(self._receive_buffer)
+        self.emit("received", response)
+        self._reset_state()
+

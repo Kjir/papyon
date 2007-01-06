@@ -65,11 +65,6 @@ class AbstractClient(gobject.GObject):
                 -1, 65535, -1,
                 gobject.PARAM_READWRITE),
             
-            "proxy": (object,
-                "Connection proxy",
-                "a L{types.ProxyInfos} instance.",
-                gobject.PARAM_READWRITE),
-            
             "status": (gobject.TYPE_INT,
                 "Connection Status",
                 "The status of this connection.",
@@ -91,7 +86,7 @@ class AbstractClient(gobject.GObject):
                 (gobject.TYPE_STRING, gobject.TYPE_ULONG)),
             }
     
-    def __init__(self, host, port, proxy=None):
+    def __init__(self, host, port):
         """Initializer
 
             @param host: the hostname to connect to.
@@ -99,29 +94,32 @@ class AbstractClient(gobject.GObject):
             
             @param port: a port number to connect to
             @type port: integer > 0 and < 65536
-
-            @param proxy: proxy infos
-            @type proxy: L{types.ProxyInfos}
         """
         gobject.GObject.__init__(self)
-        
         self._host = host
         self._port = port
-        self._proxy = proxy
-
+        self._transport = None
         self._status = IoStatus.CLOSED
 
     def _change_status(self, new_status):
         self._status = new_status
         self.notify("status")
 
+    def _pre_open(self):
+        if len(self._host) == 0 or self._port < 0 or self._port > 65535:
+            raise ValueError("Wrong host or port number : (%s, %d)" % \
+                    (self._host, self._port) )
+        if self._status in (IoStatus.OPENING, IoStatus.OPEN):
+            return False
+        assert(self._status == IoStatus.CLOSED)
+        self._change_status(IoStatus.OPENING)
+        return True
+
     def do_get_property(self, pspec):
         if pspec.name == "host":
             return self._host
         elif pspec.name == "port":
             return self._port
-        elif pspec.name == "proxy":
-            return self._proxy
         elif pspec.name == "status":
             return self._status
         else:
@@ -132,8 +130,6 @@ class AbstractClient(gobject.GObject):
             self._host = value
         elif pspec.name == "port":
             self._port = value
-        elif pspec.name == "proxy":
-            self._proxy = value
         else:
             raise AttributeError, "unknown property %s" % pspec.name
 
@@ -164,7 +160,6 @@ gobject.type_register(AbstractClient)
 class SocketClient(AbstractClient):
     """Asynchronous Socket client class.
         
-        @note: doesn't support proxy
         @sort: __init__, open, send, close
         @undocumented: do_*, _reset_state, _watch_*, __io_*, _connect_done_handler
 
@@ -190,7 +185,6 @@ class SocketClient(AbstractClient):
         AbstractClient.__init__(self, host, port)
         self._domain = domain
         self._type = type
-        self._socket = None
         self._reset_state()
     
     def _reset_state(self):
@@ -202,7 +196,7 @@ class SocketClient(AbstractClient):
         channel.set_encoding(None)
         channel.set_buffered(False)
         
-        self._socket = sock
+        self._transport = sock
         self._channel = channel
 
         self._source_id = None
@@ -210,15 +204,10 @@ class SocketClient(AbstractClient):
         self._outgoing_queue = []
     
     def open(self):
-        if len(self._host) == 0 or self._port < 0 or self._port > 65535:
-            raise ValueError("Wrong host or port number : (%s, %d)" % \
-                    (self._host, self._port) )
-        if self._status in (IoStatus.OPENING, IoStatus.OPEN):
+        if not self._pre_open():
             return
-        assert(self._status == IoStatus.CLOSED)
-        self._change_status(IoStatus.OPENING)
         try:
-            self._socket.connect((self._host, self._port))
+            self._transport.connect((self._host, self._port))
         except socket.error, e:
             pass
         self._watch_set_cond(gobject.IO_PRI |
@@ -234,10 +223,10 @@ class SocketClient(AbstractClient):
         self._watch_remove()
         self._channel.close()
         try:
-            self._socket.shutdown(socket.SHUT_RDWR)
+            self._transport.shutdown(socket.SHUT_RDWR)
         except:
             pass
-        self._socket.close()        
+        self._transport.close()        
         self._reset_state()
         self._change_status(IoStatus.CLOSED)
     close.__doc__ = AbstractClient.close.__doc__
@@ -277,7 +266,7 @@ class SocketClient(AbstractClient):
     ### asynchronous callbacks
     def _connect_done_handler(self, chan, cond):
         self._watch_remove()
-        opts = self._socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+        opts = self._transport.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
         if opts == 0:
             self._watch_set_cond(gobject.IO_IN | gobject.IO_PRI |
                                gobject.IO_ERR | gobject.IO_HUP)
@@ -354,7 +343,7 @@ class SSLSocketClient(SocketClient):
 
         self._ssl_context = context
         self._ssl_socket = OpenSSL.ssl_new(self._ssl_context)
-        OpenSSL.ssl_set_fd(self._ssl_socket, self._socket.fileno())
+        OpenSSL.ssl_set_fd(self._ssl_socket, self._transport.fileno())
         OpenSSL.ssl_set_mode (self._ssl_socket,
                 OpenSSL.SSL_MODE_ENABLE_PARTIAL_WRITE |
                 OpenSSL.SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER)
@@ -366,7 +355,7 @@ class SSLSocketClient(SocketClient):
         self._watch_remove()
         self._channel.close()
         try:
-            self._socket.shutdown(socket.SHUT_RDWR)
+            self._transport.shutdown(socket.SHUT_RDWR)
             OpenSSL.ssl_free(self._ssl_socket)
             OpenSSL.ssl_ctx_free(self._ssl_context)
         except:
@@ -379,7 +368,7 @@ class SSLSocketClient(SocketClient):
     def _connect_done_handler(self, chan, cond):
         # underlying socket is connected, now connect the SSL transport
         self._watch_remove()
-        opts = self._socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+        opts = self._transport.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
         if opts == 0:
             self._watch_set_cond(gobject.IO_IN | gobject.IO_OUT |
                     gobject.IO_PRI | gobject.IO_ERR | gobject.IO_HUP)
@@ -494,84 +483,3 @@ class SSLTCPClient(SSLSocketClient):
             @type port: integer > 0 and < 65536"""
         SSLSocketClient.__init__(self, host, port, AF_INET, SOCK_STREAM)
 gobject.type_register(SSLTCPClient)
-
-
-class HTTPConnectClient(AbstractClient):
-    """HTTP CONNECT based client.
-        
-        @undocumented: do_*, _reset_state, __on_*
-
-        @since: 0.1"""
-
-    _PROXY_TYPES = ('http', 'https')
-    
-    def __init__(self, host, port, proxy):
-        assert(proxy.type in self._PROXY_TYPES)
-        AbstractClient.__init__(self, host, port, proxy)
-        self._transport = TCPClient(proxy.host, proxy.port)
-        self._transport.connect("notify::status", self.__on_status_change)
-        self._transport.connect("sent", self.__on_sent)
-        self._transport.connect("error", self.__on_error)
-
-        self._input_parser = DelimiterParser(self._transport)
-        self._input_parser.connect("received", self.__on_received)
-        self._reset_state()
-    __init__.__doc__ = AbstractClient.__init__.__doc__
-        
-    def _reset_state(self):
-        self._input_parser.delimiter = "\r\n\r\n"
-        self._status = IoStatus.CLOSED
-
-    def open(self):
-        self._transport.open()
-    open.__doc__ = AbstractClient.open.__doc__
-
-    def close(self):
-        self._transport.close()
-    close.__doc__ = AbstractClient.close.__doc__
-
-    def send(self, buf, callback=None, cb_args=()):
-        assert(self._status == STATUS_OPEN)
-        self._transport.send(buf, callback, cb_args)
-    send.__doc__ = AbstractClient.send.__doc__
-
-    def __on_status_change(self,  transport, param):
-        status = transport.get_property("status")
-        if status == STATUS_OPEN:
-            proxy_protocol  = 'CONNECT %s:%s HTTP/1.1\r\n' % (self._host, self._port)
-            proxy_protocol += 'Proxy-Connection: Keep-Alive\r\n'
-            proxy_protocol += 'Pragma: no-cache\r\n'
-            proxy_protocol += 'Host: %s:%s\r\n' % (self._host, self._port),
-            proxy_protocol += 'User-Agent: %s/%s\r\n' % (GNet.NAME, GNet.VERSION)
-            if self._proxy.user:
-                auth = base64.encodestring(self._proxy.user + ':' + self._proxy.password)
-                proxy_protocol += 'Proxy-authorization: Basic ' + auth + '\r\n'
-            proxy_protocol += '\r\n'            
-            self._transport.send(proxy_protocol)
-        else:
-            self._change_status(status)
-            
-    def __on_sent(self, transport, data, length):
-        if self.get_property("status") == STATUS_OPEN:
-            self.emit("sent", data, length)
-    
-    def __on_received(self, receiver, chunk):
-        if self.get_property("status") == STATUS_OPENING:
-            response_code = chunk.split(' ')[1]
-            if response_code == "200":
-                self._receiver.delimiter = None
-                self._change_status(STATUS_OPEN)
-            elif response_code == "100":
-                pass
-            elif response_code == "407":
-                self.__on_error(None, PROXY_AUTHENTICATION_REQUIRED)
-            else:
-                raise NotImplementedError("Unknown Proxy response code")
-        else:
-            self.emit("received", chunk)
-
-    def __on_error(self, transport, error_code):
-        if transport is not None and error_code == IoError.CONNECTION_FAILED:
-            error_code = IoError.PROXY_CONNECTION_FAILED
-        self.emit("error", error_code)
-gobject.type_register(HTTPConnectClient)

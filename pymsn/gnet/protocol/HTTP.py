@@ -18,62 +18,14 @@
 #
 
 from gnet.constants import *
-from gnet.types import ProxyInfos, HTTPRequest, HTTPResponse
+from gnet.types import ProxyInfos, HTTPRequest
 from gnet.io import TCPClient
-from gnet.parser import DelimiterParser
+from gnet.parser import HTTPParser
 
 import gobject
 import base64
 
 __all__ = ['HTTP']
-
-class _HTTPReceiver(object):
-    
-    CHUNK_START_LINE = 0
-    CHUNK_HEADERS = 1
-    CHUNK_BODY = 2
-
-    def __init__(self, transport, callback, callback_args=()):
-        self._parser = DelimiterParser(transport)
-        self._parser.connect("received", self._on_chunk_received)
-        self._callback = callback
-        self._callback_args = callback_args
-        self._reset()
-
-    def _reset(self):
-        self._next_chunk = self.CHUNK_START_LINE
-        self._receive_buffer = ""
-        self._content_length = 0
-        self._parser.delimiter = "\r\n"
-
-    def _on_chunk_received(self, parser, chunk):
-        complete = False
-        if self._next_chunk == self.CHUNK_START_LINE:
-            self._receive_buffer += chunk + "\r\n"
-            self._next_chunk = self.CHUNK_HEADERS
-        elif self._next_chunk == self.CHUNK_HEADERS:
-            self._receive_buffer += chunk + "\r\n"
-            if chunk == "":
-                if self._content_length == 0:
-                    complete = True
-                else:
-                    self._parser.delimiter = self._content_length
-                    self._next_chunk = self.CHUNK_BODY
-            else:
-                header, value = chunk.split(":", 1)
-                header, value = header.strip(), value.strip()
-                if header == "Content-Length":
-                    self._content_length = int(value)
-        elif self._next_chunk == self.CHUNK_BODY:
-            self._receive_buffer += chunk
-            complete = True
-
-        if complete:
-            response = HTTPResponse()
-            response.parse(self._receive_buffer)
-            self._callback(response, *self._callback_args)
-            self._reset()
-
 
 class HTTP(gobject.GObject):
     """HTTP protocol client class."""
@@ -107,19 +59,20 @@ class HTTP(gobject.GObject):
         assert(proxy is None or proxy.type == 'http') # TODO: add support for other proxies (socks4 and 5)
         self._host = host
         self._port = port
-        self._proxy = proxy
+        self.__proxy = proxy
         self._transport = None
-        self._http_receiver = None
+        self._http_parser = None
         self._outgoing_queue = []
         self._waiting_response = False
 
     def _setup_transport(self):
         if self._transport is None:
-            if self._proxy is not None:
-                self._transport = TCPClient(self._proxy.host, self._proxy.port)
+            if self.__proxy is not None:
+                self._transport = TCPClient(self.__proxy.host, self.__proxy.port)
             else:
                 self._transport = TCPClient(self._host, self._port)
-            self._http_receiver = _HTTPReceiver(self._transport, self._on_response_received)
+            self._http_parser = HTTPParser(self._transport)
+            self._http_parser.connect("received", self._on_response_received)
             self._transport.connect("notify::status", self._on_status_change)
             self._transport.connect("error", self._on_error)
             self._transport.connect("sent", self._on_request_sent)
@@ -137,7 +90,7 @@ class HTTP(gobject.GObject):
         self._waiting_response = True
         self.emit("request-sent", request)
 
-    def _on_response_received(self, response):
+    def _on_response_received(self, parser, response):
         self.emit("response-received", response)
         self._waiting_response = False
         self._process_queue() # next request ?
@@ -164,10 +117,10 @@ class HTTP(gobject.GObject):
         if len(data) > 0:
             headers['Content-Length'] = str(len(data))
 
-        if self._proxy is not None:
+        if self.__proxy is not None:
             url = 'http://%s:%d%s' % (self._host, self._port, resource)
-            if self._proxy.user:
-                auth = self._proxy.user + ':' + self._proxy.password
+            if self.__proxy.user:
+                auth = self.__proxy.user + ':' + self.__proxy.password
                 credentials = base64.encodestring(auth)
                 headers['Proxy-Authorization'] = 'Basic ' + credentials
         else:

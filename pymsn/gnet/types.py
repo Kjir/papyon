@@ -146,7 +146,6 @@ class HTTPMessage(object):
 
         lines = sections[0].split("\r\n")
         for line in lines:
-
             line = line.split(":", 1)
             name = line[0].strip()
             value = line[1].strip()
@@ -188,7 +187,7 @@ class HTTPResponse(HTTPMessage):
         return start_line + "\r\n" + message
 
 class HTTPRequest(HTTPMessage):
-    def __init__(self, headers=None, body="", method="GET", resource="/", version="1.1"):
+    def __init__(self, headers=None, body="", method="GET", resource="/", version="1.0"):
         if headers is None:
             headers = {}
         HTTPMessage.__init__(self)
