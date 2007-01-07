@@ -25,7 +25,7 @@ This module provides asynchronous network I/O.
 @group Client: AbstractClient, SocketClient, TCPClient"""
 
 from gnet.constants import *
-from gnet.types import ProxyInfos
+from gnet.proxy import ProxyInfos
 from gnet.parser import DelimiterParser
 
 import gobject

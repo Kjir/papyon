@@ -18,7 +18,8 @@
 #
 
 from gnet.constants import *
-from gnet.types import ProxyInfos, HTTPRequest
+from gnet.proxy import ProxyInfos
+from gnet.message.HTTP import HTTPRequest
 from gnet.io import TCPClient
 from gnet.parser import HTTPParser
 
@@ -54,7 +55,7 @@ class HTTP(gobject.GObject):
             @type port: integer
 
             @param proxy: proxy that we can use to connect
-            @type proxy: L{gnet.types.ProxyInfos}"""
+            @type proxy: L{gnet.proxy.ProxyInfos}"""
         gobject.GObject.__init__(self)
         assert(proxy is None or proxy.type == 'http') # TODO: add support for other proxies (socks4 and 5)
         self._host = host

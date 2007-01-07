@@ -21,7 +21,7 @@
 """Incomming data parsers."""
 
 from gnet.constants import *
-from gnet.types import HTTPResponse
+from gnet.message.HTTP import HTTPResponse
 
 import gobject
 

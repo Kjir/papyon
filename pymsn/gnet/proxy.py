@@ -18,15 +18,106 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-"""Proxy support for various Clients."""
+"""Proxy support for various Clients.
+
+@group Informations: ProxyInfos
+@group Interfaces: ProxyfiableClient, AbstractProxy
+@group Implementations: HTTPConnectProxy"""
 
 from gnet.constants import *
-from gnet.types import ProxyInfos
 from gnet.io import AbstractClient, TCPClient
 from gnet.parser import HTTPParser
 
 import gobject
 import base64
+import urlparse
+
+class ProxyInfos(object):
+    """Contain informations needed to make use of a proxy.
+
+        @ivar host: hostname of the proxy server.
+        @ivar port: port used to connect to server.
+        @ivar type: proxy type
+        @ivar user: username to use for authentication.
+        @ivar password: password to use for authentication.
+        @undocumented __get_*, __set_*
+
+        @since: 0.1"""
+    
+    def __init__(self, host='', port=0, type='http', user=None, password=None):
+        """Initializer
+            
+            @param host: the hostname of the proxy server.
+            @type host: string
+            
+            @param port: the port used to connect to server.
+            @type port: integer >= 0 and < 65536
+
+            @param type: proxy type
+            @type type: string in ('http', 'https', 'socks4', 'socks5')
+
+            @param user: the username to use for authentication.
+            @type user: string
+            
+            @param password: the password to use for authentication.
+            @type password: string"""
+        self.host = host
+        self.port = port
+        self.type = type
+        self.user = user
+        self.password = password
+    
+    @staticmethod
+    def from_string(url, default_type='http'):
+        """Builds a new L{ProxyInfos} instance from a given proxy url string
+            @param url: the proxy url string
+            @type url: string
+            
+            @param default_type: the default proxy type
+            @type default_type: string in ('http', 'https', 'socks4', 'socks5')
+
+            @return L{ProxyInfos} instance filled with the infos given in the
+                url"""
+        # scheme://netloc/path;parameters?query#fragment
+        # (scheme, netloc, path;parameters, query, fragment)
+        url = urlparse.urlsplit(url, default_type)
+        type = url[0]
+        location = url[1]
+        location = location.rsplit('@',1)
+        if len(location) == 1:
+            auth = ('','')
+            host = location[0]
+        else:
+            auth = location[0].split(':',1)
+            host = location[1]
+        host = host.split(':',1)
+        if len(host) == 1:
+            port = 8080
+        else:
+            port = int(host[1])
+        host = host[0]
+        return ProxyInfos(host, port, type, auth[0], auth[1])
+
+    def __get_port(self):
+        return self._port
+    def __set_port(self, port):
+        self._port = int(port)
+        assert(self._port >= 0 and self._port <= 65535)
+    port = property(__get_port, __set_port, doc="Port used to connect to server.")
+
+    def __get_type(self):
+        return self._port
+    def __set_type(self, type):
+        assert(type in ('http', 'https', 'socks4', 'socks5'))
+        self._type = type
+    type = property(__get_type, __set_type, doc="Proxy type.")
+
+    def __str__(self):
+        host = '%s:%u' % (self.host, self._port)
+        if self.user:
+            auth = '%s:%s' % (self.user, self.password)
+            host = auth + '@' + host
+        return self.type + '://' + host + '/'
 
 class ProxyfiableClient(object):
     def _setup_transport(self, transport, status):

@@ -36,7 +36,7 @@ class HTTPS(HTTP):
             @type port: integer
 
             @param proxy: proxy that we can use to connect
-            @type proxy: L{gnet.types.ProxyInfos}"""
+            @type proxy: L{gnet.proxy.ProxyInfos}"""
         HTTP.__init__(self, host, port)
         self.__proxy = proxy
 
