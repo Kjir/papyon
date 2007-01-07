@@ -28,15 +28,7 @@ from gnet.constants import *
 
 import gobject
 import socket
-import M2Crypto.m2 as OpenSSL
-import M2Crypto.SSL
-
-OpenSSL.SSL_ERROR_NONE = OpenSSL.ssl_error_none
-OpenSSL.SSL_ERROR_ZERO_RETURN = OpenSSL.ssl_error_zero_return
-OpenSSL.SSL_ERROR_WANT_READ = OpenSSL.ssl_error_want_read
-OpenSSL.SSL_ERROR_WANT_WRITE = OpenSSL.ssl_error_want_write
-OpenSSL.SSL_ERROR_WANT_X509_LOOKUP = OpenSSL.ssl_error_want_x509_lookup
-OpenSSL.SSL_ERROR_SSL = OpenSSL.ssl_error_ssl
+import gnet.util.OpenSSL as OpenSSL
 
 __all__ = ['AbstractClient', 'SocketClient', 'SSLSocketClient', 'TCPClient',
         'SSLTCPClient']
@@ -337,7 +329,7 @@ class SSLSocketClient(SocketClient):
         #OpenSSL.ssl_ctx_set_default_verify_paths(context)
         #OpenSSL.ssl_ctx_load_verify_locations(context, ca_cert, ca_directory)
         OpenSSL.ssl_ctx_set_verify(context, OpenSSL.SSL_VERIFY_NONE,
-                M2Crypto.SSL.cb.ssl_verify_callback_allow_unknown_ca)
+                OpenSSL.Callback.ssl_verify_callback_allow_unknown_ca)
 
         self._ssl_context = context
         self._ssl_socket = OpenSSL.ssl_new(self._ssl_context)
@@ -407,7 +399,7 @@ class SSLSocketClient(SocketClient):
             if cond & (gobject.IO_IN | gobject.IO_PRI):
                 try:
                     buf = OpenSSL.ssl_read(self._ssl_socket, 1024)
-                except M2Crypto.SSL.SSLError:
+                except OpenSSL.SSLError:
                     buf = ""
                 if buf is None: # SSL_ERROR_WANT_READ | SSL_ERROR_WANT_WRITE
                     return
@@ -421,7 +413,7 @@ class SSLSocketClient(SocketClient):
                     item = self._outgoing_queue[0]
                     try:
                         ret = OpenSSL.ssl_write(self._ssl_socket, item[0])
-                    except M2Crypto.SSL.SSLError:
+                    except OpenSSL.SSLError:
                         self.close()
                         return False
                     if ret >= 0:
