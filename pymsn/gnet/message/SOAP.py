@@ -19,11 +19,10 @@
 
 """SOAP Messages structures."""
 
-from gnet.constants import *
-
 import gnet.util.ElementTree as ElementTree
+import gnet.util.StringIO as StringIO
 
-__all__=['SOAPRequest']
+__all__=['SOAPRequest', 'SOAPResponse']
 
 class NameSpace:
     SOAP_ENVELOPE = "http://schemas.xmlsoap.org/soap/envelope/"
@@ -33,6 +32,12 @@ class NameSpace:
 
 class Encoding:
     SOAP = "http://schemas.xmlsoap.org/soap/encoding/"
+
+class _SOAPSection:
+    ENVELOPE = "{" + NameSpace.SOAP_ENVELOPE + "}Envelope"
+    HEADER = "{" + NameSpace.SOAP_ENVELOPE + "}Header"
+    BODY = "{" + NameSpace.SOAP_ENVELOPE + "}Body"
+
 
 class _SOAPElement(object):
     def __init__(self, element):
@@ -44,6 +49,7 @@ class _SOAPElement(object):
         child = ElementTree.SubElement(self.element, tag, attrib, **kwargs)
         child.text = value
         return _SOAPElement(child)
+
 
 class SOAPRequest(object):
     """Abstracts a SOAP Request to be sent to the server"""
@@ -59,7 +65,7 @@ class SOAPRequest(object):
         
         @param encoding_style: the encoding style for this method
         @type encoding: URI"""
-        self.header = ElementTree.Element("{" + NameSpace.SOAP_ENVELOPE + "}Header")
+        self.header = ElementTree.Element(_SOAPSection.HEADER)
         if namespace is not None:
             method = "{" + namespace + "}" + method
         self.method = ElementTree.Element(method)
@@ -84,10 +90,10 @@ class SOAPRequest(object):
         return _SOAPElement(elem)
     
     def __str__(self):
-        envelope = ElementTree.Element("{" + NameSpace.SOAP_ENVELOPE + "}Envelope")
+        envelope = ElementTree.Element(_SOAPSection.ENVELOPE)
         if len(self.header) > 0:
             envelope.append(self.header)
-        body = ElementTree.SubElement(envelope, "{" + NameSpace.SOAP_ENVELOPE + "}Body")
+        body = ElementTree.SubElement(envelope, _SOAPSection.BODY)
         body.append(self.method)
         return "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +\
                 ElementTree.tostring(envelope, "utf-8")
@@ -96,7 +102,24 @@ class SOAPRequest(object):
         return "<SOAP request %s>" % self.method.tag
 
 
-def SOAPResponse(object):
+class SOAPResponse(object):
     def __init__(self, data):
-        self.data = data
+        self.tree = self._parse(data)
+        self.header = self.tree.find(_SOAPSection.HEADER)
+        self.body = self.tree.find(_SOAPSection.BODY)
+
+    def _parse(self, data):
+        events = ("start", "end", "start-ns", "end-ns")
+        ns = []
+        data = StringIO.StringIO(data)
+        context = ElementTree.iterparse(data, events=events)
+        for event, elem in context:
+            if event == "start-ns":
+                ns.append(elem)
+            elif event == "end-ns":
+                ns.pop()
+            elif event == "start":
+                elem.set("(xmlns)", tuple(ns))
+        data.close()
+        return context.root
 
