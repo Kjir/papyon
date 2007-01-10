@@ -50,11 +50,14 @@ class _SOAPElement(object):
         child.text = value
         return _SOAPElement(child)
 
+    def __str__(self):
+        return ElementTree.tostring(self.element, "utf-8")
+
 
 class SOAPRequest(object):
     """Abstracts a SOAP Request to be sent to the server"""
 
-    def __init__(self, method, namespace=None, encoding_style=Encoding.SOAP):
+    def __init__(self, method, namespace=None, encoding_style=Encoding.SOAP, **attr):
         """Initializer
         
         @param method: the method to be called
@@ -64,30 +67,46 @@ class SOAPRequest(object):
         @type namespace: URI
         
         @param encoding_style: the encoding style for this method
-        @type encoding: URI"""
+        @type encoding: URI
+        
+        @param **attr: attributes to be attached to the method"""
         self.header = ElementTree.Element(_SOAPSection.HEADER)
         if namespace is not None:
             method = "{" + namespace + "}" + method
         self.method = ElementTree.Element(method)
         if encoding_style is not None:
             self.method.set("{" + NameSpace.SOAP_ENVELOPE + "}encodingStyle", encoding_style)
-    
-    def add_argument(self, name, type=None, value=None):
-        return self._add_element(self.method, name, type, value)
 
-    def add_header(self, name, namespace=None, value=None):
+        for attr_key, attr_value in attr.iteritems():
+            self.method.set(attr_key, attr_value)
+    
+    def add_argument(self, name, namespace=None, type=None, attrib=None, value=None, **kwargs):
         if namespace is not None:
             name = "{" + namespace + "}" + name
-        return self._add_element(self.header, name, value=value)
+        return self._add_element(self.method, name, type, attrib, value, **kwargs)
+
+    def add_header(self, name, namespace=None, attrib=None, value=None, **kwargs):
+        if namespace is not None:
+            name = "{" + namespace + "}" + name
+        return self._add_element(self.header, name, None, attrib, value, **kwargs)
     
-    def _add_element(self, parent, name, type=None, value=None):
+    def _add_element(self, parent, name, type=None, attributes=None, value=None, **kwargs):
         elem = ElementTree.SubElement(parent, name)
+        if attributes is None:
+            attributes = {}
+        attributes.update(kwargs)
         if type:
-            if not isinstance(type, ElementTree.QName):
-                type = ElementTree.QName(NameSpace.XML_SCHEMA, type)
+            type = self._qname(type, NameSpace.XML_SCHEMA)
             elem.set("{" + NameSpace.XML_SCHEMA_INSTANCE + "}type", type)
+        for attr_key, attr_value in attributes.iteritems():
+            elem.set(attr_key, attr_value)
         elem.text = value
         return _SOAPElement(elem)
+    
+    def _qname(self, name, default_ns):
+        if name[0] != "{":
+            return ElementTree.QName(default_ns, name)
+        return ElementTree.QName(name)
     
     def __str__(self):
         envelope = ElementTree.Element(_SOAPSection.ENVELOPE)

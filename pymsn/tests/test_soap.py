@@ -1,4 +1,13 @@
+import sys, os
+parent_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+sys.path.insert(0, parent_dir) 
+del parent_dir
+del sys
+del os
+
 import gnet.message.SOAP as SOAP
+import service.SOAPService as SOAPService
+import service.SingleSignOn as SSO
 
 NS_MSNAB = "http://www.msn.com/webservices/AddressBook"
 
@@ -97,3 +106,24 @@ response = """<?xml version="1.0" encoding="utf-8"?>
 
 response = SOAP.SOAPResponse(response)
 print response.body.find(".//{%s}displayName" % NS_MSNAB).text
+
+print "------------------------------------------------"
+class TestService(SOAPService.SOAPService):
+    def __init__(self, url):
+        SOAPService.SOAPService.__init__(self, url)
+
+    def _soap_action(self, method):
+        return "http://www.test.org#%s" % method
+
+    def _method_namespace(self, method):
+        return "http://www.test.org/SOAP/TestService"
+
+test = TestService("http://www.test.org")
+test.ABFindAll(("abId", "00000000-0000-0000-0000-000000000000"),
+		("abView","abView"),
+		("deltasOnly","true"),
+		("lastChange","0001-01-01T00:00:00.0000000-08:00"))
+
+print '------------------------------------------------'
+sso = SSO.SingleSignOn("kimbix@hotmail.com", "linox46")
+sso.RequestMultipleSecurityTokens(SSO.LiveService.TB, SSO.LiveService.MESSENGER_CLEAR)
