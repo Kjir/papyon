@@ -73,7 +73,7 @@ class SingleSignOn(SOAPService):
         AuthInfo.append("BinaryVersion", NS_PASSPORT, value="4")
         AuthInfo.append("UIVersion", NS_PASSPORT, value="1")
         AuthInfo.append("Cookies", NS_PASSPORT)
-        AuthInfo.append("UIVersion", NS_PASSPORT, value=request_params)
+        AuthInfo.append("RequestParams", NS_PASSPORT, value=request_params)
 
         SecurityHeader = self.request.add_header("Security", NS_WS_SECEXT)
         UsernameToken = SecurityHeader.append("UsernameToken", NS_WS_SECEXT, Id="user")

@@ -78,7 +78,7 @@ class SOAPService(object):
 
     def _http_headers(self, method):
         """Sets the needed http headers for the current method"""
-        if self._soap_action(method) != "":
+        if self._soap_action(method):
             self.http_headers['SOAPAction'] = self._soap_action(method)
 
 
