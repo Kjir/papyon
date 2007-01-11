@@ -22,11 +22,31 @@ import gnet.message.SOAP as SOAP
 
 class SOAPService(object):
     """Base class for all Windows Live Services."""
+    
+    DEFAULT_PROTOCOL = "http"
 
-    def __init__(self, url):
-        self.url = url
+    def __init__(self, url, proxy=None):
+        protocol, host, self.resource = self._url_split(url)
         self.http_headers = {}
         self.request = None
+        self.transport = gnet.protocol.ProtocolFactory(protocol, host, proxy=proxy)
+        self.transport.connect("response-received", self._response_handler)
+        self.transport.connect("request-sent", self._request_handler)
+
+    def _url_split(self, url):
+        from urlparse import urlsplit, urlunsplit
+        if "://" not in url: # fix a bug in urlsplit
+            url = self.DEFAULT_PROTOCOL + "://" + url
+        protocol, host, path, query, fragment = urlsplit(url)
+        if path == "": path = "/"
+        resource = urlunsplit(('', '', path, query, fragment))
+        return protocol, host, resource
+
+    def _response_handler(self, transport, response):
+        print response
+
+    def _request_handler(self, transport, request):
+        print request
 
     def __getattr__(self, name):
         def method(*params):
@@ -34,10 +54,17 @@ class SOAPService(object):
         return method
     
     def _method(self, method_name, attributes, *params):
+        """Used for method construction, the SOAP tree is built
+        but not sent, so that the ComplexMethods can use it and add
+        various things to the SOAP tree before sending it"""
         ns = self._method_namespace(method_name)
         request = SOAP.SOAPRequest(method_name, ns, **attributes)
-        for tag, value in params:
-            request.add_argument(tag, value=value)
+        for param in params:
+            assert(len(param) == 2 or len(param) == 3)
+            if len(param) == 2:
+                request.add_argument(param[0], value=param[1])
+            elif len(param) == 3:
+                request.add_argument(param[1], type=param[0], value=param[2])
         self.request = request
         self._soap_headers(method_name)
         self._http_headers(method_name)
@@ -49,10 +76,10 @@ class SOAPService(object):
     
     def _send_request(self):
         """This method sends the SOAP request over the wire"""
-        #FIXME: really send instead of printing
-        from xml.dom import minidom
-        print minidom.parseString(str(self.request)).toprettyxml("  ")
-
+        self.transport.request(resource = self.resource,
+                headers = self.http_headers,
+                data = str(self.request),
+                method = 'POST')
         self.http_headers = {}
         self.soap_headers = None
         self.request = None
@@ -80,5 +107,6 @@ class SOAPService(object):
         """Sets the needed http headers for the current method"""
         if self._soap_action(method):
             self.http_headers['SOAPAction'] = self._soap_action(method)
+        self.http_headers['Content-Type'] = "text/xml; charset=utf-8"
 
 

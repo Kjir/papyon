@@ -141,7 +141,7 @@ class HTTPParser(AbstractParser):
     def _reset_state(self):
         self._next_chunk = self.CHUNK_START_LINE
         self._receive_buffer = ""
-        self._content_length = -1
+        self._content_length = 0
         self._parser.delimiter = "\r\n"
     
     def _on_status_change(self, transport, param):
@@ -159,12 +159,8 @@ class HTTPParser(AbstractParser):
         elif self._next_chunk == self.CHUNK_HEADERS:
             self._receive_buffer += chunk + "\r\n"
             if chunk == "":
-                if self._content_length is not None and \
-                        self._content_length <= 0:
+                if self._content_length == 0:
                     complete = True
-                elif self._content_length is None:
-                    self._parser.delimiter = 0
-                    self._next_chunk = self.CHUNK_BODY
                 else:
                     self._parser.delimiter = self._content_length
                     self._next_chunk = self.CHUNK_BODY
@@ -173,9 +169,6 @@ class HTTPParser(AbstractParser):
                 header, value = header.strip(), value.strip()
                 if header == "Content-Length":
                     self._content_length = int(value)
-                elif (header, value) == ("Connection", "close") and \
-                        self._content_length < 0:
-                    self._content_length = None # read up until the connection is closed
         elif self._next_chunk == self.CHUNK_BODY:
             self._receive_buffer += chunk
             if self._content_length is not None:

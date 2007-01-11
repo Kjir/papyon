@@ -113,7 +113,8 @@ class HTTP(gobject.GObject):
         if headers is None:
             headers = {}
         headers['Host'] = self._host + ':' + str(self._port)
-        headers['User-Agent'] = GNet.NAME + '/' + GNet.VERSION
+        if 'User-Agent' not in headers:
+            headers['User-Agent'] = GNet.NAME + '/' + GNet.VERSION
 
         if len(data) > 0:
             headers['Content-Length'] = str(len(data))

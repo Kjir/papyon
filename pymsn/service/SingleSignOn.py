@@ -33,6 +33,8 @@ NS_WS_ADDRESSING = "http://schemas.xmlsoap.org/ws/2004/03/addressing"
 NS_WS_POLICY = "http://schemas.xmlsoap.org/ws/2002/12/policy"
 NS_WS_ISSUE = "http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue"
 
+MSN_USER_AGENT = "MSN Explorer/9.0 (MSN 8.0; TmstmpExt)"
+
 class LiveService(object):
     CONTACTS = ("contacts.msn.com", "?fs=1&id=24000&kv=7&rn=93S9SWWw&tw=0&ver=2.1.6000.1")
     MESSENGER = ("messenger.live.com", "?id=507")
@@ -79,6 +81,10 @@ class SingleSignOn(SOAPService):
         UsernameToken = SecurityHeader.append("UsernameToken", NS_WS_SECEXT, Id="user")
         UsernameToken.append("Username", NS_WS_SECEXT, value=self.__credentials[0])
         UsernameToken.append("Password", NS_WS_SECEXT, value=self.__credentials[1])
+    
+    def _http_headers(self, method):
+        SOAPService._http_headers(self, method)
+        self.http_headers['User-Agent'] = MSN_USER_AGENT
 
     def __serialize_request_params(self, params):
         s = struct.pack("<L", len(params))
@@ -97,9 +103,3 @@ class SingleSignOn(SOAPService):
                 append("Address", NS_WS_ADDRESSING, value=live_service[0])
         if live_service[1] is not None:
             RST.append("PolicyReference", NS_WS_SECEXT, URI=live_service[1])
-
-    def _http_headers(self, method):
-        """Sets the needed http headers for the current method"""
-        pass
-
-

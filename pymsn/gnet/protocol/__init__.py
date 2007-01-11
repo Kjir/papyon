@@ -21,3 +21,15 @@
 
 from gnet.protocol.HTTP import *
 from gnet.protocol.HTTPS import *
+
+def ProtocolFactory(protocol, host, port=None, proxy=None):
+    if protocol == "http":
+        klass = HTTP
+    elif protocol == "https":
+        klass = HTTPS
+    
+    if port is None:
+        return klass(host, proxy=proxy)
+    else:
+        return klass(host, port, proxy=proxy)
+
