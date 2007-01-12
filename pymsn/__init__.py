@@ -21,5 +21,3 @@
 pymsn is a library, written in Python, for accessing the MSN
 instant messaging service.
 """
-
-import gnet

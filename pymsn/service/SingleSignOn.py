@@ -33,7 +33,7 @@ NS_WS_ADDRESSING = "http://schemas.xmlsoap.org/ws/2004/03/addressing"
 NS_WS_POLICY = "http://schemas.xmlsoap.org/ws/2002/12/policy"
 NS_WS_ISSUE = "http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue"
 
-MSN_USER_AGENT = "MSN Explorer/9.0 (MSN 8.0; TmstmpExt)"
+MSN_USER_AGENT = "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 2.0.50727; IDCRL 4.100.313.1; IDCRL-cfg 4.0.5633.0; App MsnMsgr.Exe, 8.1.168.0, {7108E71A-9926-4FCB-BCC9-9A9D3F32E423})" 
 
 class LiveService(object):
     CONTACTS = ("contacts.msn.com", "?fs=1&id=24000&kv=7&rn=93S9SWWw&tw=0&ver=2.1.6000.1")
@@ -85,6 +85,7 @@ class SingleSignOn(SOAPService):
     def _http_headers(self, method):
         SOAPService._http_headers(self, method)
         self.http_headers['User-Agent'] = MSN_USER_AGENT
+        self.http_headers['Accept'] = "text/*"
 
     def __serialize_request_params(self, params):
         s = struct.pack("<L", len(params))

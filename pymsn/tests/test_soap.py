@@ -26,6 +26,6 @@ class TemperatureService(SOAPService.SOAPService):
 
 #print '------------------------------------------------'
 sso = SSO.SingleSignOn("kimbix@hotmail.com", "linox45")
-sso.RequestMultipleSecurityTokens(SSO.LiveService.TB, SSO.LiveService.MESSENGER_CLEAR)
+sso.RequestMultipleSecurityTokens(SSO.LiveService.TB, SSO.LiveService.CONTACTS)
 
 gobject.MainLoop().run()

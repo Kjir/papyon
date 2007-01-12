@@ -20,9 +20,8 @@
 import gnet.protocol
 import gnet.message.SOAP as SOAP
 
-class SOAPService(object):
-    """Base class for all Windows Live Services."""
-    
+
+class BaseSOAPService(object):
     DEFAULT_PROTOCOL = "http"
 
     def __init__(self, url, proxy=None):
@@ -32,6 +31,7 @@ class SOAPService(object):
         self.transport = gnet.protocol.ProtocolFactory(protocol, host, proxy=proxy)
         self.transport.connect("response-received", self._response_handler)
         self.transport.connect("request-sent", self._request_handler)
+        self.transport.connect("error", self._error_handler)
 
     def _url_split(self, url):
         from urlparse import urlsplit, urlunsplit
@@ -47,6 +47,26 @@ class SOAPService(object):
 
     def _request_handler(self, transport, request):
         print request
+    
+    def _error_handler(self, transport, error):
+        print "Error", error
+
+    def _send_request(self):
+        """This method sends the SOAP request over the wire"""
+        self.transport.request(resource = self.resource,
+                headers = self.http_headers,
+                data = str(self.request),
+                method = 'POST')
+        self.http_headers = {}
+        self.soap_headers = None
+        self.request = None
+
+
+class SOAPService(BaseSOAPService):
+    """Base class for all Windows Live Services."""
+    
+    def __init__(self, url, proxy=None):
+        BaseSOAPService.__init__(self, url, proxy)
 
     def __getattr__(self, name):
         def method(*params):
@@ -74,15 +94,6 @@ class SOAPService(object):
         self._method(method_name, {}, *params)
         self._send_request()
     
-    def _send_request(self):
-        """This method sends the SOAP request over the wire"""
-        self.transport.request(resource = self.resource,
-                headers = self.http_headers,
-                data = str(self.request),
-                method = 'POST')
-        self.http_headers = {}
-        self.soap_headers = None
-        self.request = None
 
     def _soap_action(self, method):
         """return the SOAPAction header value to be used
