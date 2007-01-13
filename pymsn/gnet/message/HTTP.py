@@ -23,26 +23,36 @@
 from gnet.constants import *
 
 class HTTPMessage(object):
-    """Http message
+    """HTTP style message abstraction
 
-    header: value\r\n
-    header: value\r\n
-    header: value\r\n
-    \r\n
-    body
+        @ivar headers: HTTP style headers of the message
+        @type headers: dict()
+
+        @ivar body: HTTP Message Body
+        @type body: string
     """
     def __init__(self):
         self.clear()
         
     def add_header(self, name, value):
+        """Add the header with the given name to the set of headers of
+        this message
+            
+            @param name: name of the header
+            @param value: value of the header"""
         value = str(value)
         self.headers[name] = value
 
     def clear(self):
+        """Empties the HTTP message"""
         self.headers = {}
         self.body = ""
         
     def parse(self, chunk):
+        """Parses a given chunk of data and fill in the current object
+        
+            @param chunk: the chunk of data to parse
+            @type chunk: string"""
         self.clear()
 
         sections = chunk.split("\r\n\r\n", 1)
