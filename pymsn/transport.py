@@ -157,7 +157,7 @@ class BaseTransport(gobject.GObject):
         raise NotImplementedError
 
     # Command Sending
-    def send_command(self, command, increment=True, callback=None, cb_args=()):
+    def send_command(self, command, increment=True, callback=None, *cb_args):
         """
         Sends a L{command.Command} to the server.
 
@@ -172,12 +172,12 @@ class BaseTransport(gobject.GObject):
             @type callback: callable
 
             @param cb_args: callback arguments
-            @type cb_args: tuple
+            @type cb_args: Any, ...
         """
         raise NotImplementedError
 
     def send_command_ex(self, command, arguments=None, payload=None, 
-            callback=None, cb_args=()):
+            increment=True, callback=None, *cb_args):
         """
         Builds a command object then send it to the server.
         
@@ -191,6 +191,9 @@ class BaseTransport(gobject.GObject):
             @param payload: payload data
             @type payload: string
 
+            @param increment: if False, the transaction ID is not incremented
+            @type increment: bool
+
             @param callback: callback to be used when the command has been
                 transmitted
             @type callback: callable
@@ -198,10 +201,9 @@ class BaseTransport(gobject.GObject):
             @param cb_args: callback arguments
             @type cb_args: tuple
         """
-        transaction_id = self._transaction_id
         cmd = command.Command()
         cmd.build(command, transaction_id, arguments, payload)
-        self.send_command(cmd, increment, callback, cb_args)
+        self.send_command(cmd, increment, callback, *cb_args)
 
     def _increment_transaction_id(self):
         """Increments the Transaction ID then return it.
@@ -212,3 +214,84 @@ class BaseTransport(gobject.GObject):
 gobject.type_register(BaseTransport)
 
 
+class DirectConnection(BaseTransport):
+    """Implements a direct connection to the net using TCP/1863""" 
+
+    def __init__(self, server, server_type=ServerType.NOTIFICATION, proxies={}):
+        BaseTransport.__init__(self, server, server_type, proxies)
+        
+        transport = gnet.io.TCPClient(server[0], server[1])
+        transport.connect("notify::status", self.__on_status_change)
+        transport.connect("error", lambda t, msg: self.emit("connection-failure"))
+
+        receiver = gnet.parser.ChunkReceiver(transport)
+        receiver.connect("received", self.__on_received)
+
+        self._receiver = receiver
+        self._receiver.delimiter = "\r\n"
+        self._transport = transport
+        self.__pending_chunk = None
+        self.__resetting = False
+        
+    __init__.__doc__ = BaseTransport.__init__.__doc__
+
+    ### public commands
+    
+    def establish_connection(self):
+        logger.debug('<-> Connecting to %s:%d' % self.server )
+        self._transport.open()
+
+    def lose_connection(self):
+        self._transport.close()
+
+    def reset_connection(self, server=None):
+        if server:
+            self._transport.set_property("host", server[0])
+            self._transport.set_property("port", server[1])
+            self.server = server
+        self.__resetting = True
+        self._transport.close()
+        self._transport.open()
+
+    def send_command(self, command, increment=True, callback=None, *cb_args):
+        logger.debug('>>> ' + repr(command))
+        our_cb_args = (command, callback, cb_args)
+        self._transport.send(str(command), self.__on_command_sent, our_cb_args)
+        if increment:
+            self._increment_transaction_id()
+
+    def __on_command_sent(self, command, user_callback, user_cb_args):
+        self.emit("command-sent", command)
+        if user_callback:
+            user_callback(*user_cb_args)
+
+    ### callbacks
+    def __on_status_change(self, transport, param):
+        status = transport.get_property("status")
+        if status == gnet.constants.IoStatus.OPEN:
+            if self.__resetting:
+                self.emit("connection-reset")
+                self.__resetting = False
+            self.emit("connection-success")
+        elif status == gnet.constants.IoStatus.CLOSED:
+            if not self.__resetting:
+                self.emit("connection-lost")
+
+    def __on_received(self, receiver, chunk):
+        cmd = command.Command()
+        if self.__pending_chunk:
+            chunk = self.__pending_chunk + "\r\n" + chunk
+            cmd.parse(chunk)
+            self.__pending_chunk = None
+            self._receiver.delimiter = "\r\n"
+        else:
+            cmd.parse(chunk)
+            if cmd.name in command.Command.INCOMING_PAYLOAD:
+                payload_len = int(cmd.arguments[-1])
+                if payload_len > 0:
+                    self.__pending_chunk = chunk
+                    self._receiver.delimiter = payload_len
+                    return
+        logger.debug('<<< ' + repr(cmd))
+        self.emit("command-received", cmd)
+gobject.type_register(DirectConnection)
