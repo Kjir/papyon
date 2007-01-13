@@ -31,6 +31,7 @@ The classes of this module are structured as follow:
 G{classtree BaseTransport}"""
 
 import gnet
+import command
 
 import logging
 import gobject
@@ -158,10 +159,10 @@ class BaseTransport(gobject.GObject):
     # Command Sending
     def send_command(self, command, increment=True, callback=None, cb_args=()):
         """
-        Sends a L{structure.Command} to the server.
+        Sends a L{command.Command} to the server.
 
             @param command: command to send
-            @type command: L{structure.Command}
+            @type command: L{command.Command}
 
             @param increment: if False, the transaction ID is not incremented
             @type increment: bool
@@ -198,7 +199,7 @@ class BaseTransport(gobject.GObject):
             @type cb_args: tuple
         """
         transaction_id = self._transaction_id
-        cmd = structure.Command()
+        cmd = command.Command()
         cmd.build(command, transaction_id, arguments, payload)
         self.send_command(cmd, increment, callback, cb_args)
 
@@ -209,4 +210,5 @@ class BaseTransport(gobject.GObject):
         self._transaction_id += 1
         return self._transaction_id
 gobject.type_register(BaseTransport)
+
 

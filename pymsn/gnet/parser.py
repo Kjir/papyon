@@ -41,7 +41,7 @@ class AbstractParser(gobject.GObject):
         
             @param transport: the transport used to receive data
             @type transport: an object derived from
-                L{network.AbstractClient}"""
+                L{io.AbstractClient}"""
         gobject.GObject.__init__(self)
         if connect_signals:
             transport.connect("received", self._on_received)
@@ -75,7 +75,7 @@ class DelimiterParser(AbstractParser):
         """Initializer
         
             @param transport: the transport used to receive data
-            @type transport: L{network.AbstractClient}"""
+            @type transport: L{io.AbstractClient}"""
         AbstractParser.__init__(self, transport)
         self._chunk_delimiter = "\n"
         
