@@ -20,7 +20,7 @@
 from gnet.constants import *
 from gnet.io import SSLTCPClient
 from gnet.parser import HTTPParser
-from gnet.protocol import HTTP
+from gnet.protocol.HTTP import HTTP
 
 __all__ = ['HTTPS']
 

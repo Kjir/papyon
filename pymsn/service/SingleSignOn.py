@@ -17,6 +17,15 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
+#FIXME: not quite sure about this :/
+#FIXME: really ugly, I hate this
+import sys, os
+parent_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+sys.path.insert(0, parent_dir) 
+del parent_dir
+del sys
+del os
+
 from service.SOAPService import SOAPService
 
 import base64

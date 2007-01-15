@@ -24,11 +24,11 @@ This module provides asynchronous network I/O.
 
 @group Client: AbstractClient, SocketClient, TCPClient"""
 
-from gnet.constants import *
+from constants import *
 
 import gobject
 import socket
-import gnet.util.OpenSSL as OpenSSL
+import util.OpenSSL as OpenSSL
 
 __all__ = ['AbstractClient', 'SocketClient', 'SSLSocketClient', 'TCPClient',
         'SSLTCPClient']

@@ -30,13 +30,13 @@ POST requests.
 The classes of this module are structured as follow:
 G{classtree BaseTransport}"""
 
-import gnet
-import command
+import gnet.io
+import msnp
 
 import logging
 import gobject
 
-__all__=['ServerType', 'BaseTransport']
+__all__=['ServerType', 'BaseTransport', 'DirectConnection']
 
 logger = logging.getLogger('Connection')
 
@@ -83,11 +83,11 @@ class BaseTransport(gobject.GObject):
         @type connection-lost: ()
 
         @cvar command-received: signal emitted when a command is received
-        @type command-received: FIXME-DOC
+        @type command-received: FIXME
 
         @cvar command-sent: signal emitted when a command was successfully
             transmitted to the server
-        @type command-sent: FIXME-DOC
+        @type command-sent: FIXME
 
         @undocumented: __gsignals__"""
     
@@ -159,10 +159,10 @@ class BaseTransport(gobject.GObject):
     # Command Sending
     def send_command(self, command, increment=True, callback=None, *cb_args):
         """
-        Sends a L{command.Command} to the server.
+        Sends a L{msnp.Command} to the server.
 
             @param command: command to send
-            @type command: L{command.Command}
+            @type command: L{msnp.Command}
 
             @param increment: if False, the transaction ID is not incremented
             @type increment: bool
@@ -201,8 +201,8 @@ class BaseTransport(gobject.GObject):
             @param cb_args: callback arguments
             @type cb_args: tuple
         """
-        cmd = command.Command()
-        cmd.build(command, transaction_id, arguments, payload)
+        cmd = msnp.Command()
+        cmd.build(command, self._transaction_id, payload, *arguments)
         self.send_command(cmd, increment, callback, *cb_args)
 
     def _increment_transaction_id(self):
@@ -224,7 +224,7 @@ class DirectConnection(BaseTransport):
         transport.connect("notify::status", self.__on_status_change)
         transport.connect("error", lambda t, msg: self.emit("connection-failure"))
 
-        receiver = gnet.parser.ChunkReceiver(transport)
+        receiver = gnet.parser.DelimiterParser(transport)
         receiver.connect("received", self.__on_received)
 
         self._receiver = receiver
@@ -256,7 +256,7 @@ class DirectConnection(BaseTransport):
     def send_command(self, command, increment=True, callback=None, *cb_args):
         logger.debug('>>> ' + repr(command))
         our_cb_args = (command, callback, cb_args)
-        self._transport.send(str(command), self.__on_command_sent, our_cb_args)
+        self._transport.send(str(command), self.__on_command_sent, *our_cb_args)
         if increment:
             self._increment_transaction_id()
 
@@ -278,7 +278,7 @@ class DirectConnection(BaseTransport):
                 self.emit("connection-lost")
 
     def __on_received(self, receiver, chunk):
-        cmd = command.Command()
+        cmd = msnp.Command()
         if self.__pending_chunk:
             chunk = self.__pending_chunk + "\r\n" + chunk
             cmd.parse(chunk)
@@ -286,7 +286,7 @@ class DirectConnection(BaseTransport):
             self._receiver.delimiter = "\r\n"
         else:
             cmd.parse(chunk)
-            if cmd.name in command.Command.INCOMING_PAYLOAD:
+            if cmd.name in msnp.Command.INCOMING_PAYLOAD:
                 payload_len = int(cmd.arguments[-1])
                 if payload_len > 0:
                     self.__pending_chunk = chunk

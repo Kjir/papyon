@@ -17,7 +17,10 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-"""Tests"""
+"""MSNP2P protocol implementation.
+Contains a set of class enabling the communication using the MSNP2P
+protocol used to transfer data between peers, such as transfer of files
+and display pictures."""
 
 #FIXME: not quite sure about this :/
 #FIXME: really ugly, I hate this

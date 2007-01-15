@@ -42,7 +42,7 @@ class BuildDocCommand(Command):
             else:
                 url = ''
             cmd = [self.epydoc,
-                    '--parse-only',
+                    #'--parse-only',
                     '--no-private',
                     '--no-frames',
                     '--html',

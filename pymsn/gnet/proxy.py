@@ -24,9 +24,9 @@
 @group Interfaces: ProxyfiableClient, AbstractProxy
 @group Implementations: HTTPConnectProxy"""
 
-from gnet.constants import *
-from gnet.io import AbstractClient, TCPClient
-from gnet.parser import HTTPParser
+from constants import *
+from io import AbstractClient, TCPClient
+from parser import HTTPParser
 
 import gobject
 import base64

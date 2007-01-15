@@ -18,8 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""A set of classes abstracting the MSN protocol commands, basically all MSN
-core protocol commands look almost the same.
+"""MSN protocol commands.
 
 G{classtree Command}"""
 
@@ -95,7 +94,7 @@ class Command(object):
             
             @param buf: the data to parse
             @type buf: string"""
-        self.__init_state()
+        self._reset()
         lines = buf.split('\r\n', 1)
         self.__parse_command(lines[0])
         if len(lines) > 1: # payload

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2005-2006 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,19 +14,22 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+#
 
-"""An implementation of the MSN Messenger Protocol
+"""MSN Core protocol client implementation.
+Contains a set of class abstracting the MSNP protocol used to communicate
+with the Notification Server as well as the Switchboard Server"""
 
-pymsn is a library, written in Python, for accessing the MSN
-instant messaging service.
-    
-    @group High Level Interface: client, profile, transport
-    @group Low Level Interface: msnp, msnp2p, service
-    @group Network Layer: gnet
-"""
+#FIXME: not quite sure about this :/
+#FIXME: really ugly, I hate this
+import sys, os
+parent_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+sys.path.insert(0, parent_dir) 
+del parent_dir
+del sys
+del os
 
-from client import *
-
-import gnet.proxy
-Proxy = gnet.proxy.ProxyInfos.from_string
+from msnp.command import *
+from msnp.message import *
+from notification import *
