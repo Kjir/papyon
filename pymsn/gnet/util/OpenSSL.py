@@ -20,13 +20,13 @@
 
 """OpenSSL independent from the available distribution"""
 
-from M2Crypto.m2 import *
-import M2Crypto.SSL.cb as Callback
-from M2Crypto.SSL import SSLError
-
-SSL_ERROR_NONE = ssl_error_none
-SSL_ERROR_ZERO_RETURN = ssl_error_zero_return
-SSL_ERROR_WANT_READ = ssl_error_want_read
-SSL_ERROR_WANT_WRITE = ssl_error_want_write
-SSL_ERROR_WANT_X509_LOOKUP = ssl_error_want_x509_lookup
-SSL_ERROR_SSL = ssl_error_ssl
+#from M2Crypto.m2 import *
+#import M2Crypto.SSL.cb as Callback
+#from M2Crypto.SSL import SSLError
+#
+#SSL_ERROR_NONE = ssl_error_none
+#SSL_ERROR_ZERO_RETURN = ssl_error_zero_return
+#SSL_ERROR_WANT_READ = ssl_error_want_read
+#SSL_ERROR_WANT_WRITE = ssl_error_want_write
+#SSL_ERROR_WANT_X509_LOOKUP = ssl_error_want_x509_lookup
+#SSL_ERROR_SSL = ssl_error_ssl

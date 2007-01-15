@@ -28,7 +28,7 @@ from constants import *
 
 import gobject
 import socket
-import util.OpenSSL as OpenSSL
+import OpenSSL.SSL as OpenSSL
 
 __all__ = ['AbstractClient', 'SocketClient', 'SSLSocketClient', 'TCPClient',
         'SSLTCPClient']
@@ -326,19 +326,23 @@ class SSLSocketClient(SocketClient):
         self.close()
 
     def _reset_state(self):
-        SocketClient._reset_state(self)
-        context = OpenSSL.ssl_ctx_new(OpenSSL.sslv3_method())
-        #OpenSSL.ssl_ctx_set_default_verify_paths(context)
-        #OpenSSL.ssl_ctx_load_verify_locations(context, ca_cert, ca_directory)
-        OpenSSL.ssl_ctx_set_verify(context, OpenSSL.SSL_VERIFY_NONE,
-                OpenSSL.Callback.ssl_verify_callback_allow_unknown_ca)
+        sock = socket.socket(self._domain, self._type)
+        context = OpenSSL.Context(OpenSSL.SSLv23_METHOD)
+        ssl_sock = OpenSSL.Connection(context, sock)
+        ssl_sock.set_connect_state()
+        ssl_sock.setblocking(False)
+        
+        channel = gobject.IOChannel(ssl_sock.fileno())
+        channel.set_flags(channel.get_flags() | gobject.IO_FLAG_NONBLOCK)
+        channel.set_encoding(None)
+        channel.set_buffered(False)
+        
+        self._transport = ssl_sock
+        self._channel = channel
 
-        self._ssl_context = context
-        self._ssl_socket = OpenSSL.ssl_new(self._ssl_context)
-        OpenSSL.ssl_set_connect_state(self._ssl_socket)
-        OpenSSL.ssl_set_fd(self._ssl_socket, self._transport.fileno())
-        OpenSSL.ssl_set_mode(self._ssl_socket,
-                OpenSSL.SSL_MODE_ENABLE_PARTIAL_WRITE)
+        self._source_id = None
+        self._source_condition = 0
+        self._outgoing_queue = []
 
     def close(self):
         if self._status in (IoStatus.CLOSING, IoStatus.CLOSED):
@@ -348,8 +352,6 @@ class SSLSocketClient(SocketClient):
         self._channel.close()
         try:
             self._transport.shutdown(socket.SHUT_RDWR)
-            OpenSSL.ssl_free(self._ssl_socket)
-            OpenSSL.ssl_ctx_free(self._ssl_context)
         except:
             pass
         self._reset_state()
@@ -360,12 +362,9 @@ class SSLSocketClient(SocketClient):
     def _connect_done_handler(self, chan, cond):
         # underlying socket is connected, now connect the SSL transport
         self._watch_remove()
-        opts = self._transport.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
-        if opts == 0:
+        if self._transport.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) == 0:
             self._watch_set_cond(gobject.IO_IN | gobject.IO_OUT |
                     gobject.IO_PRI | gobject.IO_ERR | gobject.IO_HUP)
-            if OpenSSL.ssl_connect(self._ssl_socket) == 1:
-                self._change_status(IoStatus.OPEN)
         else:
             self.emit("error", IoError.CONNECTION_FAILED)
             self._change_status(IoStatus.CLOSED)
@@ -373,26 +372,17 @@ class SSLSocketClient(SocketClient):
     
     def _io_channel_handler(self, chan, cond):
         if self._status == IoStatus.OPENING: # Handshaking
-            ret = OpenSSL.ssl_do_handshake(self._ssl_socket)
-            err = OpenSSL.ssl_get_error(self._ssl_socket, ret)
-            if err == OpenSSL.SSL_ERROR_NONE:
-                self._change_status(IoStatus.OPEN)
-            elif err in (OpenSSL.SSL_ERROR_WANT_READ,
-                    OpenSSL.SSL_ERROR_WANT_WRITE,
-                    OpenSSL.SSL_ERROR_WANT_X509_LOOKUP):
-                pass
-            elif err == OpenSSL.SSL_ERROR_ZERO_RETURN:
-                self.emit("error", IoError.SSL_CONNECTION_FAILED)
-                self.close()
-                return False
-            elif err == OpenSSL.SSL_ERROR_SSL:
-                self.emit("error", IoError.SSL_PROTOCOL_ERROR)
-                self.close()
-                return False
+            if self._transport.want_read() or self._transport.want_write():
+                try:
+                    self._transport.do_handshake()
+                except OpenSSL.WantX509LookupError:
+                    return True
+                except (OpenSSL.ZeroReturnError, OpenSSL.SysCallError):
+                    self.emit("error", IoError.SSL_CONNECTION_FAILED)
+                    self.close()
+                    return False
             else:
-                self.emit("error", IoError.UNKNOWN_ERROR)
-                self.close()
-                return False
+                self._change_status(IoStatus.OPEN)
         elif self._status == IoStatus.OPEN:
             if cond & (gobject.IO_ERR | gobject.IO_HUP):
                 self.close()
@@ -400,39 +390,32 @@ class SSLSocketClient(SocketClient):
 
             if cond & (gobject.IO_IN | gobject.IO_PRI):
                 try:
-                    buf = OpenSSL.ssl_read(self._ssl_socket, 1024)
-                except OpenSSL.SSLError:
-                    buf = ""
-                if buf is None: # SSL_ERROR_WANT_READ | SSL_ERROR_WANT_WRITE
-                    return
-                elif buf == "":
+                    buf = self._transport.recv(2048)
+                except (OpenSSL.WantX509LookupError,
+                        OpenSSL.WantReadError, OpenSSL.WantWriteError):
+                    return True
+                except (OpenSSL.ZeroReturnError, OpenSSL.SysCallError):
                     self.close()
                     return False
-                else:
-                    self.emit("received", buf, len(buf))
+                self.emit("received", buf, len(buf))
             elif cond & gobject.IO_OUT:
-                if len(self._outgoing_queue) > 0: 
+                if len(self._outgoing_queue) > 0:
                     item = self._outgoing_queue[0]
                     try:
-                        ret = OpenSSL.ssl_write(self._ssl_socket, item[0][item[1]:])
-                    except OpenSSL.SSLError:
+                        ret = self._transport.send(item[0][item[1]:])
+                    except (OpenSSL.WantX509LookupError,
+                            OpenSSL.WantReadError, OpenSSL.WantWriteError):
+                        return True
+                    except (OpenSSL.ZeroReturnError, OpenSSL.SysCallError):
                         self.close()
                         return False
-                    if ret >= 0:
-                        item[1] += ret
-                        if item[1] == len(item[0]):
-                            self.emit("sent", item[0], len(item[0]))
-                            del self._outgoing_queue[0]
-                            if item[2]: # callback
-                                item[2](*item[3])
-                    else:
-                        err = OpenSSL.ssl_get_error(self._ssl_socket, ret)
-                        if err == OpenSSL.SSL_ERROR_SSL:
-                            self.emit("error", IoError.SSL_PROTOCOL_ERROR)
-                        else:
-                            self.emit("error", IoError.UNKNOWN_ERROR)
-                        self.close()
-                        return False
+                    assert(ret >= 0)
+                    self._outgoing_queue[0][1] += ret
+                    if self._outgoing_queue[0][1] == len(item[0]):
+                        self.emit("sent", item[0], len(item[0]))
+                        del self._outgoing_queue[0]
+                        if item[2]: # callback
+                            item[2](*item[3])
         return True
 gobject.type_register(SSLSocketClient)
 
