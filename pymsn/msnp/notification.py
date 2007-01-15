@@ -23,6 +23,7 @@
 Implements the protocol used to communicate with the Notification Server."""
 
 from msnp.base import BaseProtocol
+import service.SingleSignOn as SSO
 
 import logging
 import gobject
@@ -132,25 +133,14 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
         # we need to authenticate with a passport server
         elif command.arguments[1].upper() == "S":
-            passport = self._client.profile.account
+            account = self._client.profile.account
             password = self._client.profile.password
             
             if command.arguments[0] == "SSO":
-                raise NotImplementedError, "Missing Implementation, please fix"
-                nonce = command.arguments[3]
-                
-                if not command.arguments[2].startswith("MBI"): # MBI/MBI_SSL/MBI_KEY_OLD
-                    raise ProtocolError("only the MBI* policies are supported for SSO")
-                
-                self._passport.request_tokens((consts.SECURITY_TOKEN_MESSENGER_CLEAR,),
-                                              self.__got_auth_tokens, command.arguments[3])
+                sso = SSO.SingleSignOn(account, password)
+                sso.RequestMultipleSecurityTokens(SSO.LiveService.TB, SSO.LiveService.MESSENGER_CLEAR)
             elif command.arguments[0] == "TWN":
                 raise NotImplementedError, "Missing Implementation, please fix"
-                challenge = command.arguments[2]
-                auth = LegacyPassportAuth(passport, password, challenge, self._proxies)
-                auth.connect("auth-success", self.__legacy_auth_success_cb)
-                auth.connect("auth-failure", self.__auth_failure_cb)
-                auth.start()    
 
     def _handle_SBS(self, command): # unknown command
         pass

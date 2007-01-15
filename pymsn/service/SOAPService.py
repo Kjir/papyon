@@ -29,6 +29,7 @@ class BaseSOAPService(object):
         self.http_headers = {}
         self.request = None
         self.transport = gnet.protocol.ProtocolFactory(protocol, host, proxy=proxy)
+        print self.transport
         self.transport.connect("response-received", self._response_handler)
         self.transport.connect("request-sent", self._request_handler)
         self.transport.connect("error", self._error_handler)
@@ -93,7 +94,6 @@ class SOAPService(BaseSOAPService):
         """Methods that are auto handled"""
         self._method(method_name, {}, *params)
         self._send_request()
-    
 
     def _soap_action(self, method):
         """return the SOAPAction header value to be used

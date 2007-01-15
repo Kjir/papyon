@@ -223,7 +223,7 @@ class SocketClient(AbstractClient):
     
     def send(self, buffer, callback=None, *args):
         assert(self._status == IoStatus.OPEN)
-        self._outgoing_queue.append([buffer, False, callback, args])
+        self._outgoing_queue.append([buffer, 0, callback, args])
         self._watch_add_cond(gobject.IO_OUT)
     send.__doc__ = AbstractClient.send.__doc__
 
@@ -283,15 +283,14 @@ class SocketClient(AbstractClient):
         # Outgoing
         if cond & gobject.IO_OUT:            
             item = self._outgoing_queue[0]
-            if item[1]: # sent item
+            if item[1] == len(item[0]): # sent item
                 self.emit("sent", item[0], len(item[0]))
                 del self._outgoing_queue[0]
                 if item[2]: # callback
                     item[2](*item[3])
             if len(self._outgoing_queue) > 0: # send next item
                 item = self._outgoing_queue[0]
-                self._channel.write(item[0])
-                item[1] = True
+                item[1] += self._channel.write(item[0][item[1]:])
             else:
                 self._watch_remove_cond(gobject.IO_OUT)
         return True
@@ -323,6 +322,9 @@ class SSLSocketClient(SocketClient):
             @see socket module"""
         SocketClient.__init__(self, host, port, domain, type)
 
+    def __del__(self):
+        self.close()
+
     def _reset_state(self):
         SocketClient._reset_state(self)
         context = OpenSSL.ssl_ctx_new(OpenSSL.sslv3_method())
@@ -333,10 +335,10 @@ class SSLSocketClient(SocketClient):
 
         self._ssl_context = context
         self._ssl_socket = OpenSSL.ssl_new(self._ssl_context)
+        OpenSSL.ssl_set_connect_state(self._ssl_socket)
         OpenSSL.ssl_set_fd(self._ssl_socket, self._transport.fileno())
-        OpenSSL.ssl_set_mode (self._ssl_socket,
-                OpenSSL.SSL_MODE_ENABLE_PARTIAL_WRITE |
-                OpenSSL.SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER)
+        OpenSSL.ssl_set_mode(self._ssl_socket,
+                OpenSSL.SSL_MODE_ENABLE_PARTIAL_WRITE)
 
     def close(self):
         if self._status in (IoStatus.CLOSING, IoStatus.CLOSED):
@@ -412,26 +414,25 @@ class SSLSocketClient(SocketClient):
                 if len(self._outgoing_queue) > 0: 
                     item = self._outgoing_queue[0]
                     try:
-                        ret = OpenSSL.ssl_write(self._ssl_socket, item[0])
+                        ret = OpenSSL.ssl_write(self._ssl_socket, item[0][item[1]:])
                     except OpenSSL.SSLError:
                         self.close()
                         return False
                     if ret >= 0:
-                        item[1] = True
-                        self.emit("sent", item[0], len(item[0])) #FIXME: the sent signal is not 100% correct here
-                        del self._outgoing_queue[0]
-                        if item[2]: # callback
-                            item[2](*item[3])
+                        item[1] += ret
+                        if item[1] == len(item[0]):
+                            self.emit("sent", item[0], len(item[0]))
+                            del self._outgoing_queue[0]
+                            if item[2]: # callback
+                                item[2](*item[3])
                     else:
                         err = OpenSSL.ssl_get_error(self._ssl_socket, ret)
                         if err == OpenSSL.SSL_ERROR_SSL:
                             self.emit("error", IoError.SSL_PROTOCOL_ERROR)
-                            self.close()
-                            return False
                         else:
                             self.emit("error", IoError.UNKNOWN_ERROR)
-                            self.close()
-                            return False
+                        self.close()
+                        return False
         return True
 gobject.type_register(SSLSocketClient)
 
