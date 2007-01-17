@@ -76,7 +76,7 @@ class SingleSignOn(SOAPService):
 
     def _soap_headers(self, method):
         """Add the needed headers for the current method"""
-        assert(method == "RequestMultipleSecurityTokens")
+        #assert(method == "RequestMultipleSecurityTokens")
         # http://www.microsoft.com/globaldev/reference/lcid-all.mspx
         request_params = self.__serialize_request_params({"lc":"1033"})
         AuthInfo = self.request.add_header("AuthInfo", NS_PASSPORT, Id="PPAuthInfo")

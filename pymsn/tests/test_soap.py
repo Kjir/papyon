@@ -9,6 +9,9 @@ import gnet.message.SOAP as SOAP
 import service.SOAPService as SOAPService
 import service.SingleSignOn as SSO
 import gobject
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 NS_TEMP = "urn:xmethods-Temperature"
 class TemperatureService(SOAPService.SOAPService):

@@ -20,6 +20,8 @@
 import gnet.protocol
 import gnet.message.SOAP as SOAP
 
+import logging
+logger = logging.getLogger('Service')
 
 class BaseSOAPService(object):
     DEFAULT_PROTOCOL = "http"
@@ -28,8 +30,8 @@ class BaseSOAPService(object):
         protocol, host, self.resource = self._url_split(url)
         self.http_headers = {}
         self.request = None
+        self.request_queue = []
         self.transport = gnet.protocol.ProtocolFactory(protocol, host, proxy=proxy)
-        print self.transport
         self.transport.connect("response-received", self._response_handler)
         self.transport.connect("request-sent", self._request_handler)
         self.transport.connect("error", self._error_handler)
@@ -44,13 +46,13 @@ class BaseSOAPService(object):
         return protocol, host, resource
 
     def _response_handler(self, transport, response):
-        print response
+        logger.debug("<<< " + str(response))
 
     def _request_handler(self, transport, request):
-        print request
+        logger.debug(">>> " + str(request))
     
     def _error_handler(self, transport, error):
-        print "Error", error
+        logger.warning("Transport Error :" + str(error))
 
     def _send_request(self):
         """This method sends the SOAP request over the wire"""
@@ -72,6 +74,7 @@ class SOAPService(BaseSOAPService):
     def __getattr__(self, name):
         def method(*params):
             self._simple_method(name, *params)
+        method.__name__ = name
         return method
     
     def _method(self, method_name, attributes, *params):
@@ -89,11 +92,21 @@ class SOAPService(BaseSOAPService):
         self.request = request
         self._soap_headers(method_name)
         self._http_headers(method_name)
+        self.request_queue.append(method_name)
 
     def _simple_method(self, method_name, *params):
         """Methods that are auto handled"""
         self._method(method_name, {}, *params)
         self._send_request()
+
+    def _response_handler(self, transport, response):
+        BaseSOAPService._response_handler(self, transport, response)
+        soap_response = SOAP.SOAPResponse(response.body)
+        method = self.request_queue.pop(0)
+        self._extract_response(method, soap_response)
+    
+    def _extract_response(self, method, soap_response):
+        pass
 
     def _soap_action(self, method):
         """return the SOAPAction header value to be used
