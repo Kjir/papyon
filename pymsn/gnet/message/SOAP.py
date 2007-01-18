@@ -127,6 +127,9 @@ class SOAPResponse(object):
         self.header = self.tree.find(_SOAPSection.HEADER)
         self.body = self.tree.find(_SOAPSection.BODY)
 
+    def find(self, path):
+        return self.tree.find(path)
+
     def _parse(self, data):
         events = ("start", "end", "start-ns", "end-ns")
         ns = []

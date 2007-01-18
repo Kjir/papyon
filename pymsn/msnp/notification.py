@@ -148,6 +148,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _handle_OUT(self, command):
         raise NotImplementedError, "Missing Implementation, please fix"
     # callbacks --------------------------------------------------------------
+    def _sso_cb(self, soap_response, *tokens):
+        for token in tokens:
+            print token
+
     def _connect_cb(self, transport):
         self._transport.send_command_ex('VER', ProtocolConstant.VER)
 

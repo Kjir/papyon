@@ -70,17 +70,34 @@ class SOAPService(BaseSOAPService):
     
     def __init__(self, url, proxy=None):
         BaseSOAPService.__init__(self, url, proxy)
+        self._response_extractor = {}
 
     def __getattr__(self, name):
-        def method(*params):
-            self._simple_method(name, *params)
+        def method(callback, *params):
+            self._simple_method(name, callback, *params)
         method.__name__ = name
         return method
     
-    def _method(self, method_name, attributes, *params):
+    def _method(self, method_name, callback, attributes, *params):
         """Used for method construction, the SOAP tree is built
         but not sent, so that the ComplexMethods can use it and add
-        various things to the SOAP tree before sending it"""
+        various things to the SOAP tree before sending it.
+            
+            @param method_name: the SOAP method name
+            @type method_name: string
+            
+            @param callback: the callback to use when the response is received
+            @type callback: callable(response)
+            
+            @param attributes: the attributes to be attached to the method call
+            @type attributes: dict
+            
+            @param params: tuples containing the attribute name and the
+                attribute value
+            @type params: tuple(name, value) or tuple(type, name, value)
+            
+            @note: this method does not actually send the request and
+            L{_send_request} must be called"""
         ns = self._method_namespace(method_name)
         request = SOAP.SOAPRequest(method_name, ns, **attributes)
         for param in params:
@@ -92,21 +109,39 @@ class SOAPService(BaseSOAPService):
         self.request = request
         self._soap_headers(method_name)
         self._http_headers(method_name)
-        self.request_queue.append(method_name)
+        self.request_queue.append((method_name, callback))
 
-    def _simple_method(self, method_name, *params):
-        """Methods that are auto handled"""
-        self._method(method_name, {}, *params)
+    def _simple_method(self, method_name, callback, *params):
+        """Methods that are auto handled.
+                    
+            @param method_name: the SOAP method name
+            @type method_name: string
+            
+            @param callback: the callback to use when the response is received
+            @type callback: callable(response)
+            
+            @param params: tuples containing the attribute name and the
+                attribute value
+            @type params: tuple(name, value) or tuple(type, name, value)"""
+        self._method(method_name, callback, {}, *params)
         self._send_request()
 
     def _response_handler(self, transport, response):
         BaseSOAPService._response_handler(self, transport, response)
         soap_response = SOAP.SOAPResponse(response.body)
-        method = self.request_queue.pop(0)
-        self._extract_response(method, soap_response)
+        method, callback = self.request_queue.pop(0)
+        if callback is not None:
+            result = self._extract_response(method, soap_response)
+            callback(*result)
     
     def _extract_response(self, method, soap_response):
-        pass
+        if method in self._response_extractor:
+            result = [soap_response]
+            values = self._response_extractor[method]
+            for value in values:
+                result.append(soap_response.find(value))
+            return tuple(result)
+        return (soap_response,)
 
     def _soap_action(self, method):
         """return the SOAPAction header value to be used
