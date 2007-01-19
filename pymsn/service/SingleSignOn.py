@@ -30,6 +30,9 @@ from service.SOAPService import SOAPService
 
 import base64
 import struct
+import Crypto.Util.randpool as randpool
+from Crypto.Hash import HMAC, SHA
+from Crypto.Cipher import DES3
 from xml.utils import iso8601
 
 __all__ = ['SingleSignOn', 'LiveService']
@@ -45,7 +48,7 @@ NS_WS_POLICY = "http://schemas.xmlsoap.org/ws/2002/12/policy"
 NS_WS_ISSUE = "http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue"
 NS_WS_UTILITY = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
 
-MSN_USER_AGENT = "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 2.0.50727; IDCRL 4.100.313.1; IDCRL-cfg 4.0.5633.0; App MsnMsgr.Exe, 8.1.168.0, {7108E71A-9926-4FCB-BCC9-9A9D3F32E423})" 
+#MSN_USER_AGENT = "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 2.0.50727; IDCRL 4.100.313.1; IDCRL-cfg 4.0.5633.0; App MsnMsgr.Exe, 8.1.168.0, {7108E71A-9926-4FCB-BCC9-9A9D3F32E423})" 
 
 class LiveService(object):
     CONTACTS = ("contacts.msn.com", "?fs=1&id=24000&kv=7&rn=93S9SWWw&tw=0&ver=2.1.6000.1")
@@ -56,6 +59,10 @@ class LiveService(object):
     TB = ("http://Passport.NET/tb", None)
     VOICE = ("voice.messenger.msn.com", "?id=69264")
 
+class WinCrypt(object):
+    CRYPT_MODE_CBC = 1
+    CALC_3DES      = 0x6603
+    CALC_SHA1      = 0x8004
 
 class SecurityToken(object):
     def __init__(self):
@@ -64,6 +71,41 @@ class SecurityToken(object):
         self.lifetime = [0, 0]
         self.security_token = ""
         self.proof_token = ""
+
+    def mbi_crypt(self, nonce):
+        # Read key and generate two derived keys
+        key1 = base64.b64decode(self.proof_token)
+        key2 = self._derive_key(key1, "WS-SecureConversationSESSION KEY HASH")
+        key3 = self._derive_key(key1, "WS-SecureConversationSESSION KEY ENCRYPTION")
+
+        # Create a HMAC-SHA-1 hash of nonce using key2
+        hash = HMAC.new(key2, nonce, SHA).digest()
+       
+        #
+        # Encrypt nonce with DES3 using key3
+        #
+
+        # IV (Initialization Vector): 8 bytes of random data
+        iv = randpool.RandomPool().get_bytes(8)
+        obj = DES3.new(key3, DES3.MODE_CBC, iv)
+        
+        # XXX: win32's Crypt API seems to pad the input with 0x08 bytes
+        # to align on 72/36/18/9 boundary
+        ciph = obj.encrypt(nonce + "\x08\x08\x08\x08\x08\x08\x08\x08")
+    
+        blob = struct.pack("<LLLLLLL", 28, WinCrypt.CRYPT_MODE_CBC,
+                WinCrypt.CALC_3DES, WinCrypt.CALC_SHA1, len(iv), len(hash),
+                len(ciph))
+        blob += iv + hash + ciph
+        return base64.b64encode(blob)
+        
+    def _derive_key(key, magic):
+        hash1 = HMAC.new(key, magic, SHA).digest()
+        hash2 = HMAC.new(key, hash1 + magic, SHA).digest()
+
+        hash3 = HMAC.new(key, hash1, SHA).digest()            
+        hash4 = HMAC.new(key, hash3 + magic, SHA).digest()
+        return hash2 + hash4[0:4]
 
     def __str__(self):
         return "<SecurityToken type=\"%s\" address=\"%s\" lifetime=\"%s\">" % \
@@ -146,7 +188,7 @@ class SingleSignOn(SOAPService):
     
     def _http_headers(self, method):
         SOAPService._http_headers(self, method)
-        self.http_headers['User-Agent'] = MSN_USER_AGENT
+        #self.http_headers['User-Agent'] = MSN_USER_AGENT
         self.http_headers['Accept'] = "text/*"
 
     def __serialize_request_params(self, params):

@@ -25,6 +25,7 @@ from gnet.parser import HTTPParser
 
 import gobject
 import base64
+import platform
 
 __all__ = ['HTTP']
 
@@ -115,7 +116,8 @@ class HTTP(gobject.GObject):
         headers['Host'] = self._host + ':' + str(self._port)
         headers['Content-Length'] = str(len(data))
         if 'User-Agent' not in headers:
-            headers['User-Agent'] = GNet.NAME + '/' + GNet.VERSION
+            user_agent = GNet.NAME, GNet.VERSION, platform.system(), platform.machine()
+            headers['User-Agent'] = "%s/%s (%s %s)" % user_agent
 
         if self.__proxy is not None:
             url = 'http://%s:%d%s' % (self._host, self._port, resource)
