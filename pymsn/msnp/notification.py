@@ -132,13 +132,14 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             raise NotImplementedError, "Missing Implementation, please fix"
 
         # we need to authenticate with a passport server
-        elif command.arguments[1].upper() == "S":
+        elif command.arguments[1] == "S":
             account = self._client.profile.account
             password = self._client.profile.password
             
             if command.arguments[0] == "SSO":
                 sso = SSO.SingleSignOn(account, password)
-                sso.RequestMultipleSecurityTokens(self._sso_cb, SSO.LiveService.TB, SSO.LiveService.MESSENGER_CLEAR)
+                sso.RequestMultipleSecurityTokens(self._sso_cb, (command.arguments[3],),
+                        SSO.LiveService.TB, SSO.LiveService.MESSENGER_CLEAR)
             elif command.arguments[0] == "TWN":
                 raise NotImplementedError, "Missing Implementation, please fix"
 
@@ -148,9 +149,14 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _handle_OUT(self, command):
         raise NotImplementedError, "Missing Implementation, please fix"
     # callbacks --------------------------------------------------------------
-    def _sso_cb(self, soap_response, *tokens):
+    def _sso_cb(self, nonce, soap_response, *tokens):
+        blob = None
         for token in tokens:
-            print token
+            if token.service_address == SSO.LiveService.MESSENGER_CLEAR[0]:
+                blob = token.mbi_crypt(nonce)
+                break
+        assert(blob is not None)
+        self._transport.send_command_ex("USR", ("SSO", "S", token.security_token, blob))
 
     def _connect_cb(self, transport):
         self._transport.send_command_ex('VER', ProtocolConstant.VER)

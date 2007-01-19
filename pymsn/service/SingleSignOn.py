@@ -99,7 +99,7 @@ class SecurityToken(object):
         blob += iv + hash + ciph
         return base64.b64encode(blob)
         
-    def _derive_key(key, magic):
+    def _derive_key(self, key, magic):
         hash1 = HMAC.new(key, magic, SHA).digest()
         hash2 = HMAC.new(key, hash1 + magic, SHA).digest()
 
@@ -121,9 +121,9 @@ class SingleSignOn(SOAPService):
         self.__credentials = (username, password)
         SOAPService.__init__(self, SERVICE_URL)
     
-    def RequestMultipleSecurityTokens(self, callback, *services):
+    def RequestMultipleSecurityTokens(self, callback, callback_args, *services):
         assert(len(services) > 0), "RequestMultipleSecurityTokens requires at least 1 service"
-        self._method("RequestMultipleSecurityTokens", callback, {"Id": "RSTS"})
+        self._method("RequestMultipleSecurityTokens", callback, callback_args, {"Id": "RSTS"})
         i = 0
         for service in services:
             self.__request_security_token(i, service)

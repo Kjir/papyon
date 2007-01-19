@@ -78,7 +78,7 @@ class SOAPService(BaseSOAPService):
         method.__name__ = name
         return method
     
-    def _method(self, method_name, callback, attributes, *params):
+    def _method(self, method_name, callback, callback_args, attributes, *params):
         """Used for method construction, the SOAP tree is built
         but not sent, so that the ComplexMethods can use it and add
         various things to the SOAP tree before sending it.
@@ -87,7 +87,10 @@ class SOAPService(BaseSOAPService):
             @type method_name: string
             
             @param callback: the callback to use when the response is received
-            @type callback: callable(response)
+            @type callback: callable(callback_args, response)
+
+            @param callback_args: additional arguments to be passed to the callback
+            @type callback_args: tuple(callback)
             
             @param attributes: the attributes to be attached to the method call
             @type attributes: dict
@@ -109,9 +112,9 @@ class SOAPService(BaseSOAPService):
         self.request = request
         self._soap_headers(method_name)
         self._http_headers(method_name)
-        self.request_queue.append((method_name, callback))
+        self.request_queue.append((method_name, callback, callback_args))
 
-    def _simple_method(self, method_name, callback, *params):
+    def _simple_method(self, method_name, callback, callback_args, *params):
         """Methods that are auto handled.
                     
             @param method_name: the SOAP method name
@@ -120,19 +123,23 @@ class SOAPService(BaseSOAPService):
             @param callback: the callback to use when the response is received
             @type callback: callable(response)
             
+            @param callback_args: additional arguments to be passed to the callback
+            @type callback_args: tuple(callback)
+
             @param params: tuples containing the attribute name and the
                 attribute value
             @type params: tuple(name, value) or tuple(type, name, value)"""
-        self._method(method_name, callback, {}, *params)
+        self._method(method_name, callback, callback_args, {}, *params)
         self._send_request()
 
     def _response_handler(self, transport, response):
         BaseSOAPService._response_handler(self, transport, response)
         soap_response = SOAP.SOAPResponse(response.body)
-        method, callback = self.request_queue.pop(0)
+        method, callback, callback_args = self.request_queue.pop(0)
         if callback is not None:
             result = self._extract_response(method, soap_response)
-            callback(*result)
+            arguments = tuple(callback_args) + tuple(result)
+            callback(*arguments)
     
     def _extract_response(self, method, soap_response):
         if method in self._response_extractor:
