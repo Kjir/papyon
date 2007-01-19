@@ -138,7 +138,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             
             if command.arguments[0] == "SSO":
                 sso = SSO.SingleSignOn(account, password)
-                sso.RequestMultipleSecurityTokens(SSO.LiveService.TB, SSO.LiveService.MESSENGER_CLEAR)
+                sso.RequestMultipleSecurityTokens(self._sso_cb, SSO.LiveService.TB, SSO.LiveService.MESSENGER_CLEAR)
             elif command.arguments[0] == "TWN":
                 raise NotImplementedError, "Missing Implementation, please fix"
 
