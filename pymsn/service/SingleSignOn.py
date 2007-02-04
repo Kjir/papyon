@@ -124,6 +124,9 @@ class SingleSignOn(SOAPService):
     def RequestMultipleSecurityTokens(self, callback, callback_args, *services):
         assert(len(services) > 0), "RequestMultipleSecurityTokens requires at least 1 service"
         self._method("RequestMultipleSecurityTokens", callback, callback_args, {"Id": "RSTS"})
+        if LiveService.TB not in services:
+            services = list(services)
+            services.insert(0, LiveService.TB)
         i = 0
         for service in services:
             self.__request_security_token(i, service)

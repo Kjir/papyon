@@ -35,8 +35,8 @@ SERVICE_URL = "http://contacts.msn.com/abservice/SharingService.asmx"
 NS_ADDRESSBOOK = "http://www.msn.com/webservices/AddressBook"
 
 class AddressBook(SOAPService):
-    def __init__(self, username, password):
-        self.__credentials = (username, password)
+    def __init__(self, sso_client):
+        self.__sso_client = sso_client
         SOAPService.__init__(self, SERVICE_URL)
     
     def FindMembership(self, callback, callback_args):
