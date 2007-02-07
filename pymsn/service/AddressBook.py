@@ -19,7 +19,7 @@
 
 from SOAPService import SOAPService
 
-__all__ = ['AddressBook']
+__all__ = ['AddressBook', 'Sharing']
 
 AB_SERVICE_URL = "http://contacts.msn.com/abservice/abservice.asmx"
 SHARING_SERVICE_URL = "http://contacts.msn.com/abservice/SharingService.asmx"

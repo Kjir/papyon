@@ -148,7 +148,7 @@ class HTTPParser(AbstractParser):
         status = transport.get_property("status")
         if status == IoStatus.OPEN:
             self._reset_state()
-        elif status == IoStatus.CLOSING and self._content_length is None:
+        elif status == IoStatus.CLOSING:
             self.__emit_result()
 
     def _on_chunk_received(self, parser, chunk):
@@ -171,8 +171,7 @@ class HTTPParser(AbstractParser):
                     self._content_length = int(value)
         elif self._next_chunk == self.CHUNK_BODY:
             self._receive_buffer += chunk
-            if self._content_length is not None:
-                complete = True
+            complete = True
 
         if complete:
             self.__emit_result()
