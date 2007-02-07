@@ -18,7 +18,6 @@
 #
 
 from SOAPService import SOAPService
-import pymsn.storage
 
 import base64
 import struct
