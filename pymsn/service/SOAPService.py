@@ -17,8 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-import gnet.protocol
-import gnet.message.SOAP as SOAP
+import pymsn.gnet.protocol
+import pymsn.gnet.message.SOAP as SOAP
 
 import logging
 logger = logging.getLogger('Service')
@@ -31,7 +31,7 @@ class BaseSOAPService(object):
         self.http_headers = {}
         self.request = None
         self.request_queue = []
-        self.transport = gnet.protocol.ProtocolFactory(protocol, host, proxy=proxy)
+        self.transport = pymsn.gnet.protocol.ProtocolFactory(protocol, host, proxy=proxy)
         self.transport.connect("response-received", self._response_handler)
         self.transport.connect("request-sent", self._request_handler)
         self.transport.connect("error", self._error_handler)
@@ -156,14 +156,14 @@ class SOAPService(BaseSOAPService):
             
             @param method: the method name
             @type method: string"""
-        raise NotImplementedException
+        raise NotImplementedError
 
     def _method_namespace(self, method):
         """return the namespace of the given method.
             
             @param method: the method name
             @type method: string"""
-        raise NotImplementedException
+        raise NotImplementedError
 
     def _soap_headers(self, method):
         """Add the needed headers for the current method"""
@@ -174,5 +174,7 @@ class SOAPService(BaseSOAPService):
         if self._soap_action(method):
             self.http_headers['SOAPAction'] = self._soap_action(method)
         self.http_headers['Content-Type'] = "text/xml; charset=utf-8"
+        self.http_headers['Cache-Control'] ="no-cache"
+        self.http_headers['Accept'] = "text/*"
 
 

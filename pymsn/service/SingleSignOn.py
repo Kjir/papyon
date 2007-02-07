@@ -17,16 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-#FIXME: not quite sure about this :/
-#FIXME: really ugly, I hate this
-import sys, os
-parent_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-sys.path.insert(0, parent_dir) 
-del parent_dir
-del sys
-del os
-
-from service.SOAPService import SOAPService
+from SOAPService import SOAPService
+import pymsn.storage
 
 import base64
 import struct
@@ -34,6 +26,7 @@ import Crypto.Util.randpool as randpool
 from Crypto.Hash import HMAC, SHA
 from Crypto.Cipher import DES3
 from xml.utils import iso8601
+import time
 
 __all__ = ['SingleSignOn', 'LiveService']
 
@@ -47,8 +40,6 @@ NS_WS_ADDRESSING = "http://schemas.xmlsoap.org/ws/2004/03/addressing"
 NS_WS_POLICY = "http://schemas.xmlsoap.org/ws/2002/12/policy"
 NS_WS_ISSUE = "http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue"
 NS_WS_UTILITY = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
-
-#MSN_USER_AGENT = "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 2.0.50727; IDCRL 4.100.313.1; IDCRL-cfg 4.0.5633.0; App MsnMsgr.Exe, 8.1.168.0, {7108E71A-9926-4FCB-BCC9-9A9D3F32E423})" 
 
 class LiveService(object):
     CONTACTS = ("contacts.msn.com", "?fs=1&id=24000&kv=7&rn=93S9SWWw&tw=0&ver=2.1.6000.1")
@@ -71,6 +62,9 @@ class SecurityToken(object):
         self.lifetime = [0, 0]
         self.security_token = ""
         self.proof_token = ""
+
+    def is_expired(self):
+        return time.time() >= self.lifetime[0]
 
     def mbi_crypt(self, nonce):
         # Read key and generate two derived keys
@@ -160,7 +154,9 @@ class SingleSignOn(SOAPService):
                     token.security_token = t.text
                 else:
                     token.security_token = response.find(paths[6]).text
-                token.proof_token = response.find(paths[7]).text
+                proof_token = response.find(paths[7])
+                if proof_token is not None:
+                    token.proof_token = proof_token.text
                 result.append(token)
             return result
         else:
@@ -188,11 +184,6 @@ class SingleSignOn(SOAPService):
         UsernameToken = SecurityHeader.append("UsernameToken", NS_WS_SECEXT, Id="user")
         UsernameToken.append("Username", NS_WS_SECEXT, value=self.__credentials[0])
         UsernameToken.append("Password", NS_WS_SECEXT, value=self.__credentials[1])
-    
-    def _http_headers(self, method):
-        SOAPService._http_headers(self, method)
-        #self.http_headers['User-Agent'] = MSN_USER_AGENT
-        self.http_headers['Accept'] = "text/*"
 
     def __serialize_request_params(self, params):
         s = struct.pack("<L", len(params))

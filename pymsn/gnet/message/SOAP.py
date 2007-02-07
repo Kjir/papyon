@@ -19,8 +19,8 @@
 
 """SOAP Messages structures."""
 
-import gnet.util.ElementTree as ElementTree
-import gnet.util.StringIO as StringIO
+import pymsn.gnet.util.ElementTree as ElementTree
+import pymsn.gnet.util.StringIO as StringIO
 
 __all__=['SOAPRequest', 'SOAPResponse']
 

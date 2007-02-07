@@ -17,10 +17,10 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-from gnet.constants import *
-from gnet.io import SSLTCPClient
-from gnet.parser import HTTPParser
-from gnet.protocol.HTTP import HTTP
+from pymsn.gnet.constants import *
+from pymsn.gnet.io import SSLTCPClient
+from pymsn.gnet.parser import HTTPParser
+from HTTP import HTTP
 
 __all__ = ['HTTPS']
 

@@ -19,12 +19,3 @@
 
 """Windows Live Services clients.
 Contains a set of clients to connect and interact with Windows Live services."""
-
-#FIXME: not quite sure about this :/
-#FIXME: really ugly, I hate this
-import sys, os
-parent_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-sys.path.insert(0, parent_dir) 
-del parent_dir
-del sys
-del os

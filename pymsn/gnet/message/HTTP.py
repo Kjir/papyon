@@ -20,7 +20,7 @@
 
 """HTTP Messages structures."""
 
-from gnet.constants import *
+from pymsn.gnet.constants import *
 
 class HTTPMessage(object):
     """HTTP style message abstraction

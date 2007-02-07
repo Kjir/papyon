@@ -21,15 +21,6 @@
 Contains a set of class abstracting the MSNP protocol used to communicate
 with the Notification Server as well as the Switchboard Server"""
 
-#FIXME: not quite sure about this :/
-#FIXME: really ugly, I hate this
-import sys, os
-parent_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-sys.path.insert(0, parent_dir) 
-del parent_dir
-del sys
-del os
-
-from msnp.command import *
-from msnp.message import *
+from command import *
+from message import *
 from notification import *

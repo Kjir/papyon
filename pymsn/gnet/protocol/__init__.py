@@ -19,8 +19,8 @@
 
 """GNect protocol support"""
 
-from gnet.protocol.HTTP import *
-from gnet.protocol.HTTPS import *
+from HTTP import *
+from HTTPS import *
 
 def ProtocolFactory(protocol, host, port=None, proxy=None):
     if protocol == "http":

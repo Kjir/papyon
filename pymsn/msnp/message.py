@@ -22,7 +22,7 @@
 
 G{classtree Message, IncomingMessage, OutgoingMessage}"""
 
-from gnet.message.HTTP import HTTPMessage
+from pymsn.gnet.message.HTTP import HTTPMessage
 
 from urllib import quote, unquote
 

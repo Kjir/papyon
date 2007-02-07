@@ -21,12 +21,3 @@
 Contains a set of class enabling the communication using the MSNP2P
 protocol used to transfer data between peers, such as transfer of files
 and display pictures."""
-
-#FIXME: not quite sure about this :/
-#FIXME: really ugly, I hate this
-import sys, os
-parent_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-sys.path.insert(0, parent_dir) 
-del parent_dir
-del sys
-del os

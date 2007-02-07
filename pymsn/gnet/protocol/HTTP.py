@@ -17,11 +17,11 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-from gnet.constants import *
-from gnet.proxy import ProxyInfos
-from gnet.message.HTTP import HTTPRequest
-from gnet.io import TCPClient
-from gnet.parser import HTTPParser
+from pymsn.gnet.constants import *
+from pymsn.gnet.proxy import ProxyInfos
+from pymsn.gnet.message.HTTP import HTTPRequest
+from pymsn.gnet.io import TCPClient
+from pymsn.gnet.parser import HTTPParser
 
 import gobject
 import base64

@@ -1,13 +1,6 @@
-import sys, os
-parent_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-sys.path.insert(0, parent_dir) 
-del parent_dir
-del sys
-del os
-
-import gnet.message.SOAP as SOAP
-import service.SOAPService as SOAPService
-import service.SingleSignOn as SSO
+import pymsn.service.SOAPService as SOAPService
+import pymsn.service.SingleSignOn as SSO
+import pymsn.service.AddressBook as AddressBook
 import gobject
 import logging
 
@@ -28,7 +21,22 @@ class TemperatureService(SOAPService.SOAPService):
 #test.getTemp(("string", "zipcode", "10000"))
 
 #print '------------------------------------------------'
+def membership_cb(*args):
+    pass
+
+def sso_cb(soap_response, *tokens):
+    abook = None
+    for token in tokens:
+        if token.service_address == SSO.LiveService.CONTACTS[0]:
+            abook = AddressBook.AddressBook(token)
+            sharing = AddressBook.Sharing(token)
+            break
+    abook.ABFindAll(membership_cb)
+    sharing.FindMembership(membership_cb)
+
+
 sso = SSO.SingleSignOn("kimbix@hotmail.com", "linox45")
-sso.RequestMultipleSecurityTokens(SSO.LiveService.TB, SSO.LiveService.CONTACTS)
+sso.RequestMultipleSecurityTokens(sso_cb, (), SSO.LiveService.CONTACTS)
+
 
 gobject.MainLoop().run()

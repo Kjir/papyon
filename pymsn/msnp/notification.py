@@ -22,8 +22,8 @@
 """Notification protocol Implementation
 Implements the protocol used to communicate with the Notification Server."""
 
-from msnp.base import BaseProtocol
-import service.SingleSignOn as SSO
+from base import BaseProtocol
+import pymsn.service.SingleSignOn as SSO
 
 import logging
 import gobject
@@ -139,7 +139,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             if command.arguments[0] == "SSO":
                 sso = SSO.SingleSignOn(account, password)
                 sso.RequestMultipleSecurityTokens(self._sso_cb, (command.arguments[3],),
-                        SSO.LiveService.TB, SSO.LiveService.MESSENGER_CLEAR)
+                        SSO.LiveService.MESSENGER_CLEAR)
             elif command.arguments[0] == "TWN":
                 raise NotImplementedError, "Missing Implementation, please fix"
 
