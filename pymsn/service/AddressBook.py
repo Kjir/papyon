@@ -45,7 +45,7 @@ class PassportMember(Member):
     def __init__(self, xml_node):
         Member.__init__(self, xml_node)
         self.passport_name = xml_node.find("./{%s}PassportName" % NS_ADDRESSBOOK).text
-        self.passport_hidden = self._bool(xml_node.find("./{%s}PassportName" % NS_ADDRESSBOOK).text)
+        self.passport_hidden = self._bool(xml_node.find("./{%s}IsPassportNameHidden" % NS_ADDRESSBOOK).text)
         self.passport_id = xml_node.find("./{%s}PassportId" % NS_ADDRESSBOOK).text
         self.CID = xml_node.find("./{%s}CID" % NS_ADDRESSBOOK).text
         display_name = xml_node.find("./{%s}DisplayName" % NS_ADDRESSBOOK)
@@ -59,8 +59,18 @@ class EmailMember(Member):
 
 class Contact(object):
     def __init__(self, xml_node):
-        pass
+        self.contact_id = xml_node.find("./{%s}contactId" % NS_ADDRESSBOOK).text
+        contact_info = xml_node.find("./{%s}contactInfo" % NS_ADDRESSBOOK)
+        self.contact_type = contact_info.find("./{%s}contactType" % NS_ADDRESSBOOK).text
+        self.passport_name = contact_info.find("./{%s}passportName" % NS_ADDRESSBOOK).text
+        self.passport_hidden = self._bool(contact_info.find("./{%s}IsPassportNameHidden" % NS_ADDRESSBOOK).text)
+        self.display_name = contact_info.find("./{%s}displayName" % NS_ADDRESSBOOK).text
+        self.CID = contact_info.find("./{%s}CID" % NS_ADDRESSBOOK).text
 
+    def _bool(self, text): #FIXME: we need a helper class with all the conversion utilities
+        if text.lower() == "false":
+            return False
+        return True
 
 class _BaseAddressBook(object):
     def __init__(self, contacts_security_token):
@@ -102,8 +112,10 @@ class AddressBook(_BaseAddressBook, SOAPService):
         if method == "ABFindAll":
             path = "./ABFindAllResponse/ABFindAllResult/contacts".replace("/", "/{%s}" % NS_ADDRESSBOOK)
             contacts = soap_response.body.find(path)
+            result = []
             for contact in contacts:
-
+                result.append(Contact(contact))
+            return (soap_response, result)
         else:
             return SOAPService._extract_response(self, method, soap_response)
 
@@ -150,6 +162,6 @@ class Sharing(_BaseAddressBook, SOAPService):
                     else:
                         raise NotImplementedError("Unknown member type, please fix")
                     result[role.text].append(member_instance)
-            return (result,)
+            return (soap_response, result)
         else:
             return SOAPService._extract_response(self, method, soap_response)

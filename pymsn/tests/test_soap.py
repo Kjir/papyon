@@ -21,8 +21,12 @@ class TemperatureService(SOAPService.SOAPService):
 #test.getTemp(("string", "zipcode", "10000"))
 
 #print '------------------------------------------------'
-def membership_cb(*args):
-    pass
+def membership_cb(soap_response, members):
+    print members
+
+def contacts_cb(soap_response, contacts):
+    print contacts
+
 
 def sso_cb(soap_response, *tokens):
     abook = None
@@ -31,7 +35,7 @@ def sso_cb(soap_response, *tokens):
             abook = AddressBook.AddressBook(token)
             sharing = AddressBook.Sharing(token)
             break
-    abook.ABFindAll(membership_cb)
+    abook.ABFindAll(contacts_cb)
     sharing.FindMembership(membership_cb)
 
 
