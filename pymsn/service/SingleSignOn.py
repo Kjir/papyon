@@ -18,6 +18,7 @@
 #
 
 from SOAPService import SOAPService
+import pymsn.storage
 
 import base64
 import struct
@@ -63,7 +64,7 @@ class SecurityToken(object):
         self.proof_token = ""
 
     def is_expired(self):
-        return time.time() >= self.lifetime[0]
+        return time.time() + 60 >= self.lifetime[1] # add 1 minute
 
     def mbi_crypt(self, nonce):
         # Read key and generate two derived keys
@@ -112,19 +113,34 @@ class SecurityToken(object):
 class SingleSignOn(SOAPService):
     def __init__(self, username, password):
         self.__credentials = (username, password)
+        self.__storage = pymsn.storage.get_storage(username, "security_tokens")
+        self.__response_tokens = []
         SOAPService.__init__(self, SERVICE_URL)
     
     def RequestMultipleSecurityTokens(self, callback, callback_args, *services):
         assert(len(services) > 0), "RequestMultipleSecurityTokens requires at least 1 service"
         self._method("RequestMultipleSecurityTokens", callback, callback_args, {"Id": "RSTS"})
-        if LiveService.TB not in services:
-            services = list(services)
-            services.insert(0, LiveService.TB)
-        i = 0
-        for service in services:
-            self.__request_security_token(i, service)
-            i += 1
-        self._send_request()
+        services = list(services)
+        
+        for service in services: # filter already available tokens
+            if service[0] in self.__storage:
+                token = self.__storage[service[0]]
+                if not token.is_expired():
+                    services.remove(service)
+                    self.__response_tokens.append(token)
+        
+        if len(services) == 0: # FIXME: do something cleaner
+            method, callback, callback_args = self.request_queue.pop(0)
+            if callback is not None:
+                arguments = tuple(callback_args) + tuple(self.__response_tokens)
+                self.__response_tokens = []
+                callback(None, *arguments)
+        else:
+            if LiveService.TB not in services:
+                services.insert(0, LiveService.TB)
+            for i, service in enumerate(services):
+                self.__request_security_token(i, service)
+            self._send_request()
 
     def _extract_response(self, method, soap_response):
         if method == "RequestMultipleSecurityTokens":
@@ -140,7 +156,7 @@ class SingleSignOn(SOAPService):
                             (NS_WS_TRUST, NS_XML_ENC, NS_XML_ENC, NS_XML_ENC),
                     "./{%s}RequestedProofToken/{%s}BinarySecret" %
                             (NS_WS_TRUST, NS_WS_TRUST))
-            result = [soap_response]
+            result = self.__response_tokens + [soap_response]
             responses = soap_response.body.find(paths[0])
             for response in responses:
                 token = SecurityToken()
@@ -156,7 +172,9 @@ class SingleSignOn(SOAPService):
                 proof_token = response.find(paths[7])
                 if proof_token is not None:
                     token.proof_token = proof_token.text
+                self.__storage[token.service_address] = token
                 result.append(token)
+            self.__response_tokens = []
             return result
         else:
             return SOAPService._extract_response(self, method, soap_response)

@@ -23,7 +23,9 @@
 Implements the protocol used to communicate with the Notification Server."""
 
 from base import BaseProtocol
+from message import IncomingMessage
 import pymsn.service.SingleSignOn as SSO
+import pymsn.service.AddressBook as AddressBook
 
 import logging
 import gobject
@@ -56,6 +58,11 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         @ivar _status: the current protocol status
         @type _status: integer
         @see L{NotificationProtocolStatus}"""
+    __gsignals__ = {
+            "mail-received" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,))
+            }
 
     __gproperties__ = {
             "status":  (gobject.TYPE_INT,
@@ -81,7 +88,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         BaseProtocol.__init__(self, client, transport, proxies)
         gobject.GObject.__init__(self)
         self._status = NotificationProtocolStatus.CLOSED
-
+        self._address_book_service = None
+        self._sharing_service = None 
         self._protocol_version = 0
         
     def do_get_property(self, pspec):
@@ -139,7 +147,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             if command.arguments[0] == "SSO":
                 sso = SSO.SingleSignOn(account, password)
                 sso.RequestMultipleSecurityTokens(self._sso_cb, (command.arguments[3],),
-                        SSO.LiveService.MESSENGER_CLEAR)
+                        SSO.LiveService.MESSENGER_CLEAR, SSO.LiveService.CONTACTS)
             elif command.arguments[0] == "TWN":
                 raise NotImplementedError, "Missing Implementation, please fix"
 
@@ -148,15 +156,45 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     def _handle_OUT(self, command):
         raise NotImplementedError, "Missing Implementation, please fix"
+
+    # --------- Messages -----------------------------------------------------
+    def _handle_MSG(self, command):
+        msg = IncomingMessage(command)
+        if msg.content_type[0] == 'text/x-msmsgsprofile':
+            #self.__profile._profile = command
+            #FIXME: use the profile
+            
+            if self._protocol_version < 15:
+                #self._transport.send_command_ex('SYN', ('0', '0'))
+                raise NotImplementedError, "Missing Implementation, please fix"
+            else:
+                self._transport.send_command_ex("BLP", ("BL",)) #FIXME: make this configurable somewhere
+                self._address_book_service.ABFindAll(self._ab_find_all_cb)
+                self._sharing_service.FindMembership(self._find_membership_cb)
+            
+        elif msg.content_type[0] in \
+                ('text/x-msmsgsinitialemailnotification', \
+                 'text/x-msmsgsemailnotification'):
+            self.emit("mail-received", msg)
+    
     # callbacks --------------------------------------------------------------
     def _sso_cb(self, nonce, soap_response, *tokens):
+        self.__security_tokens = tokens
         blob = None
         for token in tokens:
             if token.service_address == SSO.LiveService.MESSENGER_CLEAR[0]:
                 blob = token.mbi_crypt(nonce)
-                break
+            elif token.service_address == SSO.LiveService.CONTACTS[0]:
+                self._address_book_service = AddressBook.AddressBook(token)
+                self._sharing_service = AddressBook.Sharing(token)
         assert(blob is not None)
         self._transport.send_command_ex("USR", ("SSO", "S", token.security_token, blob))
+
+    def _ab_find_all_cb(self, soap_response, contacts):
+        pass
+
+    def _find_membership_cb(self, soap_response, members):
+        pass
 
     def _connect_cb(self, transport):
         self._transport.send_command_ex('VER', ProtocolConstant.VER)

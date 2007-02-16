@@ -416,6 +416,8 @@ class SSLSocketClient(SocketClient):
                         del self._outgoing_queue[0]
                         if item[2]: # callback
                             item[2](*item[3])
+                else:
+                    self._watch_remove_cond(gobject.IO_OUT)
         return True
 gobject.type_register(SSLSocketClient)
 

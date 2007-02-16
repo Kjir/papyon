@@ -1,3 +1,4 @@
+import pymsn.storage
 import pymsn.service.SOAPService as SOAPService
 import pymsn.service.SingleSignOn as SSO
 import pymsn.service.AddressBook as AddressBook
@@ -25,11 +26,15 @@ def membership_cb(soap_response, members):
     print members
 
 def contacts_cb(soap_response, contacts):
-    print contacts
+    for contact in contacts:
+        print contact.passport_name
 
 
-def sso_cb(soap_response, *tokens):
-    abook = None
+def sso_cb1(sso, soap_response, *tokens):
+    sso.RequestMultipleSecurityTokens(sso_cb2, (), SSO.LiveService.CONTACTS) # check the storage
+
+def sso_cb2(soap_response, *tokens):
+    print tokens
     for token in tokens:
         if token.service_address == SSO.LiveService.CONTACTS[0]:
             abook = AddressBook.AddressBook(token)
@@ -40,7 +45,7 @@ def sso_cb(soap_response, *tokens):
 
 
 sso = SSO.SingleSignOn("kimbix@hotmail.com", "linox45")
-sso.RequestMultipleSecurityTokens(sso_cb, (), SSO.LiveService.CONTACTS)
+sso.RequestMultipleSecurityTokens(sso_cb1, (sso,), SSO.LiveService.CONTACTS)
 
 
 gobject.MainLoop().run()
