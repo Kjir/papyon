@@ -137,7 +137,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         assert(args_len == 3 or args_len == 4), "Received USR with invalid number of params : " + str(command)
 
         if command.arguments[0] == "OK":
-            raise NotImplementedError, "Missing Implementation, please fix"
+            raise NotImplementedError("Missing Implementation, please fix")
 
         # we need to authenticate with a passport server
         elif command.arguments[1] == "S":
@@ -176,19 +176,28 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 ('text/x-msmsgsinitialemailnotification', \
                  'text/x-msmsgsemailnotification'):
             self.emit("mail-received", msg)
-    
+
     # callbacks --------------------------------------------------------------
+    def _connect_cb(self, transport):
+        self._transport.send_command_ex('VER', ProtocolConstant.VER)
+
+    def _disconnect_cb(self, transport):
+        self._status = NotificationProtocolStatus.CLOSED
+        self.notify("status")
+
     def _sso_cb(self, nonce, soap_response, *tokens):
         self.__security_tokens = tokens
+        clear_token = None
         blob = None
         for token in tokens:
             if token.service_address == SSO.LiveService.MESSENGER_CLEAR[0]:
+                clear_token = token
                 blob = token.mbi_crypt(nonce)
             elif token.service_address == SSO.LiveService.CONTACTS[0]:
                 self._address_book_service = AddressBook.AB(token)
                 self._sharing_service = AddressBook.Sharing(token)
-        assert(blob is not None)
-        self._transport.send_command_ex("USR", ("SSO", "S", token.security_token, blob))
+        assert(clear_token is not None and blob is not None)
+        self._transport.send_command_ex("USR", ("SSO", "S", clear_token.security_token, blob))
 
     def _ab_find_all_cb(self, soap_response, contacts):
         pass
