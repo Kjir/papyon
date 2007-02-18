@@ -36,9 +36,9 @@ logger = logging.getLogger('protocol')
 
 class ProtocolConstant(object):
     VER = ('MSNP15', 'MSNP14', 'MSNP13', 'CVR0')
-    CVR = ('0x0409', 'winnt', '5.1', 'i386', 'MSG80BETA', '8.1.0168', 'msmsgs')
-    PRODUCT_ID = "PROD0113H11T8$X_"
-    PRODUCT_KEY = "RG@XY*28Q5QHS%Q5"
+    CVR = ('0x0409', 'winnt', '5.1', 'i386', 'MSNMSGR', '8.1.0178', 'msmsgs')
+    PRODUCT_ID = "PROD0114ES4Z%Q5W"
+    PRODUCT_KEY = "PK}_A_0N_K%O?A9S"
 
 
 class NotificationProtocolStatus(object):
@@ -185,7 +185,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             if token.service_address == SSO.LiveService.MESSENGER_CLEAR[0]:
                 blob = token.mbi_crypt(nonce)
             elif token.service_address == SSO.LiveService.CONTACTS[0]:
-                self._address_book_service = AddressBook.AddressBook(token)
+                self._address_book_service = AddressBook.AB(token)
                 self._sharing_service = AddressBook.Sharing(token)
         assert(blob is not None)
         self._transport.send_command_ex("USR", ("SSO", "S", token.security_token, blob))
