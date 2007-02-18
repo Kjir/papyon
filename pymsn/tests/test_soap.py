@@ -37,7 +37,7 @@ def sso_cb2(soap_response, *tokens):
     print tokens
     for token in tokens:
         if token.service_address == SSO.LiveService.CONTACTS[0]:
-            abook = AddressBook.AddressBook(token)
+            abook = AddressBook.AB(token)
             sharing = AddressBook.Sharing(token)
             break
     abook.ABFindAll(contacts_cb)

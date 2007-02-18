@@ -17,13 +17,13 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-from SOAPService import SOAPService
+from base import BaseAddressBook
+from pymsn.service.SOAPService import SOAPService
 
 from xml.utils import iso8601
 
-__all__ = ['AddressBook', 'Sharing']
+__all__ = ['Sharing']
 
-AB_SERVICE_URL = "http://contacts.msn.com/abservice/abservice.asmx"
 SHARING_SERVICE_URL = "http://contacts.msn.com/abservice/SharingService.asmx"
 NS_ADDRESSBOOK = "http://www.msn.com/webservices/AddressBook"
 
@@ -57,72 +57,10 @@ class EmailMember(Member):
         Member.__init__(self, xml_node)
         self.email = xml_node.find("./{%s}Email" % NS_ADDRESSBOOK).text
 
-class Contact(object):
-    def __init__(self, xml_node):
-        self.contact_id = xml_node.find("./{%s}contactId" % NS_ADDRESSBOOK).text
-        contact_info = xml_node.find("./{%s}contactInfo" % NS_ADDRESSBOOK)
-        self.contact_type = contact_info.find("./{%s}contactType" % NS_ADDRESSBOOK).text
-        self.passport_name = contact_info.find("./{%s}passportName" % NS_ADDRESSBOOK).text
-        self.passport_hidden = self._bool(contact_info.find("./{%s}IsPassportNameHidden" % NS_ADDRESSBOOK).text)
-        self.display_name = contact_info.find("./{%s}displayName" % NS_ADDRESSBOOK).text
-        self.CID = contact_info.find("./{%s}CID" % NS_ADDRESSBOOK).text
 
-    def _bool(self, text): #FIXME: we need a helper class with all the conversion utilities
-        if text.lower() == "false":
-            return False
-        return True
-
-class _BaseAddressBook(object):
+class Sharing(BaseAddressBook, SOAPService):
     def __init__(self, contacts_security_token):
-        self.__security_token = contacts_security_token
-
-    def _soap_action(self, method):
-        return "http://www.msn.com/webservices/AddressBook/" + method
-
-    def _method_namespace(self, method):
-        return NS_ADDRESSBOOK
-
-    def _soap_headers(self, method):
-        """Add the needed headers for the current method"""
-        ABApplicationHeader = self.request.add_header("ABApplicationHeader", NS_ADDRESSBOOK)
-        ABApplicationHeader.append("ApplicationId", NS_ADDRESSBOOK,
-                value="996CDE1E-AA53-4477-B943-2BE802EA6166")
-        ABApplicationHeader.append("IsMigration", NS_ADDRESSBOOK, value="false")
-        ABApplicationHeader.append("PartnerScenario", NS_ADDRESSBOOK, value="Initial")
-        #TODO: add <CacheKey>
-
-        ABAuthHeader = self.request.add_header("ABAuthHeader", NS_ADDRESSBOOK)
-        ABAuthHeader.append("ManagedGroupRequest", NS_ADDRESSBOOK, value="false")
-        ABAuthHeader.append("TicketToken", NS_ADDRESSBOOK, value=self.__security_token.security_token)
-
-
-class AddressBook(_BaseAddressBook, SOAPService):
-    def __init__(self, contacts_security_token):
-        _BaseAddressBook.__init__(self, contacts_security_token)
-        SOAPService.__init__(self, AB_SERVICE_URL)
-
-    def ABFindAll(self, callback, *callback_args):
-        self._simple_method("ABFindAll", callback, callback_args,
-                ("abId", "00000000-0000-0000-0000-000000000000"),
-                ("abView", "Full"),
-                ("deltasOnly", "false"),
-                ("dynamicItemView", "Gleam"))
-
-    def _extract_response(self, method, soap_response):
-        if method == "ABFindAll":
-            path = "./ABFindAllResponse/ABFindAllResult/contacts".replace("/", "/{%s}" % NS_ADDRESSBOOK)
-            contacts = soap_response.body.find(path)
-            result = []
-            for contact in contacts:
-                result.append(Contact(contact))
-            return (soap_response, result)
-        else:
-            return SOAPService._extract_response(self, method, soap_response)
-
-
-class Sharing(_BaseAddressBook, SOAPService):
-    def __init__(self, contacts_security_token):
-        _BaseAddressBook.__init__(self, contacts_security_token)
+        BaseAddressBook.__init__(self, contacts_security_token)
         SOAPService.__init__(self, SHARING_SERVICE_URL)
 
     def FindMembership(self, callback, *callback_args):
