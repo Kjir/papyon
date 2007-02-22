@@ -17,7 +17,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-from SOAPService import SOAPService
+from SOAPService import SOAPService, SOAPUtils
 import pymsn.storage
 
 import base64
@@ -40,6 +40,16 @@ NS_WS_ADDRESSING = "http://schemas.xmlsoap.org/ws/2004/03/addressing"
 NS_WS_POLICY = "http://schemas.xmlsoap.org/ws/2002/12/policy"
 NS_WS_ISSUE = "http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue"
 NS_WS_UTILITY = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+
+NS_SHORTHANDS = {
+        "ps" : NS_PASSPORT,
+        "xmlenc" : NS_XML_ENC,
+        "wsse" : NS_WS_SECEXT,
+        "wst" : NS_WS_TRUST,
+        "wsa" : NS_WS_ADDRESSING,
+        "wsp" : NS_WS_POLICY,
+        "wsi" : NS_WS_ISSUE,
+        "wsu" : NS_WS_UTILITY }
 
 class LiveService(object):
     CONTACTS = ("contacts.msn.com", "?fs=1&id=24000&kv=7&rn=93S9SWWw&tw=0&ver=2.1.6000.1")
@@ -144,32 +154,30 @@ class SingleSignOn(SOAPService):
 
     def _extract_response(self, method, soap_response):
         if method == "RequestMultipleSecurityTokens":
-            paths =("./{%s}RequestSecurityTokenResponseCollection" % NS_WS_TRUST,
-                    "./{%s}TokenType" % NS_WS_TRUST,
-                    "./{%s}AppliesTo/{%s}EndpointReference/{%s}Address" %
-                            (NS_WS_POLICY, NS_WS_ADDRESSING, NS_WS_ADDRESSING),
-                    "./{%s}LifeTime/{%s}Created" % (NS_WS_TRUST, NS_WS_UTILITY),
-                    "./{%s}LifeTime/{%s}Expires" % (NS_WS_TRUST, NS_WS_UTILITY),
-                    "./{%s}RequestedSecurityToken/{%s}BinarySecurityToken" %
-                            (NS_WS_TRUST, NS_WS_SECEXT),
-                    "./{%s}RequestedSecurityToken/{%s}EncryptedData/{%s}CipherData/{%s}CipherValue" %
-                            (NS_WS_TRUST, NS_XML_ENC, NS_XML_ENC, NS_XML_ENC),
-                    "./{%s}RequestedProofToken/{%s}BinarySecret" %
-                            (NS_WS_TRUST, NS_WS_TRUST))
+            paths =("./wst:RequestSecurityTokenResponseCollection",
+                    "./wst:TokenType",
+                    "./wsp:AppliesTo/wsa:EndpointReference/wsa:Address",
+                    "./wst:LifeTime/wsu:Created",
+                    "./wst:LifeTime/wsu:Expires",
+                    "./wst:RequestedSecurityToken/wsse:BinarySecurityToken",
+                    "./wst:RequestedSecurityToken/xmlenc:EncryptedData/xmlenc:CipherData/xmlenc:CipherValue",
+                    "./wst:RequestedProofToken/wst:BinarySecret")
             result = self.__response_tokens + [soap_response]
-            responses = soap_response.body.find(paths[0])
+            soap_utils = SOAPUtils(NS_SHORTHANDS)
+
+            responses = soap_utils.find_ex(soap_response.body, paths[0])
             for response in responses:
                 token = SecurityToken()
-                token.type = response.find(paths[1]).text
-                token.service_address = response.find(paths[2]).text
-                token.lifetime[0] = iso8601.parse(response.find(paths[3]).text)
-                token.lifetime[1] = iso8601.parse(response.find(paths[4]).text)
-                t = response.find(paths[5])
+                token.type = soap_utils.find_ex(response, paths[1]).text
+                token.service_address = soap_utils.find_ex(response, paths[2]).text
+                token.lifetime[0] = iso8601.parse(soap_utils.find_ex(response, paths[3]).text)
+                token.lifetime[1] = iso8601.parse(soap_utils.find_ex(response, paths[4]).text)
+                t = soap_utils.find_ex(response, paths[5])
                 if t is not None:
                     token.security_token = t.text
                 else:
-                    token.security_token = response.find(paths[6]).text
-                proof_token = response.find(paths[7])
+                    token.security_token = soap_utils.find_ex(response, paths[6]).text
+                proof_token = soap_utils.find_ex(response, paths[7])
                 if proof_token is not None:
                     token.proof_token = proof_token.text
                 self.__storage[token.service_address] = token

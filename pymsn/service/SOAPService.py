@@ -23,6 +23,32 @@ import pymsn.gnet.message.SOAP as SOAP
 import logging
 logger = logging.getLogger('Service')
 
+class SOAPUtils(object):
+    def __init__(self, ns_shorthands):
+        self._ns_shorthands = ns_shorthands
+
+    def find_ex(self, xml_node, path):
+        return SOAPUtils.find(xml_node, path, self._ns_shorthands)
+
+    @staticmethod
+    def find(xml_node, path, ns_shorthands):
+        for sh, ns in ns_shorthands.iteritems():
+            path = path.replace("/%s:" % sh, "/{%s}" % ns)
+        return xml_node.find(path)
+    
+    @staticmethod
+    def bool_type(s):
+        if s.lower() in ("false", "no", "f", "n", "0", ""):
+            return False
+        return True
+
+    @staticmethod
+    def int_type(s):
+        try:
+            return int(s)
+        except:
+            return 0
+
 class BaseSOAPService(object):
     DEFAULT_PROTOCOL = "http"
 

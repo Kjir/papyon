@@ -39,7 +39,7 @@ class BaseAddressBook(object):
         """Add the needed headers for the current method"""
         ABApplicationHeader = self.request.add_header("ABApplicationHeader", NS_ADDRESSBOOK)
         ABApplicationHeader.append("ApplicationId", NS_ADDRESSBOOK,
-                value="996CDE1E-AA53-4477-B943-2BE802EA6166")
+                value="996CDE1E-AA53-4477-B943-2BE802EA6166") 
         ABApplicationHeader.append("IsMigration", NS_ADDRESSBOOK, value="false")
         ABApplicationHeader.append("PartnerScenario", NS_ADDRESSBOOK, value="Initial")
         #TODO: add <CacheKey>

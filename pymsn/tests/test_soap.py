@@ -27,7 +27,7 @@ def membership_cb(soap_response, members):
 
 def contacts_cb(soap_response, contacts):
     for contact in contacts:
-        print contact.passport_name
+        print contact.account
 
 
 def sso_cb1(sso, soap_response, *tokens):

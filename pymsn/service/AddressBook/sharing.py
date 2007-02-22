@@ -18,7 +18,7 @@
 #
 
 from base import BaseAddressBook
-from pymsn.service.SOAPService import SOAPService
+from pymsn.service.SOAPService import SOAPService, SOAPUtils
 
 from xml.utils import iso8601
 
@@ -27,36 +27,40 @@ __all__ = ['Sharing']
 SHARING_SERVICE_URL = "http://contacts.msn.com/abservice/SharingService.asmx"
 NS_ADDRESSBOOK = "http://www.msn.com/webservices/AddressBook"
 
+NS_SHORTHANDS = {"ab": NS_ADDRESSBOOK}
+
+
+class Membership(object):
+    UNKNOWN = 0
+    FORWARD = 1
+    ALLOW   = 2
+    BLOCK   = 4
+    REVERSE = 8
+    PENDING = 16
 
 class Member(object):
     def __init__(self, xml_node):
-        self.membership_id = xml_node.find("./{%s}MembershipId" % NS_ADDRESSBOOK).text
-        self.type = xml_node.find("./{%s}Type" % NS_ADDRESSBOOK).text
-        self.state = xml_node.find("./{%s}State" % NS_ADDRESSBOOK).text
-        self.deleted = self._bool(xml_node.find("./{%s}Deleted" % NS_ADDRESSBOOK).text)
-        self.last_changed = iso8601.parse(xml_node.find("./{%s}LastChanged" % NS_ADDRESSBOOK).text)
+        soap_utils = SOAPUtils(NS_SHORTHANDS)
 
-    def _bool(self, text): #FIXME: we need a helper class with all the conversion utilities
-        if text.lower() == "false":
-            return False
-        return True
+        self.membership_id = soap_utils.find_ex(xml_node, "./ab:MembershipId").text
+        self.type = soap_utils.find_ex(xml_node, "./ab:Type").text
+        self.state = soap_utils.find_ex(xml_node, "./ab:State").text
+        self.deleted = SOAPUtils.bool_type(soap_utils.find_ex(xml_node, "./ab:Deleted").text)
+        self.last_changed = iso8601.parse(soap_utils.find_ex(xml_node, "./ab:LastChanged").text)
+        
+        passport = soap_utils.find_ex(xml_node, "./ab:PassportName")
+        if passport is not None:
+            self.account = passport.text
+            self.account_type = "msn"
+        else:
+            self.account = soap_utils.find_ex(xml_node, "./ab:Email").text
+            self.account_type = "yahoo"
 
-class PassportMember(Member):
-    def __init__(self, xml_node):
-        Member.__init__(self, xml_node)
-        self.passport_name = xml_node.find("./{%s}PassportName" % NS_ADDRESSBOOK).text
-        self.passport_hidden = self._bool(xml_node.find("./{%s}IsPassportNameHidden" % NS_ADDRESSBOOK).text)
-        self.passport_id = xml_node.find("./{%s}PassportId" % NS_ADDRESSBOOK).text
-        self.CID = xml_node.find("./{%s}CID" % NS_ADDRESSBOOK).text
-        display_name = xml_node.find("./{%s}DisplayName" % NS_ADDRESSBOOK)
+        display_name = soap_utils.find_ex(xml_node, "./ab:DisplayName")
         if display_name is not None:
             self.display_name = display_name.text
-
-class EmailMember(Member):
-    def __init__(self, xml_node):
-        Member.__init__(self, xml_node)
-        self.email = xml_node.find("./{%s}Email" % NS_ADDRESSBOOK).text
-
+        else:
+            self.display_name = self.account.split("@", 1)[0]
 
 class Sharing(BaseAddressBook, SOAPService):
     def __init__(self, contacts_security_token):
@@ -92,14 +96,7 @@ class Sharing(BaseAddressBook, SOAPService):
                     continue
                 result[role.text] = []
                 for member in members:
-                    type = member.find("./{%s}Type" % NS_ADDRESSBOOK).text
-                    if type == "Passport":
-                        member_instance = PassportMember(member)
-                    elif type == "Email":
-                        member_instance = EmailMember(member)
-                    else:
-                        raise NotImplementedError("Unknown member type, please fix")
-                    result[role.text].append(member_instance)
+                    result[role.text].append(Member(member))
             return (soap_response, result)
         else:
             return SOAPService._extract_response(self, method, soap_response)

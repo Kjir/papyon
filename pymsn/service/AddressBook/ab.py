@@ -18,7 +18,7 @@
 #
 
 from base import BaseAddressBook
-from pymsn.service.SOAPService import SOAPService
+from pymsn.service.SOAPService import SOAPService, SOAPUtils
 
 from xml.utils import iso8601
 
@@ -27,21 +27,28 @@ __all__ = ['AB']
 AB_SERVICE_URL = "http://contacts.msn.com/abservice/abservice.asmx"
 NS_ADDRESSBOOK = "http://www.msn.com/webservices/AddressBook"
 
+NS_SHORTHANDS = {"ab": NS_ADDRESSBOOK}
+
+
 class Contact(object):
     def __init__(self, xml_node):
-        self.contact_id = xml_node.find("./{%s}contactId" % NS_ADDRESSBOOK).text
-        contact_info = xml_node.find("./{%s}contactInfo" % NS_ADDRESSBOOK)
-        self.contact_type = contact_info.find("./{%s}contactType" % NS_ADDRESSBOOK).text
-        self.passport_name = contact_info.find("./{%s}passportName" % NS_ADDRESSBOOK).text
-        self.passport_hidden = self._bool(contact_info.find("./{%s}IsPassportNameHidden" % NS_ADDRESSBOOK).text)
-        self.display_name = contact_info.find("./{%s}displayName" % NS_ADDRESSBOOK).text
-        self.CID = contact_info.find("./{%s}CID" % NS_ADDRESSBOOK).text
+        soap_utils = SOAPUtils(NS_SHORTHANDS)
 
-    def _bool(self, text): #FIXME: we need a helper class with all the conversion utilities
-        if text.lower() == "false":
-            return False
-        return True
+        self.id = soap_utils.find_ex(xml_node, "./ab:contactId").text
+        contact_info = soap_utils.find_ex(xml_node, "./ab:contactInfo")
 
+        self.contact_type = soap_utils.find_ex(contact_info, "./ab:contactType").text
+
+        passport = soap_utils.find_ex(contact_info, "./ab:passportName")
+        if passport is not None:
+            self.account = passport.text
+            self.account_type = "msn"
+        else: # Yahoo user
+            self.account = soap_utils.find_ex(contact_info,
+                    "./ab:emails/ab:ContactEmail/ab:email").text
+            self.account_type = "yahoo"
+        self.display_name = soap_utils.find_ex(contact_info, "./ab:displayName").text
+        self.CID = soap_utils.find_ex(contact_info, "./ab:CID").text
 
 class AB(BaseAddressBook, SOAPService):
     def __init__(self, contacts_security_token):
