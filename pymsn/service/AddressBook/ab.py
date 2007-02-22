@@ -18,6 +18,7 @@
 #
 
 from base import BaseAddressBook
+from consts import NetworkID
 from pymsn.service.SOAPService import SOAPService, SOAPUtils
 
 from xml.utils import iso8601
@@ -29,7 +30,6 @@ NS_ADDRESSBOOK = "http://www.msn.com/webservices/AddressBook"
 
 NS_SHORTHANDS = {"ab": NS_ADDRESSBOOK}
 
-
 class Contact(object):
     def __init__(self, xml_node):
         soap_utils = SOAPUtils(NS_SHORTHANDS)
@@ -37,16 +37,16 @@ class Contact(object):
         self.id = soap_utils.find_ex(xml_node, "./ab:contactId").text
         contact_info = soap_utils.find_ex(xml_node, "./ab:contactInfo")
 
-        self.contact_type = soap_utils.find_ex(contact_info, "./ab:contactType").text
+        self.type = soap_utils.find_ex(contact_info, "./ab:contactType").text
 
         passport = soap_utils.find_ex(contact_info, "./ab:passportName")
         if passport is not None:
             self.account = passport.text
-            self.account_type = "msn"
+            self.netword_id = NetworkID.MSN
         else: # Yahoo user
             self.account = soap_utils.find_ex(contact_info,
                     "./ab:emails/ab:ContactEmail/ab:email").text
-            self.account_type = "yahoo"
+            self.netword_id = NetworkID.EXTERNAL
         self.display_name = soap_utils.find_ex(contact_info, "./ab:displayName").text
         self.CID = soap_utils.find_ex(contact_info, "./ab:CID").text
 

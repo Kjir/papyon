@@ -18,6 +18,7 @@
 #
 
 from base import BaseAddressBook
+from consts import NetworkID
 from pymsn.service.SOAPService import SOAPService, SOAPUtils
 
 from xml.utils import iso8601
@@ -51,10 +52,10 @@ class Member(object):
         passport = soap_utils.find_ex(xml_node, "./ab:PassportName")
         if passport is not None:
             self.account = passport.text
-            self.account_type = "msn"
+            self.netword_id = NetworkID.MSN
         else:
             self.account = soap_utils.find_ex(xml_node, "./ab:Email").text
-            self.account_type = "yahoo"
+            self.netword_id = NetworkID.EXTERNAL
 
         display_name = soap_utils.find_ex(xml_node, "./ab:DisplayName")
         if display_name is not None:

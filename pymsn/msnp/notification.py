@@ -88,8 +88,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         BaseProtocol.__init__(self, client, transport, proxies)
         gobject.GObject.__init__(self)
         self._status = NotificationProtocolStatus.CLOSED
-        self._address_book_service = None
-        self._sharing_service = None 
+        self._address_book = None
         self._protocol_version = 0
         
     def do_get_property(self, pspec):
@@ -169,9 +168,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 raise NotImplementedError, "Missing Implementation, please fix"
             else:
                 self._transport.send_command_ex("BLP", ("BL",)) #FIXME: make this configurable somewhere
-                self._address_book_service.ABFindAll(self._ab_find_all_cb)
-                self._sharing_service.FindMembership(self._find_membership_cb)
-            
+                
         elif msg.content_type[0] in \
                 ('text/x-msmsgsinitialemailnotification', \
                  'text/x-msmsgsemailnotification'):
@@ -194,16 +191,15 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 clear_token = token
                 blob = token.mbi_crypt(nonce)
             elif token.service_address == SSO.LiveService.CONTACTS[0]:
-                self._address_book_service = AddressBook.AB(token)
-                self._sharing_service = AddressBook.Sharing(token)
+                self._address_book = AddressBook.AddressBook(token)
+                self._address_book.connect("notify::status", self._address_book_cb)
+                self._address_book.sync()
         assert(clear_token is not None and blob is not None)
         self._transport.send_command_ex("USR", ("SSO", "S", clear_token.security_token, blob))
 
-    def _ab_find_all_cb(self, soap_response, contacts):
-        pass
-
-    def _find_membership_cb(self, soap_response, members):
-        pass
+    def _address_book_cb(self, address_book, pspec):
+        for key, contact in address_book._contacts.iteritems():
+            print contact._memberships ,key[1]
 
     def _connect_cb(self, transport):
         self._transport.send_command_ex('VER', ProtocolConstant.VER)

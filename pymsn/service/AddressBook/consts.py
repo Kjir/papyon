@@ -17,8 +17,11 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-"""AddressBook Management"""
-from sharing import *
-from ab import *
-
-from address_book import AddressBook
+class NetworkID(object):
+    """Refers to the contact Network ID"""
+    MSN = 1
+    """Microsoft Network"""
+    MOBILE = 4
+    """Mobile phones"""
+    EXTERNAL = 32
+    """External IM etwork, currently Yahoo!"""

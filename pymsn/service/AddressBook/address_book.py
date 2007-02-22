@@ -22,7 +22,6 @@ import sharing
 
 import gobject
 
-
 class Contact(gobject.GObject):
     """Contact related information
         @undocumented: do_get_property, do_set_property"""
@@ -49,21 +48,21 @@ class Contact(gobject.GObject):
             }
 
     __gproperties__ = {
-            "membership":     (gobject.TYPE_INT,
+            "memberships":     (gobject.TYPE_INT,
                 "Memberships",
                 "Membership relation with the contact.",
-                0, 15, 0, gobject.PARAM_READWRITE)
+                0, 15, 0, gobject.PARAM_READABLE)
             }
 
-    def __init__(self, id, type, account, display_name, memberships=sharing.Membership.UNKNOWN):
+    def __init__(self, id, netword_id, account, display_name):
         """Initializer"""
         gobject.GObject.__init__(self)
         self._id = id
-        self._type = type
+        self._netword_id = netword_id
         self._account = account
         self._display_name = display_name
 
-        self._memberships = memberships
+        self._memberships = sharing.Membership.UNKNOWN
         self._infos = []
     
     ### membership management
@@ -98,16 +97,13 @@ class Contact(gobject.GObject):
 
     ### gobject properties
     def do_get_property(self, pspec):
-        if pspec.name == "lists":
-            return self._lists
+        if pspec.name == "memberships":
+            return self._memberships
         else:
             raise AttributeError, "unknown property %s" % pspec.name
 
     def do_set_property(self, pspec, value):
-        if pspec.name == "lists":
-            self._lists = value
-        else:
-            raise AttributeError, "unknown property %s" % pspec.name
+        raise AttributeError, "unknown property %s" % pspec.name
 
 
 gobject.type_register(Contact)
@@ -138,6 +134,7 @@ class AddressBook(gobject.GObject):
         }
 
     def __init__(self, contacts_security_token): #TODO: pass an SSO client instead of the security token
+        gobject.GObject.__init__(self)
         self._ab_client = ab.AB(contacts_security_token)
         self._sharing_client = sharing.Sharing(contacts_security_token)
         self._status = AddressBookStatus.NOT_SYNCHRONIZED
@@ -165,16 +162,53 @@ class AddressBook(gobject.GObject):
         if self.__ab_find_all_response is not None:
             self.__build_addressbook()
 
+    ### gobject properties
+    def do_get_property(self, pspec):
+        if pspec.name == "status":
+            return self._status
+        else:
+            raise AttributeError, "unknown property %s" % pspec.name
+
+    def do_set_property(self, pspec, value):
+        raise AttributeError, "unknown property %s" % pspec.name
+
     # Private
     def __build_addressbook(self):
         for contact in self.__ab_find_all_response:
-            if contact.contact_type == "Me":
+            if contact.type == "Me":
                 continue #FIXME: update the profile
-            self._contacts[contact.contact_id] = Contact(contact.contact_id,
-                    contact.account_type,
+            c = Contact(contact.id,
+                    contact.netword_id,
                     contact.account,
-                    contact.display_name,
-                    sharing.Membership.FORWARD)
+                    contact.display_name)
+            c._add_membership(sharing.Membership.FORWARD)
+            self._contacts[(contact.netword_id, contact.account)] = c
+
+        for membership, members in self.__find_membership_response.iteritems():
+            if membership == "Allow":
+                membership = sharing.Membership.ALLOW
+            elif membership == "Block":
+                membership = sharing.Membership.BLOCK
+            elif membership == "Reverse":
+                membership = sharing.Membership.REVERSE
+            elif membership == "Pending":
+                membership = sharing.Membership.PENDING
+            else:
+                raise NotImplementedError("Unknown Membership Type : " + membership)
+            for member in members:
+                key = (member.netword_id, member.account)
+                if key in self._contacts:
+                    self._contacts[key]._add_membership(membership)
+                else:
+                    self._contacts[key] = Contact(
+                            "00000000-0000-0000-0000-000000000000",
+                            member.netword_id,
+                            member.account,
+                            member.display_name,
+                            membership)
+        del self.__ab_find_all_response
+        del self.__find_membership_response
+        self._status = AddressBookStatus.SYNCHRONIZED
+        self.notify("status")
 
 gobject.type_register(AddressBook)
-
