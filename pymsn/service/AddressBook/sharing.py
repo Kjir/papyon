@@ -23,7 +23,7 @@ from pymsn.service.SOAPService import SOAPService, SOAPUtils
 
 from xml.utils import iso8601
 
-__all__ = ['Sharing']
+__all__ = ['Sharing', 'Membership']
 
 SHARING_SERVICE_URL = "http://contacts.msn.com/abservice/SharingService.asmx"
 NS_ADDRESSBOOK = "http://www.msn.com/webservices/AddressBook"

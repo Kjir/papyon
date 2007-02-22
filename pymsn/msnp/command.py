@@ -56,7 +56,9 @@ class Command(object):
 
     INCOMING_PAYLOAD = (
             'GCF', 'MSG', 'UBN', 'UBM', 'UBX', 'IPG',
-            'NOT')
+            'NOT',
+            
+            '241')
 
     def __init__(self):
         self._reset()
@@ -147,7 +149,12 @@ class Command(object):
         if self.payload is not None:
             length = len(self.payload)
             if length > 0:
-                result += ' ' + str(length) + '\r\n' + '\t[payload]'
+                result += ' ' + str(length) + '\r\n'
+                if not self.is_error():
+                    result += '\t[payload]'
+                else:
+                    result += self.payload
+
                 return result
         return result
 

@@ -54,20 +54,20 @@ class Contact(gobject.GObject):
                 0, 15, 0, gobject.PARAM_READABLE)
             }
 
-    def __init__(self, id, netword_id, account, display_name):
+    def __init__(self, id, network_id, account, display_name):
         """Initializer"""
         gobject.GObject.__init__(self)
-        self._id = id
-        self._netword_id = netword_id
-        self._account = account
-        self._display_name = display_name
+        self.id = id
+        self.network_id = network_id
+        self.account = account
+        self.display_name = display_name
 
-        self._memberships = sharing.Membership.UNKNOWN
-        self._infos = []
-    
+        self.memberships = sharing.Membership.UNKNOWN
+        self.infos = []
+
     ### membership management
     def is_member(self, membership):
-        return self._memberships & membership
+        return self.memberships & membership
     
     def _add_membership(self, membership):
         if not self.is_member(sharing.Membership.REVERSE) and \
@@ -77,7 +77,7 @@ class Contact(gobject.GObject):
                 membership == sharing.Membership.FORWARD:
             self.emit("added")
 
-        self._memberships |= membership
+        self.memberships |= membership
         self.notify("memberships")
 
     def _remove_membership(self, membership):
@@ -92,13 +92,13 @@ class Contact(gobject.GObject):
                 membership == sharing.Membership.FORWARD:
             self.emit("removed")
 
-        self._memberships ^= membership
+        self.memberships ^= membership
         self.notify("memberships")
 
     ### gobject properties
     def do_get_property(self, pspec):
         if pspec.name == "memberships":
-            return self._memberships
+            return self.memberships
         else:
             raise AttributeError, "unknown property %s" % pspec.name
 
@@ -150,6 +150,38 @@ class AddressBook(gobject.GObject):
         self.notify("status")
         self._ab_client.ABFindAll(self._ab_find_all_cb)
         self._sharing_client.FindMembership(self._find_membership_cb)
+
+    def find_by_account(self, account):
+        result = []
+        for network in (NetworkID.MSN, NetworkID.EXTERNAL):
+            key = (network, account)
+            if key in self._contacts:
+                result.append(self._contacts[key])
+        return result
+
+    def find_by_memberships(self, memberships):
+        result = []
+        for key, contact in self._contacts.iteritems():
+            if contact.is_member(memberships):
+                result.append(contact)
+        return result
+
+    def contacts_by_domain(self, predicate=None):
+        result = {}
+        for key, contact in self._contacts.iteritems():
+            print contact.account, contact.memberships, predicate(contact)
+            if predicate is not None and not predicate(contact):
+                continue
+            domain = key[1].split("@", 1)[1]
+            if domain not in result:
+                result[domain] = []
+            result[domain].append(contact)
+        return result
+
+    # Properties
+    def _get_status(self):
+        return self._status
+    status = property(_get_status)
 
     # Callbacks
     def _ab_find_all_cb(self, soap_response, contacts):

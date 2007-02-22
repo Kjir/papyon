@@ -136,7 +136,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         assert(args_len == 3 or args_len == 4), "Received USR with invalid number of params : " + str(command)
 
         if command.arguments[0] == "OK":
-            raise NotImplementedError("Missing Implementation, please fix")
+            #raise NotImplementedError("Missing Implementation, please fix")
+            pass
 
         # we need to authenticate with a passport server
         elif command.arguments[1] == "S":
@@ -168,7 +169,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 raise NotImplementedError, "Missing Implementation, please fix"
             else:
                 self._transport.send_command_ex("BLP", ("BL",)) #FIXME: make this configurable somewhere
-                
+                self._address_book.sync()
         elif msg.content_type[0] in \
                 ('text/x-msmsgsinitialemailnotification', \
                  'text/x-msmsgsemailnotification'):
@@ -193,13 +194,26 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             elif token.service_address == SSO.LiveService.CONTACTS[0]:
                 self._address_book = AddressBook.AddressBook(token)
                 self._address_book.connect("notify::status", self._address_book_cb)
-                self._address_book.sync()
         assert(clear_token is not None and blob is not None)
         self._transport.send_command_ex("USR", ("SSO", "S", clear_token.security_token, blob))
 
     def _address_book_cb(self, address_book, pspec):
-        for key, contact in address_book._contacts.iteritems():
-            print contact._memberships ,key[1]
+        if address_book.status != AddressBook.AddressBookStatus.SYNCHRONIZED:
+            return
+        mask = ~(AddressBook.Membership.REVERSE | AddressBook.Membership.PENDING)
+        predicate = lambda contact: contact.is_member(mask)
+        contacts = address_book.contacts_by_domain(predicate)
+        s = '<ml l="1">'
+        for domain, contacts in contacts.iteritems():
+            s += '<d n="%s">' % domain
+            for contact in contacts:
+                user = contact.account.split("@", 1)[0]
+                lists = contact.memberships & mask
+                network_id = contact.network_id
+                s += '<c n="%s" l="%d" t="%d"/>' % (user, lists, network_id)
+            s += '</d>'
+        s += '</ml>'
+        self._transport.send_command_ex("ADL", payload=s)
 
     def _connect_cb(self, transport):
         self._transport.send_command_ex('VER', ProtocolConstant.VER)

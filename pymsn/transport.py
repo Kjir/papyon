@@ -176,7 +176,7 @@ class BaseTransport(gobject.GObject):
         """
         raise NotImplementedError
 
-    def send_command_ex(self, command, arguments=None, payload=None, 
+    def send_command_ex(self, command, arguments=(), payload=None, 
             increment=True, callback=None, *cb_args):
         """
         Builds a command object then send it to the server.
