@@ -113,6 +113,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             method = 'SSO'
         else:
             method = 'TWN'
+        self._status = NotificationProtocolStatus.AUTHENTICATING
+        self.notify("status")
         self._transport.send_command_ex('USR',
                 (method, 'I', self._client.profile.account))
 
@@ -157,6 +159,12 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _handle_OUT(self, command):
         raise NotImplementedError, "Missing Implementation, please fix"
 
+    # --------- Contact List -------------------------------------------------
+    def _handle_ADL(self, command):
+        if command.arguments[0] == "OK":
+            self._status = NotificationProtocolStatus.OPEN
+            self.notify("status")
+
     # --------- Messages -----------------------------------------------------
     def _handle_MSG(self, command):
         msg = IncomingMessage(command)
@@ -169,6 +177,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 raise NotImplementedError, "Missing Implementation, please fix"
             else:
                 self._transport.send_command_ex("BLP", ("BL",)) #FIXME: make this configurable somewhere
+                self._status = NotificationProtocolStatus.SYNCHRONIZING
+                self.notify("status")
                 self._address_book.sync()
         elif msg.content_type[0] in \
                 ('text/x-msmsgsinitialemailnotification', \
@@ -177,6 +187,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
+        self._status = NotificationProtocolStatus.OPENING
+        self.notify("status")
         self._transport.send_command_ex('VER', ProtocolConstant.VER)
 
     def _disconnect_cb(self, transport):
@@ -214,10 +226,3 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             s += '</d>'
         s += '</ml>'
         self._transport.send_command_ex("ADL", payload=s)
-
-    def _connect_cb(self, transport):
-        self._transport.send_command_ex('VER', ProtocolConstant.VER)
-
-    def _disconnect_cb(self, transport):
-        self._status = NotificationProtocolStatus.CLOSED
-        self.notify("status")

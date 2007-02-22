@@ -287,7 +287,10 @@ class DirectConnection(BaseTransport):
         else:
             cmd.parse(chunk)
             if cmd.name in msnp.Command.INCOMING_PAYLOAD:
-                payload_len = int(cmd.arguments[-1])
+                try:
+                    payload_len = int(cmd.arguments[-1])
+                except:
+                    payload_len = 0
                 if payload_len > 0:
                     self.__pending_chunk = chunk
                     self._receiver.delimiter = payload_len

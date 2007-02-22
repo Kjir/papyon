@@ -169,7 +169,6 @@ class AddressBook(gobject.GObject):
     def contacts_by_domain(self, predicate=None):
         result = {}
         for key, contact in self._contacts.iteritems():
-            print contact.account, contact.memberships, predicate(contact)
             if predicate is not None and not predicate(contact):
                 continue
             domain = key[1].split("@", 1)[1]

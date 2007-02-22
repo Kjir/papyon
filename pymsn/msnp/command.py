@@ -46,7 +46,7 @@ class Command(object):
     INCOMING_NO_TRID = (
             # NS commands
             'QNG', 'IPG', 'NOT', 'NLN', 'FLN', 'GCF',
-            'QRY', 'SBS', 'UBN', 'UBM', 'UBX', 
+            'QRY', 'SBS', 'UBN', 'UBM', 'UBX', 'ADL',
             # SW commands
             'RNG', 'JOI', 'BYE', 'MSG')
 
