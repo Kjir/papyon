@@ -104,8 +104,6 @@ class Contact(gobject.GObject):
 
     def do_set_property(self, pspec, value):
         raise AttributeError, "unknown property %s" % pspec.name
-
-
 gobject.type_register(Contact)
 
 
