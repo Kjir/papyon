@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007  Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -68,6 +69,13 @@ class Sharing(BaseAddressBook, SOAPService):
         BaseAddressBook.__init__(self, contacts_security_token)
         SOAPService.__init__(self, SHARING_SERVICE_URL)
 
+    def _soap_headers(self, method):
+        if method == "FindMemberShip":
+            BaseAddressBook._soap_headers(self, method, "Initial")
+        else:
+            # We guess Timer to be the default scenario
+            BaseAddressBook._soap_headers(self, method, "Timer")
+
     def FindMembership(self, callback, *callback_args):
         self._method("FindMembership", callback, callback_args, {})
         ServiceType = self.request.add_argument("serviceFilter", NS_ADDRESSBOOK).\
@@ -82,7 +90,6 @@ class Sharing(BaseAddressBook, SOAPService):
         #    self.request.add_argument("deltasOnly", NS_ADDRESSBOOK, value="true")
         #    self.request.add_argument("lastChange", NS_ADDRESSBOOK, value=last_change)
         self._send_request()
-
 
     def _extract_response(self, method, soap_response):
         if method == "FindMembership":

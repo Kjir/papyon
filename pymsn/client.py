@@ -70,7 +70,7 @@ class Client(object):
         self._protocol = msnp.NotificationProtocol(self, self._transport, self._proxies)
         
     def _setup_profile(self):
-        self.profile = profile.User(self._protocol, self._account)
+        self.profile = profile.User(self._account)
 
     ### public methods & properties
     def login(self):

@@ -155,7 +155,7 @@ class User(gobject.GObject):
             }
 
     def __init__(self, account):
-        self._protocol = ns_protocol
+        #self._protocol = ns_protocol
         self._account = account[0]
         self._password = account[1]
 
@@ -191,7 +191,6 @@ class User(gobject.GObject):
 
     def __set_personal_message(self, personal_message):
         pass #FIXME: set the personal message
-        self._protocol.set_personal_message(personal_message)
     def __get_personal_message(self):
         return self._personal_message
     personal_message = property(__get_personal_message, __set_personal_message)

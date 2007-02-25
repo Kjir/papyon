@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007  Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,6 +23,7 @@ from consts import NetworkID
 from pymsn.service.SOAPService import SOAPService, SOAPUtils
 
 from xml.utils import iso8601
+from string import upper, join
 
 __all__ = ['AB']
 
@@ -50,10 +52,34 @@ class Contact(object):
         self.display_name = soap_utils.find_ex(contact_info, "./ab:displayName").text
         self.CID = soap_utils.find_ex(contact_info, "./ab:CID").text
 
+
 class AB(BaseAddressBook, SOAPService):
     def __init__(self, contacts_security_token):
         BaseAddressBook.__init__(self, contacts_security_token)
         SOAPService.__init__(self, AB_SERVICE_URL)
+
+    def _soap_headers(self, method):
+        if method == "ABFindAll":
+            BaseAddressBook._soap_headers(self, method, "Initial")
+        elif method == "ABContactAdd":
+            BaseAddressBook._soap_headers(self, method, "ContactSave")
+        elif method == "ABContactDelete":
+            BaseAddressBook._soap_headers(self, method, "Timer")
+        elif method == "ABContactUpdate":
+            BaseAddressBook._soap_headers(self, method, "Timer")
+        elif method == "ABGroupAdd":
+            BaseAddressBook._soap_headers(self, method, "GroupSave")
+        elif method == "ABGroupDelete":
+            BaseAddressBook._soap_headers(self, method, "Timer")
+        elif method == "ABGroupUpdate":
+            BaseAddressBook._soap_headers(self, method, "GroupSave")
+        elif method == "ABGroupContactAdd":
+            BaseAddressBook._soap_headers(self, method, "GroupSave")
+        elif method == "ABGroupContactDelete":
+            BaseAddressBook._soap_headers(self, method, "GroupSave")
+        else:
+            # We guess Timer to be the default scenario
+            BaseAddressBook._soap_headers(method, "Timer")
 
     def ABFindAll(self, callback, *callback_args):
         self._simple_method("ABFindAll", callback, callback_args,
@@ -61,6 +87,71 @@ class AB(BaseAddressBook, SOAPService):
                 ("abView", "Full"),
                 ("deltasOnly", "false"),
                 ("dynamicItemView", "Gleam"))
+
+    def ABContactAdd(self, properties, callback, *callback_args):
+        self._method("ABContactAdd", callback, callback_args, {})
+        self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
+        Contact = self.request.add_argument("contacts", NS_ADDRESSBOOK).\
+            append("Contact", NS_ADDRESSBOOK)
+        ContactInfo = Contact.append("contactInfo", NS_ADDRESSBOOK)
+        for property, nvalue in properties.iteritems():
+            if nvalue is None: break
+            ContactInfo.append(property, NS_ADDRESSBOOK, value=nvalue)
+        # TODO : add MessengerMemberInfo?
+        self._send_request()
+
+    def ABContactDelete(self, contact_id, callback, *callback_args):
+        self._method("ABContactDelete", callback, callback_args, {})
+        self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
+        Contact = self.request.add_argument("contacts", NS_ADDRESSBOOK).\
+            append("Contact", NS_ADDRESSBOOK)
+        Contact.append("contactId", NS_ADDRESSBOOK, value=contact_id)
+        self._send_request()
+    
+    # properties is a dict which keys can be : displayName, isMessengerUser...
+    def ABContactUpdate(self, contact_id, properties, callback, *callback_args):
+        self._method("ABContactUpdate", callback, callback_args, {})
+        self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
+        Contact = self.request.add_argument("contacts", NS_ADDRESSBOOK).\
+            append("Contact", NS_ADDRESSBOOK)
+        Contact.append("contactId", NS_ADDRESSBOOK, value=contact_id)
+        ContactInfo = Contact.append("contactInfo", NS_ADDRESSBOOK)
+        # TODO : add ContactType?
+        changed = []
+        for property, nvalue in properties.iteritems():
+            if nvalue is None: break
+            ContactInfo.append(property, NS_ADDRESSBOOK, value=nvalue)
+            changed.append(upper(property[0]) + property[1:len(property)])
+        Contact.append("propertiesChanged", NS_ADDRESSBOOK, value=join(changed))        
+        self._send_request()
+
+    def ABGroupAdd(self, group_name, callback, *callback_args):
+        self._method("ABGroupAdd", callback, callback_args, {})
+        self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
+        GroupAddOptions = self.request.add_argument("groupAddOptions", NS_ADDRESSBOOK)
+        GroupAddOptions.append("fRenameOnMsgrConflict", NS_ADDRESSBOOK, value="false")
+        GroupInfo = self.request.add_argument("groupInfo", NS_ADDRESSBOOK).\
+            append("GroupInfo", NS_ADDRESSBOOK)
+        GroupInfo.append("name", NS_ADDRESSBOOK, value=group_name)
+        GroupInfo.append("groupType", NS_ADDRESSBOOK, value="C8529CE2-6EAD-434d-881F-341E17DB3FF8")
+        GroupInfo.append("fMessenger", NS_ADDRESSBOOK, value="false")
+        Annotation = GroupInfo.append("annotations", NS_ADDRESSBOOK).\
+            append("Annotation", NS_ADDRESSBOOK)
+        Annotation.append("Name", NS_ADDRESSBOOK, value="MSN.IM.DISPLAY")
+        Annotation.append("Value", NS_ADDRESSBOOK, value="1")
+        self._send_request()
+
+    def ABGroupDelete(self, callback, *callback_args):
+        pass
+
+    def ABGroupUpdate(self, callback, *callback_args):
+        pass
+
+    def ABGroupContactAdd(self, callback, *callback_args):
+        pass
+
+    def ABGroupContactDelete(self, callback, *callback_args):
+        pass
 
     def _extract_response(self, method, soap_response):
         if method == "ABFindAll":
@@ -70,6 +161,17 @@ class AB(BaseAddressBook, SOAPService):
             for contact in contacts:
                 result.append(Contact(contact))
             return (soap_response, result)
+        elif method == "ABContactAdd":
+            path = "./ABContactAddResponse/ABContactAddResult/guid".replace("/", "/{%s}" % NS_ADDRESSBOOK)
+            guid = soap_response.body.find(path)
+            return (soap_response, guid.text)
+        elif method == "ABContactDelete":
+            return None
+        elif method == "ABContactUpdate":
+            return None
+        elif method == "ABGroupAdd":
+            path = "./ABGroupAddResponse/ABContactAddResult/guid".replace("/", "/{%s}" % NS_ADDRESSBOOK)
+            guid = soap_response.body.find(path)
+            return (soap_response, guid.text)
         else:
             return SOAPService._extract_response(self, method, soap_response)
-

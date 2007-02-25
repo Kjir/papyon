@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007  Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -164,7 +165,8 @@ class SOAPService(BaseSOAPService):
         method, callback, callback_args = self.request_queue.pop(0)
         if callback is not None:
             result = self._extract_response(method, soap_response)
-            arguments = tuple(callback_args) + tuple(result)
+            arguments = tuple(callback_args)
+            if result is not None: arguments += tuple(result)
             callback(*arguments)
     
     def _extract_response(self, method, soap_response):

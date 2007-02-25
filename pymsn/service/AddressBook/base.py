@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007  Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -35,13 +36,13 @@ class BaseAddressBook(object):
     def _method_namespace(self, method):
         return NS_ADDRESSBOOK
 
-    def _soap_headers(self, method):
+    def _soap_headers(self, method, scenario):
         """Add the needed headers for the current method"""
         ABApplicationHeader = self.request.add_header("ABApplicationHeader", NS_ADDRESSBOOK)
         ABApplicationHeader.append("ApplicationId", NS_ADDRESSBOOK,
                 value="996CDE1E-AA53-4477-B943-2BE802EA6166") 
         ABApplicationHeader.append("IsMigration", NS_ADDRESSBOOK, value="false")
-        ABApplicationHeader.append("PartnerScenario", NS_ADDRESSBOOK, value="Initial")
+        ABApplicationHeader.append("PartnerScenario", NS_ADDRESSBOOK, value=scenario)
         #TODO: add <CacheKey>
 
         ABAuthHeader = self.request.add_header("ABAuthHeader", NS_ADDRESSBOOK)
