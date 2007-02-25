@@ -204,7 +204,7 @@ class User(gobject.GObject):
     def do_get_property(self, pspec):
         name = pspec.name.lower().replace("-", "_")
         return getattr(self, name)
-
+gobject.type_register(User)
 
 class Contact(gobject.GObject):
     """Contact related information
@@ -267,7 +267,7 @@ class Contact(gobject.GObject):
         self._personal_message = Presence.OFFLINE
         self._personal_message = ""
 
-        self._memberships = sharing.Membership.UNKNOWN
+        self._memberships = Membership.UNKNOWN
 
     @property
     def id(self):
@@ -299,29 +299,29 @@ class Contact(gobject.GObject):
         return self.memberships & membership
     
     def _add_membership(self, membership):
-        if not self.is_member(sharing.Membership.REVERSE) and \
-                membership == sharing.Membership.REVERSE:
+        if not self.is_member(Membership.REVERSE) and \
+                membership == Membership.REVERSE:
             self.emit("added-me")
-        elif not self.is_member(sharing.Membership.FORWARD) and \
-                membership == sharing.Membership.FORWARD:
+        elif not self.is_member(Membership.FORWARD) and \
+                membership == Membership.FORWARD:
             self.emit("added")
 
-        self.memberships |= membership
+        self._memberships |= membership
         self.notify("memberships")
 
     def _remove_membership(self, membership):
         """removes the given membership from the contact
 
             @param membership: the membership to remove
-            @type membership: int L{sharing.Membership}"""
-        if self.is_member(sharing.Membership.REVERSE) and \
-                membership == sharing.Membership.REVERSE:
+            @type membership: int L{Membership}"""
+        if self.is_member(Membership.REVERSE) and \
+                membership == Membership.REVERSE:
             self.emit("removed-me")
-        elif self.is_member(sharing.Membership.FORWARD) and \
-                membership == sharing.Membership.FORWARD:
+        elif self.is_member(Membership.FORWARD) and \
+                membership == Membership.FORWARD:
             self.emit("removed")
 
-        self.memberships ^= membership
+        self._memberships ^= membership
         self.notify("memberships")
 
     def _server_property_changed(self, name, value): #FIXME, should not be used for memberships

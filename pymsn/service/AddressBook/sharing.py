@@ -24,21 +24,13 @@ from pymsn.service.SOAPService import SOAPService, SOAPUtils
 
 from xml.utils import iso8601
 
-__all__ = ['Sharing', 'Membership']
+__all__ = ['Sharing']
 
 SHARING_SERVICE_URL = "http://contacts.msn.com/abservice/SharingService.asmx"
 NS_ADDRESSBOOK = "http://www.msn.com/webservices/AddressBook"
 
 NS_SHORTHANDS = {"ab": NS_ADDRESSBOOK}
 
-
-class Membership(object):
-    UNKNOWN = 0
-    FORWARD = 1
-    ALLOW   = 2
-    BLOCK   = 4
-    REVERSE = 8
-    PENDING = 16
 
 class Member(object):
     def __init__(self, xml_node):

@@ -19,92 +19,9 @@
 
 import ab
 import sharing
+import pymsn.profile as profile
 
 import gobject
-
-class Contact(gobject.GObject):
-    """Contact related information
-        @undocumented: do_get_property, do_set_property"""
-    
-    __gsignals__ =  {
-            "added" : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-            "added-me" : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-            "removed" : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-            "removed-me" : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-            "blocked" : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-            "allowed" : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-            }
-
-    __gproperties__ = {
-            "memberships":     (gobject.TYPE_INT,
-                "Memberships",
-                "Membership relation with the contact.",
-                0, 15, 0, gobject.PARAM_READABLE)
-            }
-
-    def __init__(self, id, network_id, account, display_name):
-        """Initializer"""
-        gobject.GObject.__init__(self)
-        self.id = id
-        self.network_id = network_id
-        self.account = account
-        self.display_name = display_name
-
-        self.memberships = sharing.Membership.UNKNOWN
-        self.infos = []
-
-    ### membership management
-    def is_member(self, membership):
-        return self.memberships & membership
-    
-    def _add_membership(self, membership):
-        if not self.is_member(sharing.Membership.REVERSE) and \
-                membership == sharing.Membership.REVERSE:
-            self.emit("added-me")
-        elif not self.is_member(sharing.Membership.FORWARD) and \
-                membership == sharing.Membership.FORWARD:
-            self.emit("added")
-
-        self.memberships |= membership
-        self.notify("memberships")
-
-    def _remove_membership(self, membership):
-        """removes the given membership from the contact
-
-            @param membership: the membership to remove
-            @type membership: int L{sharing.Membership}"""
-        if self.is_member(sharing.Membership.REVERSE) and \
-                membership == sharing.Membership.REVERSE:
-            self.emit("removed-me")
-        elif self.is_member(sharing.Membership.FORWARD) and \
-                membership == sharing.Membership.FORWARD:
-            self.emit("removed")
-
-        self.memberships ^= membership
-        self.notify("memberships")
-
-    ### gobject properties
-    def do_get_property(self, pspec):
-        if pspec.name == "memberships":
-            return self.memberships
-        else:
-            raise AttributeError, "unknown property %s" % pspec.name
-
-    def do_set_property(self, pspec, value):
-        raise AttributeError, "unknown property %s" % pspec.name
-gobject.type_register(Contact)
 
 
 class AddressBookStatus(object):
@@ -206,22 +123,22 @@ class AddressBook(gobject.GObject):
         for contact in self.__ab_find_all_response:
             if contact.type == "Me":
                 continue #FIXME: update the profile
-            c = Contact(contact.id,
+            c = profile.Contact(contact.id,
                     contact.netword_id,
                     contact.account,
                     contact.display_name)
-            c._add_membership(sharing.Membership.FORWARD)
+            c._add_membership(profile.Membership.FORWARD)
             self._contacts[(contact.netword_id, contact.account)] = c
 
         for membership, members in self.__find_membership_response.iteritems():
             if membership == "Allow":
-                membership = sharing.Membership.ALLOW
+                membership = profile.Membership.ALLOW
             elif membership == "Block":
-                membership = sharing.Membership.BLOCK
+                membership = profile.Membership.BLOCK
             elif membership == "Reverse":
-                membership = sharing.Membership.REVERSE
+                membership = profile.Membership.REVERSE
             elif membership == "Pending":
-                membership = sharing.Membership.PENDING
+                membership = profile.Membership.PENDING
             else:
                 raise NotImplementedError("Unknown Membership Type : " + membership)
             for member in members:
@@ -229,7 +146,7 @@ class AddressBook(gobject.GObject):
                 if key in self._contacts:
                     self._contacts[key]._add_membership(membership)
                 else:
-                    self._contacts[key] = Contact(
+                    self._contacts[key] = profile.Contact(
                             "00000000-0000-0000-0000-000000000000",
                             member.netword_id,
                             member.account,

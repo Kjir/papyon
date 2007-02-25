@@ -24,6 +24,7 @@ Implements the protocol used to communicate with the Notification Server."""
 
 from base import BaseProtocol
 from message import IncomingMessage
+import pymsn.profile as profile
 import pymsn.service.SingleSignOn as SSO
 import pymsn.service.AddressBook as AddressBook
 
@@ -212,7 +213,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _address_book_cb(self, address_book, pspec):
         if address_book.status != AddressBook.AddressBookStatus.SYNCHRONIZED:
             return
-        mask = ~(AddressBook.Membership.REVERSE | AddressBook.Membership.PENDING)
+        mask = ~(profile.Membership.REVERSE | profile.Membership.PENDING)
         predicate = lambda contact: contact.is_member(mask)
         contacts = address_book.contacts_by_domain(predicate)
         s = '<ml l="1">'
