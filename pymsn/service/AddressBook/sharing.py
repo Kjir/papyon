@@ -19,7 +19,7 @@
 #
 
 from base import BaseAddressBook
-from consts import NetworkID
+from pymsn.profile import NetworkID
 from pymsn.service.SOAPService import SOAPService, SOAPUtils
 
 from xml.utils import iso8601

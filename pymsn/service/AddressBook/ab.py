@@ -19,7 +19,7 @@
 #
 
 from base import BaseAddressBook
-from consts import NetworkID
+from pymsn.profile import NetworkID
 from pymsn.service.SOAPService import SOAPService, SOAPUtils
 
 from xml.utils import iso8601
@@ -49,7 +49,11 @@ class Contact(object):
             self.account = soap_utils.find_ex(contact_info,
                     "./ab:emails/ab:ContactEmail/ab:email").text
             self.netword_id = NetworkID.EXTERNAL
-        self.display_name = soap_utils.find_ex(contact_info, "./ab:displayName").text
+        display_name = soap_utils.find_ex(xml_node, "./ab:DisplayName")
+        if display_name is not None:
+            self.display_name = display_name.text
+        else:
+            self.display_name = self.account.split("@", 1)[0]
         self.CID = soap_utils.find_ex(contact_info, "./ab:CID").text
 
 
@@ -79,7 +83,7 @@ class AB(BaseAddressBook, SOAPService):
             BaseAddressBook._soap_headers(self, method, "GroupSave")
         else:
             # We guess Timer to be the default scenario
-            BaseAddressBook._soap_headers(method, "Timer")
+            BaseAddressBook._soap_headers(self, method, "Timer")
 
     def ABFindAll(self, callback, *callback_args):
         self._simple_method("ABFindAll", callback, callback_args,
@@ -166,9 +170,9 @@ class AB(BaseAddressBook, SOAPService):
             guid = soap_response.body.find(path)
             return (soap_response, guid.text)
         elif method == "ABContactDelete":
-            return None
+            return (soap_response,)
         elif method == "ABContactUpdate":
-            return None
+            return (soap_response,)
         elif method == "ABGroupAdd":
             path = "./ABGroupAddResponse/ABContactAddResult/guid".replace("/", "/{%s}" % NS_ADDRESSBOOK)
             guid = soap_response.body.find(path)

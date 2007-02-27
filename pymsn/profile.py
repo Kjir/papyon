@@ -81,6 +81,16 @@ class ClientCapabilities(object):
         return (self.client_id & 0xf0000000 != 0)
 
 
+class NetworkID(object):
+    """Refers to the contact Network ID"""
+    MSN = 1
+    """Microsoft Network"""
+    MOBILE = 4
+    """Mobile phones"""
+    EXTERNAL = 32
+    """External IM etwork, currently Yahoo!"""
+
+
 class Presence(object):
     """Presence states.
 

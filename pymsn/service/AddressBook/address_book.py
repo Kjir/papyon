@@ -57,6 +57,7 @@ class AddressBook(gobject.GObject):
         self.__find_membership_response = None
 
         self._contacts = {}
+        self._profile = None
 
     def sync(self):
         if self._status != AddressBookStatus.NOT_SYNCHRONIZED:
@@ -93,9 +94,13 @@ class AddressBook(gobject.GObject):
         return result
 
     # Properties
-    def _get_status(self):
+    @property
+    def status(self):
         return self._status
-    status = property(_get_status)
+
+    @property
+    def profile(self):
+        return self._profile
 
     # Callbacks
     def _ab_find_all_cb(self, soap_response, contacts):
@@ -121,14 +126,15 @@ class AddressBook(gobject.GObject):
     # Private
     def __build_addressbook(self):
         for contact in self.__ab_find_all_response:
-            if contact.type == "Me":
-                continue #FIXME: update the profile
             c = profile.Contact(contact.id,
                     contact.netword_id,
                     contact.account,
                     contact.display_name)
-            c._add_membership(profile.Membership.FORWARD)
-            self._contacts[(contact.netword_id, contact.account)] = c
+            if contact.type == "Me":
+                self._profile = c
+            else:
+                c._add_membership(profile.Membership.FORWARD)
+                self._contacts[(contact.netword_id, contact.account)] = c
 
         for membership, members in self.__find_membership_response.iteritems():
             if membership == "Allow":
