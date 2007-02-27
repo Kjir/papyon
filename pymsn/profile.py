@@ -27,58 +27,71 @@ __all__ = ['Presence', 'User', 'Contact']
 
 
 class ClientCapabilities(object):
-    IS_BOT = 0x00020000
-    IS_MOBILE_DEVICE = 0x00000001
-    IS_MSN_MOBILE = 0x00000040
-    IS_MSN_DIRECT_DEVICE = 0x00000080
-
-    IS_MEDIA_CENTER_USER = 0x00002000
-    IS_MSN8_USER = 0x00000002
-
-    IS_WEB_CLIENT = 0x00000200
-    IS_TGW_CLIENT = 0x00000800
-
-    HAS_SPACE = 0x00001000
-    HAS_WEBCAM = 0x00000010
-    HAS_ONECARE = 0x01000000
-
-    RENDERS_GIF = 0x00000004
-    RENDERS_ISF = 0x00000008
-
-    SUPPORTS_CHUNKING = 0x00000020
-    SUPPORTS_DIRECT_IM = 0x00004000
-    SUPPORTS_WINKS = 0x00008000
-    SUPPORTS_SHARED_SEARCH = 0x00010000
-    SUPPORTS_VOICE_IM = 0x00040000
-    SUPPORTS_SECURE_CHANNEL = 0x00080000
-    SUPPORTS_SIP_INVITE = 0x00100000
-    SUPPORTS_SHARED_DRIVE = 0x00400000
-
-    P2P_SUPPORTS_TURN = 0x02000000
-    P2P_BOOTSTRAP_VIA_UUN = 0x04000000
     
-    def __init__(self, client_id):
-        self.client_id = client_id
+    _CAPABILITIES = {
+            'is_bot': 0x00020000,
+            'is_mobile_device': 0x00000001,
+            'is_msn_mobile': 0x00000040,
+            'is_msn_direct_device': 0x00000080,
+
+            'is_media_center_user': 0x00002000,
+            'is_msn8_user': 0x00000002,
+
+            'is_web_client': 0x00000200,
+            'is_tgw_client': 0x00000800,
+
+            'has_space': 0x00001000,
+            'has_webcam': 0x00000010,
+            'has_onecare': 0x01000000,
+
+            'renders_gif': 0x00000004,
+            'renders_isf': 0x00000008,
+
+            'supports_chunking': 0x00000020,
+            'supports_direct_im': 0x00004000,
+            'supports_winks': 0x00008000,
+            'supports_shared_search': 0x00010000,
+            'supports_voice_im': 0x00040000,
+            'supports_secure_channel': 0x00080000,
+            'supports_sip_invite': 0x00100000,
+            'supports_shared_drive': 0x00400000,
+
+            'p2p_supports_turn': 0x02000000,
+            'p2p_bootstrap_via_uun': 0x04000000
+            }
+
+    def __init__(self, msnc=0, client_id=0):
+        MSNC = (0x0,        # MSNC0
+                0x10000000, # MSNC1
+                0x20000000, # MSNC2
+                0x30000000, # MSNC3
+                0x40000000, # MSNC4
+                0x50000000, # MSNC5
+                0x60000000, # MSNC6
+                0x70000000) # MSNC7
+        object.__setattr__(self, 'client_id', MSNC[msnc] | client_id)
 
     def __getattr__(self, name):
-        mask = getattr(self, name.upper(), None)
-        if mask is None:
-            raise AttributeError("object 'ClientCapabilities' has no attribute '%s'" % name)
+        if name == "p2p_aware":
+            mask = 0xf0000000
+        elif name in self._CAPABILITIES:
+            mask = self._CAPABILITIES[name]
         else:
-            return mask & self.client_id != 0
-
+            raise AttributeError("object 'ClientCapabilities' has no attribute '%s'" % name)
+        return (self.client_id & mask != 0)
+            
     def __setattr__(self, name, value):
-        mask = getattr(self, name.upper(), None)
-        if mask is None:
-            raise AttributeError("object 'ClientCapabilities' has no attribute '%s'" % name)
-        else:
-            if value == True:
+        if name in self._CAPABILITIES:
+            mask = self._CAPABILITIES[name]
+            if value:
                 self.client_id |= mask
             else:
                 self.client_id ^= mask
+        else:
+            raise AttributeError("object 'ClientCapabilities' has no attribute '%s'" % name)
 
-    def p2p_aware(self):
-        return (self.client_id & 0xf0000000 != 0)
+    def __str__(self):
+        return str(self.client_id)
 
 
 class NetworkID(object):
@@ -115,6 +128,16 @@ class Presence(object):
     OUT_TO_LUNCH = 'LUN'
     INVISIBLE = 'HDN'
     OFFLINE = 'FLN'
+
+
+class Privacy(object):
+    """User privacy, defines the default policy concerning contacts
+    not belonging to the ALLOW list nor to the BLOCK list
+    
+        @cvar ALLOW: allow by default
+        @cvar BLOCK: block by default"""
+    ALLOW = 'AL'
+    BLOCK = 'BL'
 
 
 class Membership(object):
@@ -162,17 +185,28 @@ class User(gobject.GObject):
                 "The presence to show to others",
                 Presence.OFFLINE,
                 gobject.PARAM_READABLE),
+
+            "privacy": (gobject.TYPE_STRING,
+                "Privacy",
+                "The privacy policy to use",
+                Privacy.BLOCK,
+                gobject.PARAM_READABLE),
             }
 
-    def __init__(self, account):
-        #self._protocol = ns_protocol
+    def __init__(self, account, ns_client):
+        gobject.GObject.__init__(self)
+        self._ns_client = ns_client
         self._account = account[0]
         self._password = account[1]
 
         self._profile = ""
         self._display_name = self._account.split("@", 1)[0]
         self._presence = Presence.OFFLINE
+        self._privacy = Privacy.BLOCK
         self._personal_message = ""
+        
+        self.client_id = ClientCapabilities()
+        
         #FIXME: Display Picture
 
     @property
@@ -188,33 +222,41 @@ class User(gobject.GObject):
         return self._profile
 
     def __set_display_name(self, display_name):
-        pass #FIXME: set the display name
+        self._ns_client.set_display_name(display_name)
     def __get_display_name(self):
         return self._display_name
     display_name = property(__get_display_name, __set_display_name)
         
     def __set_presence(self, presence):
-        pass #FIXME: set the presence
+        self._ns_client.set_presence(presence)
     def __get_presence(self):
         return self._presence
     presence = property(__get_presence, __set_presence)
 
+    def __set_privacy(self, privacy):
+        pass #FIXME: set the privacy setting
+    def __get_privacy(self):
+        return self._privacy
+    privacy = property(__get_privacy, __set_privacy)
+
     def __set_personal_message(self, personal_message):
-        pass #FIXME: set the personal message
+        self._ns_client.set_personal_message(personal_message)
     def __get_personal_message(self):
         return self._personal_message
     personal_message = property(__get_personal_message, __set_personal_message)
 
     def _server_property_changed(self, name, value):
-        assert(name in __gproperties__.keys())
-        name = name.lower().replace("-", "_")
-        setattr(self, name, value)
-        self.notify(name)
+        attr_name = "_" + name.lower().replace("-", "_")
+        old_value = getattr(self, attr_name)
+        if value != old_value:
+            setattr(self, attr_name, value)
+            self.notify(name)
 
     def do_get_property(self, pspec):
         name = pspec.name.lower().replace("-", "_")
         return getattr(self, name)
 gobject.type_register(User)
+
 
 class Contact(gobject.GObject):
     """Contact related information
@@ -274,7 +316,7 @@ class Contact(gobject.GObject):
         self._account = account
 
         self._display_name = display_name
-        self._personal_message = Presence.OFFLINE
+        self._presence = Presence.OFFLINE
         self._personal_message = ""
 
         self._memberships = Membership.UNKNOWN
@@ -335,14 +377,14 @@ class Contact(gobject.GObject):
         self.notify("memberships")
 
     def _server_property_changed(self, name, value): #FIXME, should not be used for memberships
-        assert(name in __gproperties__.keys())
-        name = name.lower().replace("-", "_")
-        setattr(self, name, value)
-        self.notify(name)
+        attr_name = "_" + name.lower().replace("-", "_")
+        old_value = getattr(self, attr_name)
+        if value != old_value:
+            setattr(self, attr_name, value)
+            self.notify(name)
 
     def do_get_property(self, pspec):
         name = pspec.name.lower().replace("-", "_")
         return getattr(self, name)
-
 gobject.type_register(Contact)
 

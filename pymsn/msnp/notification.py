@@ -24,12 +24,15 @@ Implements the protocol used to communicate with the Notification Server."""
 
 from base import BaseProtocol
 from message import IncomingMessage
+import pymsn.gnet.util.ElementTree as et #FIXME: maybe this should be moved to pymsn
 import pymsn.profile as profile
 import pymsn.service.SingleSignOn as SSO
 import pymsn.service.AddressBook as AddressBook
 
 import logging
+import urllib
 import gobject
+import xml.sax.saxutils as xml_utils
 
 __all__ = ['NotificationProtocolStatus', 'NotificationProtocol']
 
@@ -48,6 +51,61 @@ class NotificationProtocolStatus(object):
     AUTHENTICATING = 2
     SYNCHRONIZING = 3
     OPEN = 4
+
+
+def _msn_challenge(data):
+    """
+    Compute an answer for MSN Challenge from a given data
+
+        @param data: the challenge string sent by the server
+        @type data: string
+    """
+    import struct
+    import md5
+    def little_endify(value, c_type="L"):
+        """Transform the given value into little endian"""
+        return struct.unpack(">" + c_type, struct.pack("<" + c_type, value))[0]
+
+    md5_digest = md5.md5(data + consts.PRODUCT_KEY).digest()
+    # Make array of md5 string ints
+    md5_integers = struct.unpack("<llll", md5_digest)
+    md5_integers = [(x & 0x7fffffff) for x in md5_integers]
+    # Make array of chl string ints
+    data += consts.PRODUCT_ID
+    amount = 8 - len(data) % 8
+    data += "".zfill(amount)
+    chl_integers = struct.unpack("<%di" % (len(data)/4), data)
+    # Make the key
+    high = 0
+    low = 0
+    i = 0
+    while i < len(chl_integers) - 1:
+        temp = chl_integers[i]
+        temp = (consts.MAGIC_NUM * temp) % 0x7FFFFFFF
+        temp += high
+        temp = md5_integers[0] * temp + md5_integers[1]
+        temp = temp % 0x7FFFFFFF
+        high = chl_integers[i + 1]
+        high = (high + temp) % 0x7FFFFFFF
+        high = md5_integers[2] * high + md5_integers[3]
+        high = high % 0x7FFFFFFF
+        low = low + high + temp
+        i += 2
+    high = little_endify((high + md5_integers[1]) % 0x7FFFFFFF)
+    low = little_endify((low + md5_integers[3]) % 0x7FFFFFFF)
+    key = (high << 32L) + low
+    key = little_endify(key, "Q")
+    longs = [x for x in struct.unpack(">QQ", md5_digest)]
+    longs = [little_endify(x, "Q") for x in longs]
+    longs = [x ^ key for x in longs]
+    longs = [little_endify(abs(x), "Q") for x in longs]
+    out = ""
+    for value in longs:
+        value = hex(value)
+        value = value[2:-1]
+        value = value.zfill(16)
+        out += value.lower()
+    return out
 
 
 class NotificationProtocol(BaseProtocol, gobject.GObject):
@@ -91,6 +149,11 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._status = NotificationProtocolStatus.CLOSED
         self._address_book = None
         self._protocol_version = 0
+    
+    # Properties ------------------------------------------------------------
+    @property
+    def status(self):
+        return self._status
         
     def do_get_property(self, pspec):
         if pspec.name == "status":
@@ -101,6 +164,37 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def do_set_property(self, pspec, value):
         raise AttributeError, "unknown property %s" % pspec.name
     
+    # Public API -------------------------------------------------------------
+    def set_presence(self, presence):
+        """Publish the new user presence.
+
+            @param presence: the new presence
+            @type presence: string L{profile.Presence}"""
+        if presence == profile.Presence.OFFLINE:
+            self.signoff()
+        else:
+            self._transport.send_command_ex('CHG', (presence, str(self._client.profile.client_id)))
+    
+    def set_display_name(self, display_name):
+        """Sets the new display name
+            
+            @param friendly_name: the new friendly name
+            @type friendly_name: string"""
+        self._transport.send_command_ex('PRP', ('MFN', urllib.quote(display_name)))
+
+    def set_personal_message(self, personal_message=''):
+        """Sets the new personal message
+            
+            @param personal_message: the new personal message
+            @type personal_message: string"""
+        message = xml_utils.escape(personal_message)
+        pm = '<Data>'\
+                '<PSM>%s</PSM>'\
+                '<CurrentMedia></CurrentMedia>'\
+                '<MachineGuid>{CAFEBABE-DEAD-BEEF-BAAD-FEEDDEADC0DE}</MachineGuid>'\
+            '</Data>' % message
+        self._transport.send_command_ex('UUX', payload=pm)
+        self._client.profile._server_property_changed("personal-message", personal_message)
     # Handlers ---------------------------------------------------------------
     # --------- Connection ---------------------------------------------------
     def _handle_VER(self, command):
@@ -159,25 +253,70 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     def _handle_OUT(self, command):
         raise NotImplementedError, "Missing Implementation, please fix"
+    
+    # --------- Presence & Privacy -------------------------------------------
+    def _handle_BLP(self, command):
+        self._client.profile._server_property_changed("privacy", command.arguments[0])
 
+    def _handle_CHG(self, command):
+        self._client.profile._server_property_changed("presence", command.arguments[0])
+
+    def _handle_ILN(self,command):
+        self._handle_NLN(command)
+
+    def _handle_FLN(self,command):
+        contacts = self._address_book.find_by_account(command.arguments[0])
+        for contact in contacts:
+            contact._server_property_changed("presence", PresenceStatus.OFFLINE)
+
+    def _handle_NLN(self,command):
+        contacts = self._address_book.find_by_account(command.arguments[1])
+        for contact in contacts:
+            presence = command.arguments[0]
+            display_name = urllib.unquote(command.arguments[3])
+            contact._server_property_changed("presence", presence)
+            contact._server_property_changed("display-name", display_name)
+
+    # --------- Display name and co ------------------------------------------
+    def _handle_PRP(self, command):
+        ctype = command.arguments[0]
+        if len(command.arguments) < 2: return
+        if ctype == 'MFN':
+            self._client.profile._server_property_changed('display-name',
+                    urllib.unquote(command.arguments[1]))
+        # TODO: add support for other stuff
+
+    def _handle_UUX(self, command):
+        pass
+
+    def _handle_UBX(self,command): # contact infos
+        contacts = self._address_book.find_by_account(command.arguments[0])
+        if command.payload:
+            for contact in contacts:
+                data = et.fromstring(command.payload)
+                contact._server_property_changed("personal-message", data.find("./PSM").text)
     # --------- Contact List -------------------------------------------------
     def _handle_ADL(self, command):
         if command.arguments[0] == "OK":
             self._status = NotificationProtocolStatus.OPEN
             self.notify("status")
+            #FIXME: remove the following lines, are there just for testing
+            self._client.profile.presence = profile.Presence.ONLINE
+            self._client.profile.display_name = "pymsn rewrite"
+            self._client.profile.personal_message = "Hello from pymsn.rewrite"
+
 
     # --------- Messages -----------------------------------------------------
     def _handle_MSG(self, command):
         msg = IncomingMessage(command)
         if msg.content_type[0] == 'text/x-msmsgsprofile':
-            #self.__profile._profile = command
-            #FIXME: use the profile
+            self._client.profile._server_property_changed("profile", command.payload)
             
             if self._protocol_version < 15:
                 #self._transport.send_command_ex('SYN', ('0', '0'))
                 raise NotImplementedError, "Missing Implementation, please fix"
             else:
-                self._transport.send_command_ex("BLP", ("BL",)) #FIXME: make this configurable somewhere
+                self._transport.send_command_ex("BLP", (self._client.profile.privacy,))
                 self._status = NotificationProtocolStatus.SYNCHRONIZING
                 self.notify("status")
                 self._address_book.sync()
@@ -185,6 +324,17 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 ('text/x-msmsgsinitialemailnotification', \
                  'text/x-msmsgsemailnotification'):
             self.emit("mail-received", msg)
+    
+    # --------- Challenge ----------------------------------------------------
+    def _handle_QNG(self,command):
+        pass
+
+    def _handle_QRY(self,command):
+        pass
+
+    def _handle_CHL(self,command):
+        response = _msn_challenge(command.arguments[0])
+        self._transport.send_command_ex('QRY', (ProtocolConstant.PRODUCT_ID,), payload=response)
 
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
@@ -213,6 +363,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _address_book_cb(self, address_book, pspec):
         if address_book.status != AddressBook.AddressBookStatus.SYNCHRONIZED:
             return
+        self._client.profile._server_property_changed("display-name", address_book.profile.display_name)
+
         mask = ~(profile.Membership.REVERSE | profile.Membership.PENDING)
         predicate = lambda contact: contact.is_member(mask)
         contacts = address_book.contacts_by_domain(predicate)

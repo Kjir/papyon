@@ -55,22 +55,13 @@ class Client(object):
             @type account: tuple(account, password)
 
             @param proxies: proxies that we can use to connect
-            @type proxies: {type: string => L{gio.network.ProxyInfos}}"""
+            @type proxies: {type: string => L{gnet.proxy.ProxyInfos}}"""
         self._account = account
         self._proxies = proxies
 
-        self._setup_transport(server)
-        self._setup_protocol()
-        self._setup_profile()
-
-    def _setup_transport(self, server):
         self._transport = DirectConnection(server, ServerType.NOTIFICATION, self._proxies)
-
-    def _setup_protocol(self):
         self._protocol = msnp.NotificationProtocol(self, self._transport, self._proxies)
-        
-    def _setup_profile(self):
-        self.profile = profile.User(self._account)
+        self.profile = profile.User(self._account, self._protocol)
 
     ### public methods & properties
     def login(self):

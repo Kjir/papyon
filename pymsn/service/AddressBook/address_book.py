@@ -69,7 +69,7 @@ class AddressBook(gobject.GObject):
 
     def find_by_account(self, account):
         result = []
-        for network in (NetworkID.MSN, NetworkID.EXTERNAL):
+        for network in (profile.NetworkID.MSN, profile.NetworkID.EXTERNAL):
             key = (network, account)
             if key in self._contacts:
                 result.append(self._contacts[key])
