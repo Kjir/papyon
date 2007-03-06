@@ -45,7 +45,7 @@ class Client(object):
     
     @group Connection: login, logout"""
 
-    def __init__(self, server, account, proxies={}):
+    def __init__(self, server, account, proxies={}, transport_class=DirectConnection):
         """Initializer
 
             @param server: the Notification server to connect to.
@@ -59,7 +59,7 @@ class Client(object):
         self._account = account
         self._proxies = proxies
 
-        self._transport = DirectConnection(server, ServerType.NOTIFICATION, self._proxies)
+        self._transport = transport_class(server, ServerType.NOTIFICATION, self._proxies)
         self._protocol = msnp.NotificationProtocol(self, self._transport, self._proxies)
         self.profile = profile.User(self._account, self._protocol)
 

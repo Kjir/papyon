@@ -89,7 +89,7 @@ class HTTP(gobject.GObject):
     def _on_request_sent(self, transport, request, length):
         assert(str(self._outgoing_queue[0]) == request)
         self._waiting_response = True
-        self.emit("request-sent", request)
+        self.emit("request-sent", self._outgoing_queue[0])
 
     def _on_response_received(self, parser, response):
         if response.status == 100:
@@ -136,11 +136,10 @@ class HTTP(gobject.GObject):
             url = 'http://%s:%d%s' % (self._host, self._port, resource)
             if self.__proxy.user:
                 auth = self.__proxy.user + ':' + self.__proxy.password
-                credentials = base64.encodestring(auth)
+                credentials = base64.encodestring(auth).strip()
                 headers['Proxy-Authorization'] = 'Basic ' + credentials
         else:
             url = resource
-
-        request  = HTTPRequest(headers, data, method, resource)
+        request  = HTTPRequest(headers, data, method, url)
         self._outgoing_queue.append(request)
         self._process_queue()

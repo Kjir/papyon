@@ -81,7 +81,7 @@ class ProxyInfos(object):
         # scheme://netloc/path;parameters?query#fragment
         # (scheme, netloc, path;parameters, query, fragment)
         url = urlparse.urlsplit(url, default_type)
-        type = url[0]
+        proxy_type = url[0]
         location = url[1]
         location = location.rsplit('@',1)
         if len(location) == 1:
@@ -96,7 +96,7 @@ class ProxyInfos(object):
         else:
             port = int(host[1])
         host = host[0]
-        return ProxyInfos(host, port, type, auth[0], auth[1])
+        return ProxyInfos(host, port, proxy_type, auth[0], auth[1])
 
     def __get_port(self):
         return self._port
@@ -106,14 +106,14 @@ class ProxyInfos(object):
     port = property(__get_port, __set_port, doc="Port used to connect to server.")
 
     def __get_type(self):
-        return self._port
+        return self._type
     def __set_type(self, type):
         assert(type in ('http', 'https', 'socks4', 'socks5'))
         self._type = type
     type = property(__get_type, __set_type, doc="Proxy type.")
 
     def __str__(self):
-        host = '%s:%u' % (self.host, self._port)
+        host = '%s:%u' % (self.host, self.port)
         if self.user:
             auth = '%s:%s' % (self.user, self.password)
             host = auth + '@' + host

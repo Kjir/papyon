@@ -18,10 +18,14 @@ def get_proxies():
     return result
 
 class Client(pymsn.Client):
-    def __init__(self, account, quit):
+    def __init__(self, account, quit, http_mode=False):
         server = ('207.46.109.66', 1863)
         self.quit = quit
-        pymsn.Client.__init__(self, server, account, proxies = get_proxies())
+        if http_mode:
+            from pymsn.transport import HTTPPollConnection
+            pymsn.Client.__init__(self, server, account, get_proxies(), HTTPPollConnection)
+        else:
+            pymsn.Client.__init__(self, server, account, proxies = get_proxies())
         gobject.idle_add(self.connect)
 
     def connect(self):
@@ -43,6 +47,12 @@ def main():
     import sys
     import getpass
     import signal
+    
+    if "--http" in sys.argv:
+        http_mode = True
+        sys.argv.remove('--http')
+    else:
+        http_mode = False
 
     if len(sys.argv) < 2:
         account = raw_input('Account: ')
@@ -64,7 +74,7 @@ def main():
 
     signal.signal(signal.SIGTERM, sigterm_cb)
 
-    n = Client((account, passwd), quit)
+    n = Client((account, passwd), quit, http_mode)
 
     while mainloop.is_running():
         try:

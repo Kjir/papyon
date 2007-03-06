@@ -149,7 +149,8 @@ class HTTPParser(AbstractParser):
         if status == IoStatus.OPEN:
             self._reset_state()
         elif status == IoStatus.CLOSING:
-            self.__emit_result()
+            #self.__emit_result()
+            pass
 
     def _on_chunk_received(self, parser, chunk):
         complete = False

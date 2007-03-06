@@ -54,7 +54,6 @@ class HTTPMessage(object):
             @param chunk: the chunk of data to parse
             @type chunk: string"""
         self.clear()
-
         sections = chunk.split("\r\n\r\n", 1)
 
         if len(sections) > 1:

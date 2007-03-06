@@ -31,6 +31,7 @@ The classes of this module are structured as follow:
 G{classtree BaseTransport}"""
 
 import gnet.io
+import gnet.protocol
 import msnp
 
 import logging
@@ -38,7 +39,7 @@ import gobject
 
 __all__=['ServerType', 'BaseTransport', 'DirectConnection']
 
-logger = logging.getLogger('Connection')
+logger = logging.getLogger('Transport')
 
 class ServerType(object):
     """"""
@@ -298,3 +299,135 @@ class DirectConnection(BaseTransport):
         logger.debug('<<< ' + repr(cmd))
         self.emit("command-received", cmd)
 gobject.type_register(DirectConnection)
+
+
+class HTTPPollConnection(BaseTransport):
+    """Implements an HTTP polling transport, basically it encapsulates the MSNP
+    commands into an HTTP request, and receive responses by polling a specific
+    url"""
+    def __init__(self, server, server_type=ServerType.NOTIFICATION, proxies={}):
+        self._target_server = server
+        server = ("gateway.messenger.hotmail.com", 80)
+        BaseTransport.__init__(self, server, server_type, proxies)
+        self._setup_transport()
+        
+        self._command_queue = []
+        self._waiting_for_response = False # are we waiting for a response
+        self._session_id = None
+
+    def _setup_transport(self):
+        server = self.server
+        proxies = self.proxies
+        if 'http' in proxies:
+            transport = gnet.protocol.HTTP(server[0], server[1], proxies['http'])
+        else:
+            transport = gnet.protocol.HTTP(server[0], server[1])
+        transport.connect("response-received", self.__on_received)
+        transport.connect("request-sent", self.__on_sent)
+        transport.connect("error", lambda t, msg: self.emit("connection-lost"))
+        self._transport = transport
+
+    def establish_connection(self):
+        logger.debug('<-> Connecting to %s:%d' % self.server)
+        self.__polling_source_id = gobject.timeout_add(3000, self._poll)
+        self.emit("connection-success")
+
+    def lose_connection(self):
+        gobject.source_remove(self.__polling_source_id)
+        del self.__polling_source_id
+        self.emit("connection-lost")
+
+    def reset_connection(self, server=None):
+        if server:
+            self._target_server = server
+        self.emit("connection-reset")
+
+    def send_command(self, command, increment=True, callback=None, *cb_args):
+        self._command_queue.append((command, increment, callback, cb_args))
+        self._send_command()
+
+    def _send_command(self):
+        if len(self._command_queue) == 0 or self._waiting_for_response:
+            return
+        command, increment = self._command_queue[0][0:2]
+        resource = "/gateway/gateway.dll"
+        headers = {
+            "Accept": "*/*",
+            "Accept-Language": "en-us",
+            #"User-Agent": "MSMSGS",
+            "Connection": "Keep-Alive",
+            "Pragma": "no-cache",
+            "Content-Type": "application/x-msn-messenger",
+            "Proxy-Connection": "Keep-Alive"
+        }
+        
+        str_command = str(command)
+        if self._session_id is None:            
+            resource += "?Action=open&Server=%s&IP=%s" % (self.server_type, self._target_server[0])
+        elif command == None:# Polling the server for queued messages
+            resource += "?Action=poll&SessionID=%s" % self._session_id 
+            str_command = ""
+        else:
+            resource += "?SessionID=%s" % self._session_id
+
+        self._transport.request(resource, headers, str_command, "POST")
+        self._waiting_for_response = True
+        
+        if command is not None:
+            logger.debug('>>> ' + repr(command))
+        
+        if increment:
+            self._increment_transaction_id()
+        
+    def _poll(self):
+        if not self._waiting_for_response:
+            self.send_command(None)
+        return True
+        
+    def __on_received(self, transport, http_response):
+        if 'X-MSN-Messenger' in http_response.headers:
+            data = http_response.headers['X-MSN-Messenger'].split(";")
+            for elem in data:
+                key, value =  [p.strip() for p in elem.split('=', 1)]
+                if key == 'SessionID':
+                    self._session_id = value
+                elif key == 'GW-IP':
+                    self.server = (value, self.server[1])
+                    self._setup_transport()
+                elif key == 'Session'and value == 'close':
+                    #self.lose_connection()
+                    pass
+        
+        self._waiting_for_response = False
+
+        commands = http_response.body
+        while len(commands) != 0:
+            commands = self.__extract_command(commands)
+        
+        self._send_command()
+
+    def __on_sent(self, transport, http_request):
+        command, increment, callback, cb_args = self._command_queue.pop(0)
+        if command is not None:
+            if callback:
+                callback(*cb_args)
+            self.emit("command-sent", command)
+
+    def __extract_command(self, data):
+        first, rest = data.split('\r\n', 1)
+        cmd = msnp.Command()
+        cmd.parse(first.strip())
+        if cmd.name in msnp.Command.INCOMING_PAYLOAD:
+            payload_len = int(cmd.arguments[-1])
+            if payload_len > 0:
+                cmd.payload = rest[:payload_len].strip()
+            logger.debug('<<< ' + repr(cmd))
+            self.emit("command-received", cmd)
+            return rest[payload_len:]
+        else:
+            logger.debug('<<< ' + repr(cmd))
+            self.emit("command-received", cmd)
+            return rest
+
+
+
