@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2005  Ole André Vadla Ravnås <oleavr@gmail.com>
-# Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2006-2007  Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007  Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,8 +31,14 @@ import gobject
 import socket
 import OpenSSL.SSL as OpenSSL
 
-__all__ = ['AbstractClient', 'SocketClient', 'SSLSocketClient', 'TCPClient',
-        'SSLTCPClient']
+__all__ = ['SocketClient', 'SSLSocketClient', 'TCPClient', 'SSLTCPClient']
+
+
+class ProxyfiableClient(object):
+    def _setup_transport(self, transport, status):
+        self._transport = transport
+        self._change_status(status)
+
 
 class AbstractClient(gobject.GObject):
     """Abstract client base class.
@@ -92,8 +99,9 @@ class AbstractClient(gobject.GObject):
         self._status = IoStatus.CLOSED
 
     def _change_status(self, new_status):
-        self._status = new_status
-        self.notify("status")
+        if self._status != new_status:
+            self._status = new_status
+            self.notify("status")
 
     def _pre_open(self):
         if len(self._host) == 0 or self._port < 0 or self._port > 65535:
@@ -222,7 +230,7 @@ class SocketClient(AbstractClient):
     close.__doc__ = AbstractClient.close.__doc__
     
     def send(self, buffer, callback=None, *args):
-        assert(self._status == IoStatus.OPEN)
+        assert(self._status == IoStatus.OPEN), self._status
         self._outgoing_queue.append([buffer, 0, callback, args])
         self._watch_add_cond(gobject.IO_OUT)
     send.__doc__ = AbstractClient.send.__doc__
@@ -422,7 +430,7 @@ class SSLSocketClient(SocketClient):
 gobject.type_register(SSLSocketClient)
 
 
-class TCPClient(SocketClient):
+class TCPClient(SocketClient, ProxyfiableClient):
     """Asynchronous TCP client class.
         
         @sort: __init__, open, send, close
@@ -441,7 +449,7 @@ class TCPClient(SocketClient):
         SocketClient.__init__(self, host, port, AF_INET, SOCK_STREAM)
 gobject.type_register(TCPClient)
 
-class SSLTCPClient(SSLSocketClient):
+class SSLTCPClient(SSLSocketClient, ProxyfiableClient):
     """Asynchronous SSL TCP client class.
         
         @sort: __init__, open, send, close

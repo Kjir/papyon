@@ -174,7 +174,7 @@ class AB(BaseAddressBook, SOAPService):
         elif method == "ABContactUpdate":
             return (soap_response,)
         elif method == "ABGroupAdd":
-            path = "./ABGroupAddResponse/ABContactAddResult/guid".replace("/", "/{%s}" % NS_ADDRESSBOOK)
+            path = "./ABGroupAddResponse/ABGroupAddResult/guid".replace("/", "/{%s}" % NS_ADDRESSBOOK)
             guid = soap_response.body.find(path)
             return (soap_response, guid.text)
         else:

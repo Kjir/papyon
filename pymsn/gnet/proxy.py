@@ -32,6 +32,8 @@ import gobject
 import base64
 import urlparse
 
+__all__ = ['HTTPConnectProxy']
+
 class ProxyInfos(object):
     """Contain informations needed to make use of a proxy.
 
@@ -119,11 +121,6 @@ class ProxyInfos(object):
             host = auth + '@' + host
         return self.type + '://' + host + '/'
 
-class ProxyfiableClient(object):
-    def _setup_transport(self, transport, status):
-        self._transport = transport
-        self._change_status(status)
-
 
 class AbstractProxy(AbstractClient):
     def __init__(self, client, proxy_infos):
@@ -138,14 +135,14 @@ class HTTPConnectProxy(AbstractProxy):
         """Open the connection."""
         if not self._pre_open():
             return
-        host = self._proxy.host
-        port = self._proxy.port
-        self._transport = TCPClient(hots, port)
+        self._transport = TCPClient(self._proxy.host, self._proxy.port)
         self._transport.connect("notify::status", self.__on_status_change)
         self._transport.connect("error", self.__on_error)
         self._http_parser = HTTPParser(self._transport)
         self._received_signal = \
                 self._http_parser.connect("received", self.__on_received)
+        self._change_status(IoStatus.CLOSED)
+        self._transport.open()
 
     def close(self):
         """Close the connection."""
@@ -156,7 +153,7 @@ class HTTPConnectProxy(AbstractProxy):
 
     def _change_status(self, status):
         AbstractProxy._change_status(self, status)
-        self._client._setup_transport(self._transport._transport, status)
+        self._client._setup_transport(self._transport, status)
 
     def __on_status_change(self,  transport, param):
         status = transport.get_property("status")
@@ -166,10 +163,10 @@ class HTTPConnectProxy(AbstractProxy):
             proxy_protocol  = 'CONNECT %s:%s HTTP/1.1\r\n' % (host, port)
             proxy_protocol += 'Proxy-Connection: Keep-Alive\r\n'
             proxy_protocol += 'Pragma: no-cache\r\n'
-            proxy_protocol += 'Host: %s:%s\r\n' % (host, port),
+            proxy_protocol += 'Host: %s:%s\r\n' % (host, port)
             proxy_protocol += 'User-Agent: %s/%s\r\n' % (GNet.NAME, GNet.VERSION)
             if self._proxy.user:
-                auth = base64.encodestring(self._proxy.user + ':' + self._proxy.password)
+                auth = base64.encodestring(self._proxy.user + ':' + self._proxy.password).strip()
                 proxy_protocol += 'Proxy-authorization: Basic ' + auth + '\r\n'
             proxy_protocol += '\r\n'
             self._transport.send(proxy_protocol)
@@ -195,72 +192,4 @@ class HTTPConnectProxy(AbstractProxy):
         if transport is not None and error_code == IoError.CONNECTION_FAILED:
             error_code = IoError.PROXY_CONNECTION_FAILED
         self.emit("error", error_code)
-
-#class HTTPConnectProxy(AbstractProxy):
-#     """HTTP proxy client using the CONNECT method to tunnel the communications.
-#        
-#        @since: 0.1"""
-#    
-#    def __init__(self, client, proxy):
-#        assert(proxy.type in ('http', 'https'))
-#        AbstractProxy.__init__(self, client, proxy)
-#
-#    def _get_transport(self):
-#        if self._transport is None:
-#            host = self._proxy.host
-#            port = self._proxy.port
-#            self._transport = TCPClient(hots, port)
-#            self._transport.connect("notify::status", self.__on_status_change)
-#            self._transport.connect("error", self.__on_error)
-#            self._http_parser = HTTPParser(self._transport)
-#            self._http_parser.connect("received", self.__on_received)
-#        return self._transport._socket #TODO: a bit ugly :D fix this
-#
-#    def open(self):
-#        """Asks the proxy to open a connection"""
-#        if self._status in (IoStatus.OPENING, IoStatus.OPEN):
-#            return
-#        assert(self._status == IoStatus.CLOSED)
-#        socket = self.transport
-#        self._transport.open() # FIXME: dirty dirty
-#
-#    def close(self):
-#        """Asks the proxy to close the connection and discard the transport"""
-#        self._transport.close()
-#
-#    def __on_status_change(self,  transport, param):
-#        status = transport.get_property("status")
-#        if status == IoStatus.OPEN:
-#            host = self._client.get_property("host")
-#            port = self._client.get_property("port")
-#            proxy_protocol  = 'CONNECT %s:%s HTTP/1.1\r\n' % (host, port)
-#            proxy_protocol += 'Proxy-Connection: Keep-Alive\r\n'
-#            proxy_protocol += 'Pragma: no-cache\r\n'
-#            proxy_protocol += 'Host: %s:%s\r\n' % (host, port),
-#            proxy_protocol += 'User-Agent: %s/%s\r\n' % (GNet.NAME, GNet.VERSION)
-#            if self._proxy.user:
-#                auth = base64.encodestring(self._proxy.user + ':' + self._proxy.password)
-#                proxy_protocol += 'Proxy-authorization: Basic ' + auth + '\r\n'
-#            proxy_protocol += '\r\n'
-#            self._transport.send(proxy_protocol)
-#        else:
-#            self._change_status(status)
-#    
-#    def __on_received(self, parser, response):
-#        if self.get_property("status") == IoStatus.OPENING:
-#            if response.status == 200:
-#                self._http_parser.delimiter = None
-#
-#                self._change_status(IoStatus.OPEN)
-#            elif response.status == 100:
-#                pass
-#            elif response.status == 407:
-#                self.__on_error(None, IoError.PROXY_AUTHENTICATION_REQUIRED)
-#            else:
-#                raise NotImplementedError("Unknown Proxy response code")
-#
-#    def __on_error(self, transport, error_code):
-#        if transport is not None and error_code == IoError.CONNECTION_FAILED:
-#            error_code = IoError.PROXY_CONNECTION_FAILED
-#        self.emit("error", error_code)
-#
+gobject.type_register(HTTPConnectProxy)

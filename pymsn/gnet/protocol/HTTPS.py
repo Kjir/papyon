@@ -19,6 +19,7 @@
 
 from pymsn.gnet.constants import *
 from pymsn.gnet.io import SSLTCPClient
+from pymsn.gnet.proxy import HTTPConnectProxy
 from pymsn.gnet.parser import HTTPParser
 from HTTP import HTTP
 
@@ -38,11 +39,17 @@ class HTTPS(HTTP):
             @param proxy: proxy that we can use to connect
             @type proxy: L{gnet.proxy.ProxyInfos}"""
         HTTP.__init__(self, host, port)
+        assert(proxy is None or proxy.type == 'https')
         self.__proxy = proxy
 
     def _setup_transport(self):
         if self._transport is None:
-            self._transport = SSLTCPClient(self._host, self._port)
+            transport = SSLTCPClient(self._host, self._port)
+            if self.__proxy is not None:
+                print 'Using proxy : ', self.__proxy
+                self._transport = HTTPConnectProxy(transport, self.__proxy)
+            else:
+                self._transport = transport
             self._http_parser = HTTPParser(self._transport)
             self._http_parser.connect("received", self._on_response_received)
             self._transport.connect("notify::status", self._on_status_change)

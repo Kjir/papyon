@@ -54,18 +54,12 @@ class HTTPMessage(object):
             @param chunk: the chunk of data to parse
             @type chunk: string"""
         self.clear()
-        sections = chunk.split("\r\n\r\n", 1)
-
-        if len(sections) > 1:
-            self.body = sections[1]
-        else:
-            self.body = ""
-
-        lines = sections[0].split("\r\n")
-        for line in lines:
-            line = line.split(":", 1)
-            name = line[0].strip()
-            value = line[1].strip()
+        lines = chunk.split("\r\n")
+        for i, line in enumerate(lines):
+            if line == "":
+                self.body = "\r\n".join(lines[i+1:])
+                break
+            name, value = line.split(": ", 1)
             self.add_header(name, value)
 
     def __str__(self):
