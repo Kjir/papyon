@@ -43,6 +43,7 @@ class ProtocolConstant(object):
     CVR = ('0x0409', 'winnt', '5.1', 'i386', 'MSNMSGR', '8.1.0178', 'msmsgs')
     PRODUCT_ID = "PROD0114ES4Z%Q5W"
     PRODUCT_KEY = "PK}_A_0N_K%O?A9S"
+    CHL_MAGIC_NUM = 0x0E79A9C1
 
 
 class NotificationProtocolStatus(object):
@@ -66,12 +67,12 @@ def _msn_challenge(data):
         """Transform the given value into little endian"""
         return struct.unpack(">" + c_type, struct.pack("<" + c_type, value))[0]
 
-    md5_digest = md5.md5(data + consts.PRODUCT_KEY).digest()
+    md5_digest = md5.md5(data + ProtocolConstant.PRODUCT_KEY).digest()
     # Make array of md5 string ints
     md5_integers = struct.unpack("<llll", md5_digest)
     md5_integers = [(x & 0x7fffffff) for x in md5_integers]
     # Make array of chl string ints
-    data += consts.PRODUCT_ID
+    data += ProtocolConstant.PRODUCT_ID
     amount = 8 - len(data) % 8
     data += "".zfill(amount)
     chl_integers = struct.unpack("<%di" % (len(data)/4), data)
@@ -81,7 +82,7 @@ def _msn_challenge(data):
     i = 0
     while i < len(chl_integers) - 1:
         temp = chl_integers[i]
-        temp = (consts.MAGIC_NUM * temp) % 0x7FFFFFFF
+        temp = (ProtocolConstant.CHL_MAGIC_NUM * temp) % 0x7FFFFFFF
         temp += high
         temp = md5_integers[0] * temp + md5_integers[1]
         temp = temp % 0x7FFFFFFF

@@ -308,7 +308,7 @@ class Contact(gobject.GObject):
                 gobject.PARAM_READABLE),
             }
 
-    def __init__(self, id, network_id, account, display_name):
+    def __init__(self, id, network_id, account, display_name, memberships=Membership.UNKNOWN):
         """Initializer"""
         gobject.GObject.__init__(self)
         self._id = id
@@ -319,7 +319,7 @@ class Contact(gobject.GObject):
         self._presence = Presence.OFFLINE
         self._personal_message = ""
 
-        self._memberships = Membership.UNKNOWN
+        self._memberships = memberships
 
     @property
     def id(self):
