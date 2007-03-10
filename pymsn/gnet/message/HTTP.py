@@ -56,7 +56,7 @@ class HTTPMessage(object):
         self.clear()
         lines = chunk.split("\r\n")
         for i, line in enumerate(lines):
-            if line == "":
+            if line.strip() == "":
                 self.body = "\r\n".join(lines[i+1:])
                 break
             name, value = line.split(": ", 1)
