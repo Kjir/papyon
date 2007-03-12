@@ -126,14 +126,34 @@ class AbstractProxy(AbstractClient):
     def __init__(self, client, proxy_infos):
         self._client = client
         self._proxy = proxy_infos
+        self._client.connect("sent", self.__on_client_sent)
+        self._client.connect("received", self.__on_client_received)
+        self._client.connect("notify::status", self.__on_client_status_change)
         AbstractClient.__init__(self, proxy_infos.host, proxy_infos.port)
+    
+    def _pre_open(self, sock=None):
+        self._change_status(IoStatus.OPENING)
+
+    def _post_open(self):
+        pass
+
+    def __on_client_status_change(self, client, param):
+        status = client.get_property("status")
+        if status == IoStatus.OPEN:
+            self._change_status(IoStatus.OPEN)
+
+    def __on_client_sent(self, client, data, length):
+        self.emit("sent", data, length)
+
+    def __on_client_received(self, client, data, length):
+        self.emit("received", data, length)
 gobject.type_register(AbstractProxy)
 
 
 class HTTPConnectProxy(AbstractProxy):
     def open(self):
         """Open the connection."""
-        if not self._pre_open():
+        if not self._configure():
             return
         self._transport = TCPClient(self._proxy.host, self._proxy.port)
         self._transport.connect("notify::status", self.__on_status_change)
@@ -141,7 +161,7 @@ class HTTPConnectProxy(AbstractProxy):
         self._http_parser = HTTPParser(self._transport)
         self._received_signal = \
                 self._http_parser.connect("received", self.__on_received)
-        self._change_status(IoStatus.CLOSED)
+        self._pre_open()
         self._transport.open()
 
     def close(self):
@@ -153,9 +173,12 @@ class HTTPConnectProxy(AbstractProxy):
 
     def _change_status(self, status):
         AbstractProxy._change_status(self, status)
-        self._client._setup_transport(self._transport, status)
+        if status == IoStatus.OPENING:
+            self._client._proxy_opening(self._transport)
+        elif status == IoStatus.CLOSED:
+            self._client._proxy_closed()
 
-    def __on_status_change(self,  transport, param):
+    def __on_status_change(self, transport, param):
         status = transport.get_property("status")
         if status == IoStatus.OPEN:
             host = self._client.get_property("host")
@@ -180,7 +203,7 @@ class HTTPConnectProxy(AbstractProxy):
                 self._http_parser.disconnect(self._received_signal)
                 del self._received_signal
                 del self._http_parser
-                self._change_status(IoStatus.OPEN)
+                self._client._proxy_open()
             elif response.status == 100:
                 pass
             elif response.status == 407:
@@ -191,5 +214,7 @@ class HTTPConnectProxy(AbstractProxy):
     def __on_error(self, transport, error_code):
         if transport is not None and error_code == IoError.CONNECTION_FAILED:
             error_code = IoError.PROXY_CONNECTION_FAILED
+        print "error"
         self.emit("error", error_code)
+
 gobject.type_register(HTTPConnectProxy)
