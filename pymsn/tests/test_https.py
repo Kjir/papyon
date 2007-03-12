@@ -27,9 +27,9 @@ def request(http, req):
 uagent = "Mozilla/4.0"
 proxies = get_proxies()
 if 'https' in proxies:
-    c = pymsn.gnet.protocol.HTTPS("sourceforge.net", proxy=proxies['https'])
+    c = pymsn.gnet.protocol.HTTPS("www.rtai.org", proxy=proxies['https'])
 else:
-    c = pymsn.gnet.protocol.HTTPS("sourceforge.net")
+    c = pymsn.gnet.protocol.HTTPS("www.rtai.org")
 
 c.connect("response-received", response)
 c.connect("request-sent", request)

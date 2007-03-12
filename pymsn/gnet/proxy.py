@@ -120,6 +120,13 @@ class ProxyInfos(object):
             auth = '%s:%s' % (self.user, self.password)
             host = auth + '@' + host
         return self.type + '://' + host + '/'
+    
+    def __repr__(self):
+        host = '%s:%u' % (self.host, self.port)
+        if self.user:
+            auth = '%s:%s' % (self.user, "*" * len(self.password))
+            host = auth + '@' + host
+        return self.type + '://' + host + '/'
 
 
 class AbstractProxy(AbstractClient):
@@ -132,7 +139,7 @@ class AbstractProxy(AbstractClient):
         AbstractClient.__init__(self, proxy_infos.host, proxy_infos.port)
     
     def _pre_open(self, sock=None):
-        self._change_status(IoStatus.OPENING)
+        pass
 
     def _post_open(self):
         pass
@@ -143,9 +150,11 @@ class AbstractProxy(AbstractClient):
             self._change_status(IoStatus.OPEN)
 
     def __on_client_sent(self, client, data, length):
+        print "sent %d bytes" % length
         self.emit("sent", data, length)
 
     def __on_client_received(self, client, data, length):
+        print "received %d bytes" % length
         self.emit("received", data, length)
 gobject.type_register(AbstractProxy)
 
@@ -174,7 +183,7 @@ class HTTPConnectProxy(AbstractProxy):
     def _change_status(self, status):
         AbstractProxy._change_status(self, status)
         if status == IoStatus.OPENING:
-            self._client._proxy_opening(self._transport)
+            self._client._proxy_opening(self._transport._transport)
         elif status == IoStatus.CLOSED:
             self._client._proxy_closed()
 
@@ -184,9 +193,9 @@ class HTTPConnectProxy(AbstractProxy):
             host = self._client.get_property("host")
             port = self._client.get_property("port")
             proxy_protocol  = 'CONNECT %s:%s HTTP/1.1\r\n' % (host, port)
-            proxy_protocol += 'Proxy-Connection: Keep-Alive\r\n'
+            #proxy_protocol += 'Proxy-Connection: Keep-Alive\r\n'
             proxy_protocol += 'Pragma: no-cache\r\n'
-            proxy_protocol += 'Host: %s:%s\r\n' % (host, port)
+            #proxy_protocol += 'Host: %s:%s\r\n' % (host, port)
             proxy_protocol += 'User-Agent: %s/%s\r\n' % (GNet.NAME, GNet.VERSION)
             if self._proxy.user:
                 auth = base64.encodestring(self._proxy.user + ':' + self._proxy.password).strip()
@@ -214,7 +223,6 @@ class HTTPConnectProxy(AbstractProxy):
     def __on_error(self, transport, error_code):
         if transport is not None and error_code == IoError.CONNECTION_FAILED:
             error_code = IoError.PROXY_CONNECTION_FAILED
-        print "error"
         self.emit("error", error_code)
 
 gobject.type_register(HTTPConnectProxy)

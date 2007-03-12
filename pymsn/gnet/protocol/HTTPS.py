@@ -46,7 +46,7 @@ class HTTPS(HTTP):
         if self._transport is None:
             transport = SSLTCPClient(self._host, self._port)
             if self.__proxy is not None:
-                print 'Using proxy : ', self.__proxy
+                print 'Using proxy : ', repr(self.__proxy)
                 self._transport = HTTPConnectProxy(transport, self.__proxy)
             else:
                 self._transport = transport

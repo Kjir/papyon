@@ -84,32 +84,34 @@ class DelimiterParser(AbstractParser):
 
     def _on_received(self, transport, buf, length):
         self._recv_cache += buf
-        if self._process_recv_cache():
-            gobject.idle_add(self._process_recv_cache, priority=gobject.PRIORITY_LOW) 
+        self._process_recv_cache()
 
     def _process_recv_cache(self):
         if len(self._recv_cache) == 0:
-            return False
+            return
         if self._chunk_delimiter is None or self._chunk_delimiter == "":
             self.emit("received", self._recv_cache)
             self._recv_cache = ""
-        elif isinstance(self._chunk_delimiter, int):
-            available = len(self._recv_cache)
-            required = self._chunk_delimiter
-            if required <= available:
-                self.emit ("received", self._recv_cache[:required])
-                self._recv_cache = self._recv_cache[required:]
-        else:
-            s = self._recv_cache.split(self._chunk_delimiter, 1)
-            if len(s) > 1:
-                self.emit("received", s[0])
-                self._recv_cache = s[1]
-            else:
-                self._recv_cache = s[0]
+            return
         
-        if len(self._recv_cache) == 0:
-            return False
-        return True
+        previous_length = len(self._recv_cache)
+        while len(self._recv_cache) != 0:
+            if isinstance(self._chunk_delimiter, int):
+                available = len(self._recv_cache)
+                required = self._chunk_delimiter
+                if required <= available:
+                    self.emit ("received", self._recv_cache[:required])
+                    self._recv_cache = self._recv_cache[required:]
+            else:
+                s = self._recv_cache.split(self._chunk_delimiter, 1)
+                if len(s) > 1:
+                    self.emit("received", s[0])
+                    self._recv_cache = s[1]
+                else:
+                    self._recv_cache = s[0]
+            if len(self._recv_cache) == previous_length: # noting got consumed, exit
+                return
+            previous_length = len(self._recv_cache)
 
     def _set_chunk_delimiter(self, delimiter):
         self._chunk_delimiter = delimiter

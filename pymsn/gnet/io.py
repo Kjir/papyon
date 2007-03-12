@@ -43,13 +43,13 @@ class ProxyfiableClient(object):
 
     def _proxy_opening(self, sock):
         if not self._configure(): return
-        self._pre_open()
+        self._pre_open(sock)
 
     def _proxy_open(self):
         self._post_open()
 
     def _proxy_closed(self):
-        self._close()
+        self.close()
         
 
 
@@ -315,7 +315,8 @@ class SocketClient(AbstractClient):
                     item[2](*item[3])
             if len(self._outgoing_queue) > 0: # send next item
                 item = self._outgoing_queue[0]
-                item[1] += self._channel.write(item[0][item[1]:])
+                l = self._channel.write(item[0][item[1]:])
+                item[1] += l
             else:
                 self._watch_remove_cond(gobject.IO_OUT)
         return True
@@ -353,8 +354,8 @@ class SSLSocketClient(SocketClient):
             return
         self._change_status(IoStatus.CLOSING)
         self._watch_remove()
-        self._channel.close()
         try:
+            self._channel.close()
             self._transport.shutdown(socket.SHUT_RDWR)
         except:
             pass
@@ -408,9 +409,9 @@ class SSLSocketClient(SocketClient):
                 except (OpenSSL.ZeroReturnError, OpenSSL.SysCallError):
                     self.close()
                     return False
+                print "SSLSocketClient::_io_channel_handler::received %d bytes" % len(buf)
                 self.emit("received", buf, len(buf))
             elif cond & gobject.IO_OUT:
-                print len(self._outgoing_queue)
                 if len(self._outgoing_queue) > 0:
                     item = self._outgoing_queue[0]
                     try:
@@ -422,6 +423,7 @@ class SSLSocketClient(SocketClient):
                         self.close()
                         return False
                     assert(ret >= 0)
+                    print "SSLSocketClient::_io_channel_handler::sent %d bytes" % ret
                     self._outgoing_queue[0][1] += ret
                     if self._outgoing_queue[0][1] == len(item[0]):
                         self.emit("sent", item[0], len(item[0]))
