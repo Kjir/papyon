@@ -59,8 +59,8 @@ class HTTPMessage(object):
             if line.strip() == "":
                 self.body = "\r\n".join(lines[i+1:])
                 break
-            name, value = line.split(": ", 1)
-            self.add_header(name, value)
+            name, value = line.split(":", 1)
+            self.add_header(name.rstrip(), value.lstrip())
 
     def __str__(self):
         result = []
