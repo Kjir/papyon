@@ -94,17 +94,21 @@ class HTTP(gobject.GObject):
     def _on_response_received(self, parser, response):
         if response.status == 100:
             return
-        if response.status in (301, 302): # UNTESTED: please test
-            location = response.headers['Location']
-            self._outgoing_queue[0].headers['Host'] = location
+        #if response.status in (301, 302): # UNTESTED: please test
+        #    location = response.headers['Location']
 
-            location = location.rsplit(":", 1)
-            self._host = location[0]
-            if len(location) == 2:
-                self._port = int(location[1])
-
-            self._setup_transport()
-            return
+        #    location = location.rsplit("://", 1)
+        #    if len(location) == 2:
+        #        scheme = location[0]
+        #        location = location[1]
+        #    if scheme == "http":
+        #        location = location.rsplit(":", 1)
+        #        self._host = location[0]
+        #        if len(location) == 2:
+        #            self._port = int(location[1])
+        #        self._outgoing_queue[0].headers['Host'] = response.headers['Location']
+        #        self._setup_transport()
+        #        return
         self._outgoing_queue.pop(0) # pop the request from the queue
         self.emit("response-received", response)
         self._waiting_response = False

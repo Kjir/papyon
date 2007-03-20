@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2005  Ole André Vadla Ravnås <oleavr@gmail.com>
 # Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -18,34 +17,21 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-"""Constants used in GNet."""
-from socket import AF_INET, AF_INET6, \
-    SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, SOCK_RDM, SOCK_SEQPACKET
-try:
-    from socket import AF_UNIX
-except ImportError:
-    pass
+__all__ = ['ProxyfiableClient']
 
-class GNet:
-    NAME = "gnet"
-    VERSION = "0.1"
+class ProxyfiableClient(object):
+    """All proxifiable clients must inherit from this class
+    to enable the Proxy object to manipulate them"""
 
-class IoStatus:
-    """Various networking status"""
-    CLOSING = 0
-    CLOSED  = 1
-    OPENING = 2
-    OPEN    = 3
+    def __init__(self):
+        pass
 
-class IoError:
-    """I/O error codes"""
-    CONNECTION_FAILED = 0
+    def _proxy_opening(self, sock):
+        if not self._configure(): return
+        self._pre_open(sock)
 
-    SSL_CONNECTION_FAILED = 10
-    SSL_PROTOCOL_ERROR = 11
+    def _proxy_open(self):
+        self._post_open()
 
-    PROXY_CONNECTION_FAILED = 20
-    PROXY_AUTHENTICATION_REQUIRED = 21
-    PROXY_FORBIDDEN = 22
-
-    UNKNOWN_ERROR = 99
+    def _proxy_closed(self):
+        self.close()

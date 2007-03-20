@@ -19,7 +19,7 @@
 
 from pymsn.gnet.constants import *
 from pymsn.gnet.io import SSLTCPClient
-from pymsn.gnet.proxy import HTTPConnectProxy
+from pymsn.gnet.proxy.HTTPConnect import HTTPConnectProxy
 from pymsn.gnet.parser import HTTPParser
 from HTTP import HTTP
 
