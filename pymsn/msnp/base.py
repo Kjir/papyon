@@ -42,7 +42,7 @@ class BaseProtocol(object):
             L{gnet.proxy.ProxyInfos} instance
     """
 
-    def __init__(self, client, transport, profile, proxies={}):
+    def __init__(self, client, transport, proxies={}):
         """Initializer
 
             @param client: the parent instance of L{client.Client}
@@ -50,9 +50,6 @@ class BaseProtocol(object):
 
             @param transport: The transport to use to speak the protocol
             @type transport: L{transport.BaseTransport}
-
-            @param profile: the profile of the user connecting to this account
-            @type profile: FIXME
             
             @param proxies: a dictonary mapping the proxy type to a
                 L{gnet.proxy.ProxyInfos} instance

@@ -329,12 +329,12 @@ class HTTPPollConnection(BaseTransport):
 
     def establish_connection(self):
         logger.debug('<-> Connecting to %s:%d' % self.server)
-        self.__polling_source_id = gobject.timeout_add(3000, self._poll)
+        self._polling_source_id = gobject.timeout_add(3000, self._poll)
         self.emit("connection-success")
 
     def lose_connection(self):
-        gobject.source_remove(self.__polling_source_id)
-        del self.__polling_source_id
+        gobject.source_remove(self._polling_source_id)
+        del self._polling_source_id
         self.emit("connection-lost")
 
     def reset_connection(self, server=None):
@@ -385,6 +385,9 @@ class HTTPPollConnection(BaseTransport):
         return True
         
     def __on_received(self, transport, http_response):
+        if http_response.status == 403:
+            print "Your proxy sucks, error 403 : forbidden !" # FIXME: transmist proper error
+            self.lose_connection()
         if 'X-MSN-Messenger' in http_response.headers:
             data = http_response.headers['X-MSN-Messenger'].split(";")
             for elem in data:

@@ -41,10 +41,8 @@ class AbstractProxy(AbstractClient):
             self._status = IoStatus.CLOSED
 
     def _on_client_sent(self, client, data, length):
-        print "sent %d bytes" % length
         self.emit("sent", data, length)
 
     def _on_client_received(self, client, data, length):
-        print "received %d bytes" % length
         self.emit("received", data, length)
 gobject.type_register(AbstractProxy)

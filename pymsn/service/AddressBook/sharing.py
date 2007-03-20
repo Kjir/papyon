@@ -57,9 +57,9 @@ class Member(object):
             self.display_name = self.account.split("@", 1)[0]
 
 class Sharing(BaseAddressBook, SOAPService):
-    def __init__(self, contacts_security_token):
+    def __init__(self, contacts_security_token, http_proxy=None):
         BaseAddressBook.__init__(self, contacts_security_token)
-        SOAPService.__init__(self, SHARING_SERVICE_URL)
+        SOAPService.__init__(self, SHARING_SERVICE_URL, http_proxy)
 
     def _soap_headers(self, method):
         if method == "FindMemberShip":

@@ -243,7 +243,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             password = self._client.profile.password
             
             if command.arguments[0] == "SSO":
-                sso = SSO.SingleSignOn(account, password)
+                if 'https' in self._proxies:
+                    sso = SSO.SingleSignOn(account, password, self._proxies['https'])
+                else:
+                    sso = SSO.SingleSignOn(account, password)
                 sso.RequestMultipleSecurityTokens(self._sso_cb, (command.arguments[3],),
                         SSO.LiveService.MESSENGER_CLEAR, SSO.LiveService.CONTACTS)
             elif command.arguments[0] == "TWN":
@@ -356,7 +359,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 clear_token = token
                 blob = token.mbi_crypt(nonce)
             elif token.service_address == SSO.LiveService.CONTACTS[0]:
-                self._address_book = AddressBook.AddressBook(token)
+                if 'http' in self._proxies:
+                    self._address_book = AddressBook.AddressBook(token, self._proxies['http'])
+                else:
+                    self._address_book = AddressBook.AddressBook(token)
                 self._address_book.connect("notify::status", self._address_book_cb)
         assert(clear_token is not None and blob is not None)
         self._transport.send_command_ex("USR", ("SSO", "S", clear_token.security_token, blob))

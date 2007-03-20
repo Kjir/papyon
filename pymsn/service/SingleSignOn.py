@@ -121,11 +121,11 @@ class SecurityToken(object):
 
 
 class SingleSignOn(SOAPService):
-    def __init__(self, username, password):
+    def __init__(self, username, password, https_proxy=None):
         self.__credentials = (username, password)
         self.__storage = pymsn.storage.get_storage(username, "security_tokens")
         self.__response_tokens = []
-        SOAPService.__init__(self, SERVICE_URL)
+        SOAPService.__init__(self, SERVICE_URL, https_proxy)
     
     def RequestMultipleSecurityTokens(self, callback, callback_args, *services):
         assert(len(services) > 0), "RequestMultipleSecurityTokens requires at least 1 service"

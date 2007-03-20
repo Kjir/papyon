@@ -29,4 +29,4 @@ instant messaging service.
 from client import *
 
 import gnet.proxy
-Proxy = gnet.proxy.ProxyInfos.from_string
+Proxy = gnet.proxy.ProxyFactory

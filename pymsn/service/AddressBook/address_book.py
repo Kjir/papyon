@@ -48,10 +48,10 @@ class AddressBook(gobject.GObject):
             gobject.PARAM_READABLE)
         }
 
-    def __init__(self, contacts_security_token): #TODO: pass an SSO client instead of the security token
+    def __init__(self, contacts_security_token, http_proxy=None): #TODO: pass an SSO client instead of the security token
         gobject.GObject.__init__(self)
-        self._ab_client = ab.AB(contacts_security_token)
-        self._sharing_client = sharing.Sharing(contacts_security_token)
+        self._ab_client = ab.AB(contacts_security_token, http_proxy)
+        self._sharing_client = sharing.Sharing(contacts_security_token, http_proxy)
         self._status = AddressBookStatus.NOT_SYNCHRONIZED
         self.__ab_find_all_response = None
         self.__find_membership_response = None

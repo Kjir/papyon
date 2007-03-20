@@ -58,9 +58,9 @@ class Contact(object):
 
 
 class AB(BaseAddressBook, SOAPService):
-    def __init__(self, contacts_security_token):
+    def __init__(self, contacts_security_token, http_proxy=None):
         BaseAddressBook.__init__(self, contacts_security_token)
-        SOAPService.__init__(self, AB_SERVICE_URL)
+        SOAPService.__init__(self, AB_SERVICE_URL, http_proxy)
 
     def _soap_headers(self, method):
         if method == "ABFindAll":

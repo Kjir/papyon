@@ -58,7 +58,6 @@ class Client(object):
             @type proxies: {type: string => L{gnet.proxy.ProxyInfos}}"""
         self._account = account
         self._proxies = proxies
-
         self._transport = transport_class(server, ServerType.NOTIFICATION, self._proxies)
         self._protocol = msnp.NotificationProtocol(self, self._transport, self._proxies)
         self.profile = profile.User(self._account, self._protocol)

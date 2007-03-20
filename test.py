@@ -12,6 +12,10 @@ def get_proxies():
     import urllib
     proxies = urllib.getproxies()
     result = {}
+    if 'https' not in proxies and \
+            'http' in proxies:
+        url = proxies['http'].replace("http://", "https://")
+        result['https'] = pymsn.Proxy(url)
     for type, url in proxies.items():
         if type == 'no': continue
         result[type] = pymsn.Proxy(url)
