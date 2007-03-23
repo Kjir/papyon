@@ -7,6 +7,21 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
+def get_proxies():
+    import urllib
+    proxies = urllib.getproxies()
+    result = {}
+    if 'https' not in proxies and \
+            'http' in proxies:
+        url = proxies['http'].replace("http://", "https://")
+        result['https'] = pymsn.Proxy(url)
+    for type, url in proxies.items():
+        if type == 'no': continue
+        result[type] = pymsn.Proxy(url)
+    return result
+
+proxies = get_proxies()
+
 NS_TEMP = "urn:xmethods-Temperature"
 class TemperatureService(SOAPService.SOAPService):
     def __init__(self, url):
@@ -37,14 +52,21 @@ def sso_cb2(soap_response, *tokens):
     print tokens
     for token in tokens:
         if token.service_address == SSO.LiveService.CONTACTS[0]:
-            abook = AddressBook.AB(token)
-            sharing = AddressBook.Sharing(token)
+            if 'http' in proxies:
+                abook = AddressBook.AB(token, proxies['http'])
+                sharing = AddressBook.Sharing(token, proxies['http']))
+            else:
+                abook = AddressBook.AB(token)
+                sharing = AddressBook.Sharing(token)
             break
     abook.ABFindAll(contacts_cb)
     sharing.FindMembership(membership_cb)
 
+if 'https' in proxies:
+    sso = SSO.SingleSignOn("kimbix@hotmail.com", "linox45", proxies['https'])
+else:
+    sso = SSO.SingleSignOn("kimbix@hotmail.com", "linox45")
 
-sso = SSO.SingleSignOn("kimbix@hotmail.com", "linox45")
 sso.RequestMultipleSecurityTokens(sso_cb1, (sso,), SSO.LiveService.CONTACTS)
 
 

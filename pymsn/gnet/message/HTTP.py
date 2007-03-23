@@ -54,6 +54,7 @@ class HTTPMessage(object):
             @param chunk: the chunk of data to parse
             @type chunk: string"""
         self.clear()
+
         lines = chunk.split("\r\n")
         for i, line in enumerate(lines):
             if line.strip() == "":
