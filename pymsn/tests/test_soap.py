@@ -54,7 +54,7 @@ def sso_cb2(soap_response, *tokens):
         if token.service_address == SSO.LiveService.CONTACTS[0]:
             if 'http' in proxies:
                 abook = AddressBook.AB(token, proxies['http'])
-                sharing = AddressBook.Sharing(token, proxies['http']))
+                sharing = AddressBook.Sharing(token, proxies['http'])
             else:
                 abook = AddressBook.AB(token)
                 sharing = AddressBook.Sharing(token)

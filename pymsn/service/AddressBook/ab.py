@@ -81,6 +81,8 @@ class AB(BaseAddressBook, SOAPService):
             BaseAddressBook._soap_headers(self, method, "GroupSave")
         elif method == "ABGroupContactDelete":
             BaseAddressBook._soap_headers(self, method, "GroupSave")
+        elif method == "UpdateDynamicItem":
+            BaseAddressBook._soap_headers(self, method, "RoamingIdentityChanged")
         else:
             # We guess Timer to be the default scenario
             BaseAddressBook._soap_headers(self, method, "Timer")
@@ -112,7 +114,7 @@ class AB(BaseAddressBook, SOAPService):
         Contact.append("contactId", NS_ADDRESSBOOK, value=contact_id)
         self._send_request()
     
-    # properties is a dict which keys can be : displayName, isMessengerUser...
+    # properties is a dict which keys can be : displayName, isMessengerUser... boolean values
     def ABContactUpdate(self, contact_id, properties, callback, *callback_args):
         self._method("ABContactUpdate", callback, callback_args, {})
         self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
@@ -156,6 +158,10 @@ class AB(BaseAddressBook, SOAPService):
 
     def ABGroupContactDelete(self, callback, *callback_args):
         pass
+
+    def UpdateDynamicItem(self, callback, *callback_args):
+        pass
+    
 
     def _extract_response(self, method, soap_response):
         if method == "ABFindAll":
