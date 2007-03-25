@@ -44,6 +44,11 @@ class SOAPUtils(object):
         return True
 
     @staticmethod
+    def bool_to_string(b):
+        if b: return "true"
+        return "false"
+
+    @staticmethod
     def int_type(s):
         try:
             return int(s)
@@ -210,7 +215,6 @@ class SOAPService(BaseSOAPService):
         self.http_headers['Content-Type'] = "text/xml; charset=utf-8"
         self.http_headers['Cache-Control'] ="no-cache"
         self.http_headers['Accept'] = "text/*"
-        #self.http_headers["Proxy-Connection"] = "Keep-Alive"
-        #self.http_headers["Connection"] = "Keep-Alive"
-
-
+        # fix : (to be removed later)
+        self.http_headers["Proxy-Connection"] = "Keep-Alive"
+        self.http_headers["Connection"] = "Keep-Alive"

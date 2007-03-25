@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2006 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,7 +38,6 @@ class AddressBookStatus(object):
     SYNCHRONIZED = 2
     """The addressbook is already synchornized"""
 
-
 class AddressBook(gobject.GObject):
 
     __gproperties__ = {
@@ -53,9 +53,11 @@ class AddressBook(gobject.GObject):
         self._ab_client = ab.AB(contacts_security_token, http_proxy)
         self._sharing_client = sharing.Sharing(contacts_security_token, http_proxy)
         self._status = AddressBookStatus.NOT_SYNCHRONIZED
-        self.__ab_find_all_response = None
+        self.__ab_find_all_groups_response = None
+        self.__ab_find_all_contacts_response = None
         self.__find_membership_response = None
 
+        self._groups = {}
         self._contacts = {}
         self._profile = None
 
@@ -64,7 +66,7 @@ class AddressBook(gobject.GObject):
             return
         self._status = AddressBookStatus.SYNCHRONIZING
         self.notify("status")
-        self._ab_client.ABFindAll("Initial", self._ab_find_all_cb)
+        self._ab_client.ABFindAll("Initial", False, self._ab_find_all_cb)
         self._sharing_client.FindMembership("Initial", self._find_membership_cb)
 
     def find_by_account(self, account):
@@ -93,6 +95,37 @@ class AddressBook(gobject.GObject):
             result[domain].append(contact)
         return result
 
+    def add_contact(self, passport, messenger=True):
+        self._ab_client.ABContactAdd("ContactSave", passport, messenger, 
+                                     "LivePending", self._ab_contact_add_cb)
+
+    def delete_contact(self, contact, messenger_only=False):
+        if messenger_only:
+            properties = { "displayName":"", "isMessengerUser":"false" }
+            self._ab_client.ABContactUpdate("Timer", contact.id(), properties,
+                                            self._ab_delete_contact_msgr_cb)
+        else:
+            self._ab_client.ABContactDelete("Timer", contact.id(),
+                                            self._ab_delete_contact_cb)
+
+    def block_contact(self, contact):
+        pass
+
+    def unblock_contact(self, contact):
+        pass
+
+    def add_group(self, group_name):
+        self._ab_client.ABGroupAdd("GroupSave", group_name, 
+                                   self._ab_add_group_cb)
+
+    def delete_group(self, group):
+        self._ab_client.ABGroupDelete("Timer", group.id(),
+                                      self._ab_delete_group_cb)
+
+    def change_group_name(self, group, new_name):
+        self._ab_client.ABGroupUpdate("GroupSave", group.id(), new_name,
+                                      self._ab_change_group_name_cb)
+
     # Properties
     @property
     def status(self):
@@ -103,15 +136,39 @@ class AddressBook(gobject.GObject):
         return self._profile
 
     # Callbacks
-    def _ab_find_all_cb(self, soap_response, contacts):
-        self.__ab_find_all_response = contacts
+    def _ab_find_all_cb(self, soap_response, groups, contacts):
+        self.__ab_find_all_groups_response = groups
+        self.__ab_find_all_contacts_response = contacts
         if self.__find_membership_response is not None:
             self.__build_addressbook()
 
     def _find_membership_cb(self, soap_response, members):
         self.__find_membership_response = members
-        if self.__ab_find_all_response is not None:
+        if self.__ab_find_all_contacts_response is not None:
             self.__build_addressbook()
+
+    def _ab_contact_add_cb(self, soap_response):
+        self._ab_client.ABFindAll("Initial", True, 
+                                  self._ab_contact_add_find_all_cb)
+
+    def _ab_contact_add_find_all_cb(self, soap_response, groups, contacts):
+        # find the new contact in contacts and add it
+        pass
+
+    def _ab_delete_contact_msgr_cb(self, soap_response):
+        pass
+
+    def _ab_delete_contact_cb(self, soap_response):
+        pass
+
+    def _ab_add_group_cb(self, soap_response, group_guid):
+        pass
+
+    def _ab_delete_group_cb(self, soap_response):
+        pass
+
+    def _ab_change_group_name_cb(self, soap_response):
+        pass
 
     ### gobject properties
     def do_get_property(self, pspec):
@@ -125,11 +182,17 @@ class AddressBook(gobject.GObject):
 
     # Private
     def __build_addressbook(self):
-        for contact in self.__ab_find_all_response:
+        for group in self.__ab_find_all_groups_response:
+            g = profile.Group(group.id, group.name)
+            self._groups[group.id] = g
+
+        print self._groups
+
+        for contact in self.__ab_find_all_contacts_response:
             c = profile.Contact(contact.id,
-                    contact.netword_id,
-                    contact.account,
-                    contact.display_name)
+                                contact.netword_id,
+                                contact.account,
+                                contact.display_name)
             if contact.type == "Me":
                 self._profile = c
             else:
@@ -158,7 +221,8 @@ class AddressBook(gobject.GObject):
                             member.account,
                             member.display_name,
                             membership)
-        del self.__ab_find_all_response
+        del self.__ab_find_all_contacts_response
+        del self.__ab_find_all_groups_response
         del self.__find_membership_response
         self._status = AddressBookStatus.SYNCHRONIZED
         self.notify("status")

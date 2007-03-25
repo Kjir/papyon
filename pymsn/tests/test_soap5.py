@@ -25,8 +25,8 @@ class ABTests:
                 self.abook = AddressBook.AB(token)
                 self.sharing = AddressBook.Sharing(token)
                 break
-        self.abook.ABFindAll("Initial", self.contacts_cb)
-        #self.sharing.FindMembership("Initial", self.membership_cb)
+        self.abook.ABFindAll("Initial", False, self.contacts_cb)
+        self.sharing.FindMembership("Initial", self.membership_cb)
 
     def membership_cb(self, soap_response, members):
         print members
@@ -35,13 +35,20 @@ class ABTests:
         for contact in contacts:
             print contact.account
             print contact.id
-        props = { "contactType":"Regular",
-                  "passportName":"arg@gmail.com",
-                  "isMessengerUser":"false" }
-        self.abook.ABContactAdd("ContactSave", props, self.contact_add_cb)
-
+        self.abook.ABContactAdd("ContactSave", 
+                                "johann.prieur@gmail.com",
+                                True,
+                                "LivePending",
+                                self.contact_add_cb)
+        
     def contact_add_cb(self, soap_response, guid):
         print "The guid for the added contact is " + guid
+        self.abook.ABFindAll("ContactSave", True, self.findall)
+
+    def findall(self, soap_response, contacts):
+        for contact in contacts:
+            print contact.account
+            print contact.id
 
 test = ABTests()
 gobject.MainLoop().run()

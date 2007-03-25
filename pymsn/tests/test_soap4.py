@@ -48,7 +48,7 @@ class ABTests:
                                    self.update1)
 #         self.abook.ABContactUpdate(contacts[4].id,{},self.update4)
 
-    def update1(self):
+    def update1(self, aa):
         print '1 done'
 
     def update2(self):

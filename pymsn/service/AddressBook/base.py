@@ -29,7 +29,7 @@ NS_ADDRESSBOOK = "http://www.msn.com/webservices/AddressBook"
 class BaseAddressBook(object):
     def __init__(self, contacts_security_token):
         self.__security_token = contacts_security_token
-        self.__scenario = "Initial"
+        self.__scenario = None
 
     def _soap_action(self, method):
         return "http://www.msn.com/webservices/AddressBook/" + method

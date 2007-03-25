@@ -388,3 +388,47 @@ class Contact(gobject.GObject):
         return getattr(self, name)
 gobject.type_register(Contact)
 
+class Group(gobject.GObject):
+
+    __gsignals__ = {
+        "added": (gobject.SIGNAL_RUN_FIRST,
+                  gobject.TYPE_NONE,
+                  ()),
+        "deleted": (gobject.SIGNAL_RUN_FIRST,
+                    gobject.TYPE_NONE,
+                    ()),
+        "updated": (gobject.SIGNAL_RUN_FIRST,
+                    gobject.TYPE_NONE,
+                    ()) 
+        }
+
+    __gproperties__ = {
+        "name": (gobject.TYPE_STRING,
+                 "Group name",
+                 "Name that the user chooses for the group",
+                 "",
+                 gobject.PARAM_READWRITE)
+        }
+
+    def __init__(self, id, name):
+        """Initializer"""
+        gobject.GObject.__init__(self)
+        self._id = id
+        self._name = name
+
+    @property
+    def id(self):
+        "Group identifier in a GUID form"""
+        return self._id
+
+    @property
+    def name(self):
+        "Group name"
+        return self.name
+
+    def do_get_property(self, pspec):
+        name = pspec.name.lower().replace("-", "_")
+        return getattr(self, name)
+
+gobject.type_register(Group)
+

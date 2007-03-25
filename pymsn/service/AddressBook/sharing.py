@@ -61,13 +61,6 @@ class Sharing(BaseAddressBook, SOAPService):
         BaseAddressBook.__init__(self, contacts_security_token)
         SOAPService.__init__(self, SHARING_SERVICE_URL, http_proxy)
 
-#     def _soap_headers(self, method):
-#         if method == "FindMemberShip":
-#             BaseAddressBook._soap_headers(self, method, "Initial")
-#         else:
-#             # We guess Timer to be the default scenario
-#             BaseAddressBook._soap_headers(self, method, "Timer")
-
     def FindMembership(self, scenario, callback, *callback_args):
         self.__scenario = scenario
         self._method("FindMembership", callback, callback_args, {})
@@ -83,6 +76,30 @@ class Sharing(BaseAddressBook, SOAPService):
         #    self.request.add_argument("deltasOnly", NS_ADDRESSBOOK, value="true")
         #    self.request.add_argument("lastChange", NS_ADDRESSBOOK, value=last_change)
         self._send_request()
+
+    def AddMember(self, scenario, member_role, passport,
+                  callback, *callback_args):
+        self.__scenario = scenario
+        self._method("AddMember", callback, callback_args, {})
+        serviceHandle = self.request.add_argument("serviceHandle")
+        serviceHandle.append("Id", value="0")
+        servicehandle.append("Type", value="Messenger")
+        servicehandle.append("ForeignId", value="")
+        Membership = self.request.add_argument("memberships").\
+            append("Membership")
+        Membership.append("MemberRole", value=member_role)
+        #Member = Membership.append("Members").append("Member", 
+        #                                             xsi\:type="PassportMember",
+        #                                             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance")
+        #Member.append("Type", value="Passport")
+        #Member.append("State", value="Accepted")
+        #Member.append("PassportName", value=passport)
+        self._send_request()
+
+    def DeleteMember(self, scenario, callback, *callback_args):
+        self.__scenario = scenario
+        self._method("DeleteMember", callback, callback_args, {})
+        pass
 
     def _extract_response(self, method, soap_response):
         if method == "FindMembership":
