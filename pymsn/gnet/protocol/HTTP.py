@@ -85,6 +85,10 @@ class HTTP(gobject.GObject):
     def _on_status_change(self, transport, param):
         if transport.get_property("status") == IoStatus.OPEN:
             self._process_queue()
+        elif transport.get_property("status") == IoStatus.CLOSED and\
+                (self._waiting_response or len(self._outgoing_queue) > 0):
+            self._waiting_response = False
+            self._setup_transport()
 
     def _on_request_sent(self, transport, request, length):
         assert(str(self._outgoing_queue[0]) == request)

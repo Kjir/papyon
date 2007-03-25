@@ -29,6 +29,7 @@ NS_ADDRESSBOOK = "http://www.msn.com/webservices/AddressBook"
 class BaseAddressBook(object):
     def __init__(self, contacts_security_token):
         self.__security_token = contacts_security_token
+        self.__scenario = "Initial"
 
     def _soap_action(self, method):
         return "http://www.msn.com/webservices/AddressBook/" + method
@@ -36,13 +37,13 @@ class BaseAddressBook(object):
     def _method_namespace(self, method):
         return NS_ADDRESSBOOK
 
-    def _soap_headers(self, method, scenario):
+    def _soap_headers(self, method):
         """Add the needed headers for the current method"""
         ABApplicationHeader = self.request.add_header("ABApplicationHeader", NS_ADDRESSBOOK)
         ABApplicationHeader.append("ApplicationId", NS_ADDRESSBOOK,
                 value="996CDE1E-AA53-4477-B943-2BE802EA6166") 
         ABApplicationHeader.append("IsMigration", NS_ADDRESSBOOK, value="false")
-        ABApplicationHeader.append("PartnerScenario", NS_ADDRESSBOOK, value=scenario)
+        ABApplicationHeader.append("PartnerScenario", NS_ADDRESSBOOK, value=self.__scenario)
         #TODO: add <CacheKey>
 
         ABAuthHeader = self.request.add_header("ABAuthHeader", NS_ADDRESSBOOK)

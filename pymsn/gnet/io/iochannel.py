@@ -137,6 +137,7 @@ class GIOChannelClient(AbstractClient):
 
     def send(self, buffer, callback=None, *args):
         assert(self._status == IoStatus.OPEN), self._status
-        self._outgoing_queue.append(OutgoingPacket(buffer, len(buffer), callback, args))
+        self._outgoing_queue.append(OutgoingPacket(buffer, len(buffer),
+            callback, *args))
         self._watch_add_cond(gobject.IO_OUT)
 gobject.type_register(GIOChannelClient)

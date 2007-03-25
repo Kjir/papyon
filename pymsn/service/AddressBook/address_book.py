@@ -64,8 +64,8 @@ class AddressBook(gobject.GObject):
             return
         self._status = AddressBookStatus.SYNCHRONIZING
         self.notify("status")
-        self._ab_client.ABFindAll(self._ab_find_all_cb)
-        self._sharing_client.FindMembership(self._find_membership_cb)
+        self._ab_client.ABFindAll("Initial", self._ab_find_all_cb)
+        self._sharing_client.FindMembership("Initial", self._find_membership_cb)
 
     def find_by_account(self, account):
         result = []

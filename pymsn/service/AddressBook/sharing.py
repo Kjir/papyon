@@ -61,14 +61,15 @@ class Sharing(BaseAddressBook, SOAPService):
         BaseAddressBook.__init__(self, contacts_security_token)
         SOAPService.__init__(self, SHARING_SERVICE_URL, http_proxy)
 
-    def _soap_headers(self, method):
-        if method == "FindMemberShip":
-            BaseAddressBook._soap_headers(self, method, "Initial")
-        else:
-            # We guess Timer to be the default scenario
-            BaseAddressBook._soap_headers(self, method, "Timer")
+#     def _soap_headers(self, method):
+#         if method == "FindMemberShip":
+#             BaseAddressBook._soap_headers(self, method, "Initial")
+#         else:
+#             # We guess Timer to be the default scenario
+#             BaseAddressBook._soap_headers(self, method, "Timer")
 
-    def FindMembership(self, callback, *callback_args):
+    def FindMembership(self, scenario, callback, *callback_args):
+        self.__scenario = scenario
         self._method("FindMembership", callback, callback_args, {})
         ServiceType = self.request.add_argument("serviceFilter", NS_ADDRESSBOOK).\
             append("Types", NS_ADDRESSBOOK)

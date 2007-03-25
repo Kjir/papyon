@@ -75,30 +75,8 @@ class SSLSocketClient(GIOChannelClient):
             if cond & (gobject.IO_ERR | gobject.IO_HUP):
                 self.close()
                 return False
-
-            if cond & gobject.IO_OUT:
-                if len(self._outgoing_queue) > 0:
-                    item = self._outgoing_queue[0]
-                    if item.is_complete(): # sent item
-                        self.emit("sent", item.buffer, item.size)
-                        item.callback()
-                        del self._outgoing_queue[0]
-                        del item
-                    if len(self._outgoing_queue) > 0: # send next item
-                        item = self._outgoing_queue[0]
-                        try:
-                            ret = self._transport.send(item.read())
-                        except (OpenSSL.WantX509LookupError,
-                                OpenSSL.WantReadError, OpenSSL.WantWriteError):
-                            return True
-                        except (OpenSSL.ZeroReturnError, OpenSSL.SysCallError):
-                            self.close()
-                            return False
-                        item.sent(ret)
-                else:
-                    self._watch_remove_cond(gobject.IO_OUT)
-
-            elif cond & (gobject.IO_IN | gobject.IO_PRI):
+            
+            if cond & (gobject.IO_IN | gobject.IO_PRI):
                 try:
                     buf = self._transport.recv(2048)
                 except (OpenSSL.WantX509LookupError,
@@ -108,6 +86,28 @@ class SSLSocketClient(GIOChannelClient):
                     self.close()
                     return False
                 self.emit("received", buf, len(buf))
+
+            if cond & gobject.IO_OUT:
+                if len(self._outgoing_queue) > 0: # send next item
+                    item = self._outgoing_queue[0]
+                    try:
+                        ret = self._transport.send(item.read())
+                    except (OpenSSL.WantX509LookupError,
+                            OpenSSL.WantReadError, OpenSSL.WantWriteError):
+                        return True
+                    except (OpenSSL.ZeroReturnError, OpenSSL.SysCallError):
+                        self.close()
+                        return False
+                    item.sent(ret)
+                    if item.is_complete(): # sent item
+                        self.emit("sent", item.buffer, item.size)
+                        item.callback()
+                        del self._outgoing_queue[0]
+                        del item
+                    if len(self._outgoing_queue) == 0:
+                        self._watch_remove_cond(gobject.IO_OUT)
+                else:
+                    self._watch_remove_cond(gobject.IO_OUT)
 
         return True
 

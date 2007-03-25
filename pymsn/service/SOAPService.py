@@ -50,6 +50,7 @@ class SOAPUtils(object):
         except:
             return 0
 
+
 class BaseSOAPService(object):
     DEFAULT_PROTOCOL = "http"
 
@@ -73,10 +74,15 @@ class BaseSOAPService(object):
         return protocol, host, resource
 
     def _response_handler(self, transport, response):
-        logger.debug("<<< " + str(response))
+        #logger.debug("<<< " + str(response))
+        soap_response = SOAP.SOAPResponse(response.body)
+        logger.debug("<<< SOAP Response: " + soap_response.body[0].tag)
+        
 
     def _request_handler(self, transport, request):
-        logger.debug(">>> " + str(request))
+        #logger.debug(">>> " + str(request))
+        soap_request = SOAP.SOAPResponse(request.body)
+        logger.debug(">>> SOAP Request: " + soap_request.body[0].tag)
     
     def _error_handler(self, transport, error):
         logger.warning("Transport Error :" + str(error))
@@ -204,5 +210,7 @@ class SOAPService(BaseSOAPService):
         self.http_headers['Content-Type'] = "text/xml; charset=utf-8"
         self.http_headers['Cache-Control'] ="no-cache"
         self.http_headers['Accept'] = "text/*"
+        #self.http_headers["Proxy-Connection"] = "Keep-Alive"
+        #self.http_headers["Connection"] = "Keep-Alive"
 
 
