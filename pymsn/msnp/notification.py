@@ -147,18 +147,22 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         """
         BaseProtocol.__init__(self, client, transport, proxies)
         gobject.GObject.__init__(self)
-        self._status = NotificationProtocolStatus.CLOSED
+        self.__status = NotificationProtocolStatus.CLOSED
         self._address_book = None
         self._protocol_version = 0
     
     # Properties ------------------------------------------------------------
-    @property
-    def status(self):
-        return self._status
+    def __get_status(self):
+        return self.__status
+    def __set_status(self, status):
+        self.__status = status
+        self.notify("status")
+    status = property(__get_status)
+    _status = property(__get_status, __set_status)
         
     def do_get_property(self, pspec):
         if pspec.name == "status":
-            return self._status
+            return self.__status
         else:
             raise AttributeError, "unknown property %s" % pspec.name
 
@@ -196,6 +200,40 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             '</Data>' % message
         self._transport.send_command_ex('UUX', payload=pm)
         self._client.profile._server_property_changed("personal-message", personal_message)
+
+    def signoff(self):
+        """Logout from the server"""
+        self._transport.send_command_ex('OUT')
+        self._transport.lose_connection()
+
+    def add_group(self, name):
+        """Create a new group using the given name
+            
+            @param name: the group name"""
+        pass
+
+    def add_contact(self, contact_id, network_id=profile.NetworkID.MSN):
+        """Add a contact to the contact list, given its contact ID and its
+        network ID
+            
+            @param contact_id: the contact identifier
+            @type contact_id: string
+            
+            @param network_id: the contact network
+            @type network_id: integer
+            @see L{pymsn.profile.NetworkID}"""
+
+        if network_id == profile.NetworkID.MOBILE:
+            payload = '<ml><t><c n="tel:%s" l="2" /></t></ml>' % contact
+            self._transport.send_command_ex("ADL", payload=payload)
+        else:
+            contact, domain = contact_id.split("@", 1)
+            payload = '<ml><d n="%s"><c n="%s" l="1" t="%d"/></d></ml>' % (domain,
+                    contact, network_id)
+            self._transport.send_command_ex("ADL", payload=payload)
+            payload = '<ml l="2"><d n="%s"><c n="%s"/></d></ml>'% (domain, contact)
+            self._transport.send_command_ex("FQY", payload=payload)
+
     # Handlers ---------------------------------------------------------------
     # --------- Connection ---------------------------------------------------
     def _handle_VER(self, command):
@@ -302,13 +340,11 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     # --------- Contact List -------------------------------------------------
     def _handle_ADL(self, command):
         if command.arguments[0] == "OK":
-            self._status = NotificationProtocolStatus.OPEN
-            self.notify("status")
-            #FIXME: remove the following lines, are there just for testing
-            self._client.profile.presence = profile.Presence.ONLINE
-            self._client.profile.display_name = "pymsn rewrite"
-            self._client.profile.personal_message = "Hello from pymsn.rewrite"
-
+            if self._status != NotificationProtocolStatus.OPEN: # Initial ADL
+                self._status = NotificationProtocolStatus.OPEN
+                self.notify("status")
+            else: # contact Added
+                raise NotImplementedError("ADL contact add response")
 
     # --------- Messages -----------------------------------------------------
     def _handle_MSG(self, command):
