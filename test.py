@@ -30,9 +30,9 @@ class Client(pymsn.Client):
             pymsn.Client.__init__(self, server, account, get_proxies(), HTTPPollConnection)
         else:
             pymsn.Client.__init__(self, server, account, proxies = get_proxies())
-        gobject.idle_add(self.connect)
+        gobject.idle_add(self._connect)
 
-    def connect(self):
+    def _connect(self):
         self.login()
         return False
 
@@ -46,6 +46,8 @@ class Client(pymsn.Client):
 
     def on_login_success(self, proto):
         self.profile.presence = pymsn.Presence.ONLINE
+        self.profile.display_name = "Kimbix"
+        self.profile.personal_message = "Testing pymsn, and freeing the pandas!"
 
 def main():
     import sys

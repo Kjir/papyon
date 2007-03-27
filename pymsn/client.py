@@ -61,6 +61,16 @@ class Client(object):
         self._transport = transport_class(server, ServerType.NOTIFICATION, self._proxies)
         self._protocol = msnp.NotificationProtocol(self, self._transport, self._proxies)
         self.profile = profile.User(self._account, self._protocol)
+        self.__setup_callbacks()
+
+    def __setup_callbacks(self):
+        self._transport.connect("connection-failure", self.on_connect_failure)
+        self._transport.connect("connection-lost", self.on_disconnected)
+        self._transport.connect("command-received", self.on_command_received)
+        self._transport.connect("command-sent", self.on_command_sent)
+
+        self._protocol.connect("login-success", self.on_login_success)
+        self._protocol.connect("login-failure", self.on_login_failure)
 
     ### public methods & properties
     def login(self):
@@ -71,3 +81,48 @@ class Client(object):
         """Logout from the server."""
         self._protocol.signoff()
 
+
+    ### Callbacks
+    def on_connect_failure(self, transp):
+        """Callback used when the connection to the server fails.
+        
+            @param transp: an instance of a class that implements the
+                L{transport.BaseTransport} interface"""
+        pass
+
+    def on_disconnected(self, transp):
+        """Callback used when we get disconnected from the server.
+        
+            @param transp: an instance of a class that implements the
+                L{transport.BaseTransport} interface"""
+        pass
+
+    def on_command_received(self, transp, cmd):
+        """Callback used when a command is received.
+            
+            @note: may be used for debugging purposes
+            @param transp: an instance of a class that implements the
+                L{transport.BaseTransport} interface
+            @param cmd: a {structure.Command} instance"""
+        pass
+
+    def on_command_sent(self, transp, cmd):
+        """Callback used when a command is sent.
+            
+            @note: may be used for debugging purposes
+            @param transp: an instance of a class that implements the
+                L{transport.BaseTransport} interface
+            @param cmd: a {structure.Command} instance"""
+        pass
+
+    def on_login_success(self, proto):
+        """Callback used when the login process succeeds.
+        
+            @param proto: the L{protocol.NotificationProtocol} instance"""
+        pass
+        
+    def on_login_failure(self, proto):
+        """Callback used when the login process fails.
+        
+            @param proto: the L{protocol.NotificationProtocol} instance"""
+        pass

@@ -27,6 +27,7 @@ instant messaging service.
 """
 
 from client import *
+from profile import NetworkID, Presence, Privacy, Membership
 
 import gnet.proxy
 Proxy = gnet.proxy.ProxyFactory

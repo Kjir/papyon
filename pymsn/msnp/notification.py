@@ -119,6 +119,14 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         @type _status: integer
         @see L{NotificationProtocolStatus}"""
     __gsignals__ = {
+            "login-failure" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                ()),
+
+            "login-success" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                ()),
+
             "mail-received" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,))
@@ -424,6 +432,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             if self._status != NotificationProtocolStatus.OPEN: # Initial ADL
                 self._status = NotificationProtocolStatus.OPEN
                 self.notify("status")
+                self.emit("login-success")
             else: # contact Added
                 raise NotImplementedError("ADL contact add response")
 

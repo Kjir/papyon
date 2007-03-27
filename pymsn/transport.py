@@ -421,7 +421,10 @@ class HTTPPollConnection(BaseTransport):
         cmd = msnp.Command()
         cmd.parse(first.strip())
         if cmd.name in msnp.Command.INCOMING_PAYLOAD:
-            payload_len = int(cmd.arguments[-1])
+            try:
+                payload_len = int(cmd.arguments[-1])
+            except:
+                payload_len = 0
             if payload_len > 0:
                 cmd.payload = rest[:payload_len].strip()
             logger.debug('<<< ' + repr(cmd))

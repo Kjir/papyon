@@ -284,7 +284,7 @@ class Contact(gobject.GObject):
             }
 
     __gproperties__ = {
-            "memberships": (gobject.TYPE_INT,
+            "memberships": (gobject.TYPE_UINT,
                 "Memberships",
                 "Membership relation with the contact.",
                 0, 15, 0, gobject.PARAM_READABLE),
@@ -307,10 +307,10 @@ class Contact(gobject.GObject):
                 Presence.OFFLINE,
                 gobject.PARAM_READABLE),
             
-            "client-id": (gobject.TYPE_INT,
+            "client-id": (gobject.TYPE_UINT64,
                 "Client ID",
                 "The client ID specifying capabilities of the contact 's client",
-                0,
+                0, 0xFFFFFFFF, 0,
                 gobject.PARAM_READABLE),
             }
 
