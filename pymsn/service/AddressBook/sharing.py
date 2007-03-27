@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
-# Copyright (C) 2007  Johann Prieur <johann.prieur@gmail.com>
+# Copyright (C) 2006 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -77,7 +77,7 @@ class Sharing(BaseAddressBook, SOAPService):
         #    self.request.add_argument("lastChange", NS_ADDRESSBOOK, value=last_change)
         self._send_request()
 
-    def AddMember(self, scenario, member_role, passport,
+    def AddMember(self, scenario, passport, member_role,
                   callback, *callback_args):
         self.__scenario = scenario
         self._method("AddMember", callback, callback_args, {})

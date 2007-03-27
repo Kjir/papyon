@@ -55,6 +55,20 @@ class SOAPUtils(object):
         except:
             return 0
 
+class SOAPFault(Exception):
+    
+    SOAP_ENVELOPE = "http://schemas.xmlsoap.org/soap/envelope/"
+    NS_SHORTHANDS = { "soap": SOAP_ENVELOPE }
+
+    def __init__(self, xml_node):
+        self._soap_utils = SOAPUtils(SOAPFault.NS_SHORTHANDS)
+        fault = self._soap_utils.find_ex(xml_node, "./soap:Fault")
+        self.code = self._soap_utils.find_ex(fault, "./faultcode").text
+        self.string = self._soap_utils.find_ex(fault, "./faultstring").text
+        self.actor = self._soap_utils.find_ex(fault, "./faultactor").text
+        
+    def __str__(self):
+        return self.string + self.actor
 
 class BaseSOAPService(object):
     DEFAULT_PROTOCOL = "http"
@@ -79,15 +93,15 @@ class BaseSOAPService(object):
         return protocol, host, resource
 
     def _response_handler(self, transport, response):
-        #logger.debug("<<< " + str(response))
+        logger.debug("<<< " + str(response))
         soap_response = SOAP.SOAPResponse(response.body)
-        logger.debug("<<< SOAP Response: " + soap_response.body[0].tag)
+        #logger.debug("<<< SOAP Response: " + soap_response.body[0].tag)
         
 
     def _request_handler(self, transport, request):
-        #logger.debug(">>> " + str(request))
+        logger.debug(">>> " + str(request))
         soap_request = SOAP.SOAPResponse(request.body)
-        logger.debug(">>> SOAP Request: " + soap_request.body[0].tag)
+        #logger.debug(">>> SOAP Request: " + soap_request.body[0].tag)
     
     def _error_handler(self, transport, error):
         logger.warning("Transport Error :" + str(error))

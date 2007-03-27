@@ -126,6 +126,14 @@ class AddressBook(gobject.GObject):
         self._ab_client.ABGroupUpdate("GroupSave", group.id(), new_name,
                                       self._ab_change_group_name_cb)
 
+    def add_contact_to_group(self, contact, group):
+        self._ab_client.ABGroupContactAdd("GroupSave", group.id(), contact.id(),
+                                          self._ab_add_contact_to_group_cb)
+
+    def delete_contact_from_group(self, contact, group):
+        self._ab_client.ABGroupDelete("GroupSave", contact.id(), group.id(),
+                                      self._ab_delete_contact_from_group_cb)
+
     # Properties
     @property
     def status(self):
@@ -170,6 +178,12 @@ class AddressBook(gobject.GObject):
     def _ab_change_group_name_cb(self, soap_response):
         pass
 
+    def _ab_add_contact_to_group_cb(self, soap_response):
+        pass
+
+    def _ab_delete_contact_from_group_cb(self, soap_response):
+        pass
+
     ### gobject properties
     def do_get_property(self, pspec):
         if pspec.name == "status":
@@ -185,8 +199,6 @@ class AddressBook(gobject.GObject):
         for group in self.__ab_find_all_groups_response:
             g = profile.Group(group.id, group.name)
             self._groups[group.id] = g
-
-        print self._groups
 
         for contact in self.__ab_find_all_contacts_response:
             c = profile.Contact(contact.id,

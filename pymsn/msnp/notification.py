@@ -212,28 +212,108 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             @param name: the group name"""
         pass
 
-    def add_contact(self, contact_id, network_id=profile.NetworkID.MSN):
-        """Add a contact to the contact list, given its contact ID and its
-        network ID
-            
-            @param contact_id: the contact identifier
-            @type contact_id: string
+    def add_contact(self, account, network_id=profile.NetworkID.MSN):
+        """Add a contact to the contact list.
+
+            @param account: the contact identifier
+            @type account: string
             
             @param network_id: the contact network
             @type network_id: integer
             @see L{pymsn.profile.NetworkID}"""
+        self.add_contact_to_membership(account, network_id, 
+                profile.Membership.FORWARD)
 
-        if network_id == profile.NetworkID.MOBILE:
-            payload = '<ml><t><c n="tel:%s" l="2" /></t></ml>' % contact
-            self._transport.send_command_ex("ADL", payload=payload)
-        else:
-            contact, domain = contact_id.split("@", 1)
-            payload = '<ml><d n="%s"><c n="%s" l="1" t="%d"/></d></ml>' % (domain,
-                    contact, network_id)
-            self._transport.send_command_ex("ADL", payload=payload)
-            payload = '<ml l="2"><d n="%s"><c n="%s"/></d></ml>'% (domain, contact)
+        if network_id != profile.NetworkID.MOBILE:
+            payload = '<ml l="2"><d n="%s"><c n="%s"/></d></ml>'% \
+                    (domain, contact)
             self._transport.send_command_ex("FQY", payload=payload)
 
+    def remove_contact(self, contact):
+        """Remove a contact from the contact list.
+
+            @param contact: the contact to allow
+            @type contact: L{pymsn.profile.Contact}"""
+        self.remove_contact_from_membership(contact.account,
+                contact.network_id, profile.Membership.FORWARD)
+
+    def allow_contact(self, contact):
+        """Add a contact to the allow list.
+
+            @param contact: the contact to allow
+            @type contact: L{pymsn.profile.Contact}"""
+        if contact.is_member(profile.Membership.ALLOW):
+            return
+        elif contact.is_member(profile.Membership.BLOCK):
+            self.remove_contact_from_membership(contact.account,
+                    contact.network_id, profile.Membership.BLOCK)
+
+        self.add_contact_to_membership(contact.account, contact.network_id,
+                profile.Membership.ALLOW)
+    
+    def block_contact(self, contact):
+        """Add a contact to the block list.
+
+            @param contact: the contact to allow
+            @type contact: L{pymsn.profile.Contact}"""
+        if contact.is_member(profile.Membership.BLOCK):
+            return
+        elif contact.is_member(profile.Membership.ALLOW):
+            self.remove_contact_from_membership(contact.account,
+                    contact.network_id, profile.Membership.ALLOW)
+
+        self.add_contact_to_membership(contact.account, contact.network_id,
+                profile.Membership.BLOCK)
+    
+    def add_contact_to_membership(self, account, network_id=profile.NetworkID.MSN,
+            membership=profile.Membership.FORWARD):
+        """Add a contact to a given membership.
+
+            @param account: the contact identifier
+            @type account: string
+            
+            @param network_id: the contact network
+            @type network_id: integer
+            @see L{pymsn.profile.NetworkID}
+            
+            @param membership: the list to be added to
+            @type membership: integer
+            @see L{pymsn.profile.Membership}"""
+
+        if network_id == profile.NetworkID.MOBILE:
+            payload = '<ml><t><c n="tel:%s" l="%d" /></t></ml>' % \
+                    (contact, membership)
+            self._transport.send_command_ex("ADL", payload=payload)
+        else:
+            contact, domain = account.split("@", 1)
+            payload = '<ml><d n="%s"><c n="%s" l="%d" t="%d"/></d></ml>' % \
+                    (domain, contact, membership, network_id)
+            self._transport.send_command_ex("ADL", payload=payload)
+
+    def remove_contact_from_membership(self, account, network_id=profile.NetworkID.MSN,
+            membership=profile.Membership.FORWARD):
+        """Remove a contact from a given membership.
+
+            @param account: the contact identifier
+            @type account: string
+            
+            @param network_id: the contact network
+            @type network_id: integer
+            @see L{pymsn.profile.NetworkID}
+            
+            @param membership: the list to be added to
+            @type membership: integer
+            @see L{pymsn.profile.Membership}"""
+
+        if network_id == profile.NetworkID.MOBILE:
+            payload = '<ml><t><c n="tel:%s" l="%d" /></t></ml>' % \
+                    (contact, membership)
+            self._transport.send_command_ex("RML", payload=payload)
+        else:
+            contact, domain = account.split("@", 1)
+            payload = '<ml><d n="%s"><c n="%s" l="%d" t="%d"/></d></ml>' % \
+                    (domain, contact, membership, network_id)
+            self._transport.send_command_ex("RML", payload=payload)
     # Handlers ---------------------------------------------------------------
     # --------- Connection ---------------------------------------------------
     def _handle_VER(self, command):
@@ -318,6 +398,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             display_name = urllib.unquote(command.arguments[3])
             contact._server_property_changed("presence", presence)
             contact._server_property_changed("display-name", display_name)
+            contact._server_property_changed("client-id", int(command.arguments[4]))
 
     # --------- Display name and co ------------------------------------------
     def _handle_PRP(self, command):
@@ -421,4 +502,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 s += '<c n="%s" l="%d" t="%d"/>' % (user, lists, network_id)
             s += '</d>'
         s += '</ml>'
+        # FIXME: the payload can reach the maximum (which is 7500 bytes), so
+        # we need to split this into multiple ADL in that case
         self._transport.send_command_ex("ADL", payload=s)

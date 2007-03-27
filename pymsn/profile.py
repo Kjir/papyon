@@ -306,6 +306,12 @@ class Contact(gobject.GObject):
                 "The presence to show to others",
                 Presence.OFFLINE,
                 gobject.PARAM_READABLE),
+            
+            "client-id": (gobject.TYPE_INT,
+                "Client ID",
+                "The client ID specifying capabilities of the contact 's client",
+                0,
+                gobject.PARAM_READABLE),
             }
 
     def __init__(self, id, network_id, account, display_name, memberships=Membership.UNKNOWN):
@@ -320,6 +326,7 @@ class Contact(gobject.GObject):
         self._personal_message = ""
 
         self._memberships = memberships
+        self._client_id = ClientCapabilities()
 
     @property
     def id(self):
@@ -345,6 +352,11 @@ class Contact(gobject.GObject):
     def memberships(self):
         """Contact membership value"""
         return self._memberships
+
+    @property
+    def client_id(self):
+        """Contact client ID"""
+        return self._client_id
     
     ### membership management
     def is_member(self, membership):
@@ -377,11 +389,13 @@ class Contact(gobject.GObject):
         self.notify("memberships")
 
     def _server_property_changed(self, name, value): #FIXME, should not be used for memberships
+        if name == "client-id":
+            value = ClientCapabilities(client_id=value)
         attr_name = "_" + name.lower().replace("-", "_")
         old_value = getattr(self, attr_name)
         if value != old_value:
             setattr(self, attr_name, value)
-            self.notify(name)
+        self.notify(name)
 
     def do_get_property(self, pspec):
         name = pspec.name.lower().replace("-", "_")
@@ -424,7 +438,7 @@ class Group(gobject.GObject):
     @property
     def name(self):
         "Group name"
-        return self.name
+        return self._name
 
     def do_get_property(self, pspec):
         name = pspec.name.lower().replace("-", "_")
