@@ -21,6 +21,7 @@
 from pymsn.service.SOAPService import SOAPService
 
 from xml.utils import iso8601
+from string import join
 
 __all__ = ['BaseAddressBook']
 
@@ -32,7 +33,7 @@ class BaseAddressBook(object):
         self.__scenario = None
 
     def _soap_action(self, method):
-        return "http://www.msn.com/webservices/AddressBook/" + method
+        return join([NS_ADDRESSBOOK, method], '/')
 
     def _method_namespace(self, method):
         return NS_ADDRESSBOOK

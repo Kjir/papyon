@@ -20,6 +20,7 @@
 from pymsn.service.SOAPService import SOAPService
 
 from xml.utils import iso8601
+from string import join
 
 __all__ = ['BaseStorage']
 
@@ -27,11 +28,11 @@ NS_STORAGE = "http://www.msn.com/webservices/storage/w10"
 
 class BaseStorage(object):
     
-    def __init__(self, storage_security_tokens):
+    def __init__(self, storage_security_token):
         self.__security_token = storage_security_token
 
     def _soap_action(self, method):
-        return "http://www.msn.com/webservices/storage/w10/" + method
+        return join([NS_STORAGE, method], '/')
 
     def _method_namespace(self, method):
         return NS_STORAGE
@@ -49,5 +50,3 @@ class BaseStorage(object):
         StorageUserHeader = self.request.add_header("StorageUserHeader", NS_STORAGE)
         StorageUserHeader.append("Puid", value="0")
         StorageUserHeader.append("TicketToken", value=self.__security_token)
-
-        

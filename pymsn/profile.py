@@ -312,6 +312,7 @@ class Contact(gobject.GObject):
                 "The client ID specifying capabilities of the contact 's client",
                 0, 0xFFFFFFFF, 0,
                 gobject.PARAM_READABLE),
+
             }
 
     def __init__(self, id, network_id, account, display_name, memberships=Membership.UNKNOWN):

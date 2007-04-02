@@ -20,7 +20,7 @@
 
 from base import BaseAddressBook
 from pymsn.profile import NetworkID
-from pymsn.service.SOAPService import SOAPService, SOAPUtils
+from pymsn.service.SOAPService import SOAPService, SOAPUtils, SOAPFault
 
 from xml.utils import iso8601
 
@@ -56,6 +56,10 @@ class Member(object):
         else:
             self.display_name = self.account.split("@", 1)[0]
 
+class SharingError(SOAPFault):
+    def __init__(self, xml_node):
+        SOAPFault.__init__(self, xml_node)
+
 class Sharing(BaseAddressBook, SOAPService):
     def __init__(self, contacts_security_token, http_proxy=None):
         BaseAddressBook.__init__(self, contacts_security_token)
@@ -79,29 +83,52 @@ class Sharing(BaseAddressBook, SOAPService):
 
     def AddMember(self, scenario, passport, member_role,
                   callback, *callback_args):
+        if True: raise NotImplementedError
+        # TODO : RE to find out fields (case of a not passport member)
         self.__scenario = scenario
         self._method("AddMember", callback, callback_args, {})
-        serviceHandle = self.request.add_argument("serviceHandle")
-        serviceHandle.append("Id", value="0")
-        servicehandle.append("Type", value="Messenger")
-        servicehandle.append("ForeignId", value="")
-        Membership = self.request.add_argument("memberships").\
-            append("Membership")
-        Membership.append("MemberRole", value=member_role)
-        #Member = Membership.append("Members").append("Member", 
-        #                                             xsi\:type="PassportMember",
-        #                                             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance")
-        #Member.append("Type", value="Passport")
-        #Member.append("State", value="Accepted")
-        #Member.append("PassportName", value=passport)
+        serviceHandle = self.request.add_argument("serviceHandle", NS_ADDRESSBOOK)
+        serviceHandle.append("Id", NS_ADDRESSBOOK, value="0")
+        servicehandle.append("Type", NS_ADDRESSBOOK, value="Messenger")
+        servicehandle.append("ForeignId", NS_ADDRESSBOOK, value="")
+        Membership = self.request.add_argument("memberships", NS_ADDRESSBOOK).\
+            append("Membership", NS_ADDRESSBOOK)
+        Membership.append("MemberRole", NS_ADDRESSBOOK, value=member_role)
+        # TODO : take a better look for the xsi thing
+        att = { "xsi:type=" : "PassportMember" }
+        Member = Membership.append("Members").\
+            append("Member", NS_ADDRESSBOOK, attrib=att)
+        Member.append("Type", NS_ADDRESSBOOK, value="Passport")
+        Member.append("State", NS_ADDRESSBOOK, value="Accepted")
+        Member.append("PassportName", NS_ADDRESSBOOK, value=passport)
         self._send_request()
 
-    def DeleteMember(self, scenario, callback, *callback_args):
+    def DeleteMember(self, scenario, member_role, member_id,
+                     callback, *callback_args):
+        if True: raise NotImplementedError
+        # TODO : RE to find out fields
         self.__scenario = scenario
         self._method("DeleteMember", callback, callback_args, {})
-        pass
+        serviceHandle = self.request.add_argument("serviceHandle", NS_ADDRESSBOOK)
+        serviceHandle.append("Id", NS_ADDRESSBOOK, value="0")
+        servicehandle.append("Type", NS_ADDRESSBOOK, value="Messenger")
+        servicehandle.append("ForeignId", NS_ADDRESSBOOK, value="")
+        Membership = self.request.add_argument("memberships", NS_ADDRESSBOOK).\
+            append("Membership", NS_ADDRESSBOOK)
+        Membership.append("MemberRole", NS_ADDRESSBOOK, value=member_role)
+        att = { "xsi:type=" : "PassportMember" }
+        Member = Membership.append("Members", NS_ADDRESSBOOK).\
+            append("Member", NS_ADDRESSBOOK, attrib=att)
+        Member.append("Type", NS_ADDRESSBOOK, value="Passport")
+        Member.append("MembershipId", NS_ADDRESSBOOK, value=member_id)
+        Member.append("State", NS_ADDRESSBOOK, value="Accepted")
+        self._send_request()
 
     def _extract_response(self, method, soap_response):
+        path = "./%sResponse".replace("/", "/{%s}" % NS_ADDRESSBOOK) % method
+        if soap_response.body.find(path) is None: 
+            raise SharingError(soap_response.body)
+
         if method == "FindMembership":
             path = "./FindMembershipResponse/FindMembershipResult/Services/Service/Memberships".\
                     replace("/", "/{%s}" % NS_ADDRESSBOOK)
@@ -116,5 +143,9 @@ class Sharing(BaseAddressBook, SOAPService):
                 for member in members:
                     result[role.text].append(Member(member))
             return (soap_response, result)
+        elif method == "AddMember":
+            pass
+        elif method == "DeleteMember":
+            pass
         else:
             return SOAPService._extract_response(self, method, soap_response)

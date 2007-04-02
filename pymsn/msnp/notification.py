@@ -2,8 +2,9 @@
 #
 # pymsn - a python client library for Msn
 #
-# Copyright (C) 2005-2006 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2005-2007 Ali Sabil <ali.sabil@gmail.com>
 # Copyright (C) 2005-2006 Ole André Vadla Ravnås <oleavr@gmail.com> 
+# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -128,6 +129,14 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 ()),
 
             "mail-received" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+
+            "oim-received" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+
+            "oim-deleted" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,))
             }
@@ -454,7 +463,13 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 ('text/x-msmsgsinitialemailnotification', \
                  'text/x-msmsgsemailnotification'):
             self.emit("mail-received", msg)
-    
+        elif msg.content_type[0] in \
+                ('text/x-msmsgsinitialmdatanotification', \
+                 'text/x-msmsgsoimnotification'):
+            self.emit("oim-received", msg)
+        elif msg.content_type[0] == 'text/x-msmsgsactivemailnotification':
+            self.emit("oim-deleted", msg)
+
     # --------- Challenge ----------------------------------------------------
     def _handle_QNG(self,command):
         pass

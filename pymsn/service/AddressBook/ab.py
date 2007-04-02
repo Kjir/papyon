@@ -236,14 +236,41 @@ class AB(BaseAddressBook, SOAPService):
             append("guid", NS_ADDRESSBOOK, value=group_guid)
         self._send_request()
 
-    def UpdateDynamicItem(self, scenario, callback, *callback_args):
+    def UpdateDynamicItem(self, scenario, passport, last_changed, gleam,
+                          callback, *callback_args):
         """call the UpdateDynamicItem SOAP action
 
            @param scenario : the scenario to use for the action
         """
+        # WARNING : this method is not complete at all
         self.__scenario = scenario
-        pass
-    
+        self._method("UpdateDynamicItem", callback, callback_args, {})
+        self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
+        att = { "xsi:type=" : "PassportDynamicItem" }
+        DynamicItem = self.request.add_argument("dynamicItems", NS_ADDRESSBOOK).\
+            append("DynamicItem", NS_ADDRESSBOOK, attrib=att)
+        DynamicItem.append("Type", NS_ADDRESSBOOK, value="Passport")
+        DynamicItem.append("PassportName", NS_ADDRESSBOOK, value=passport)
+        NotificationData = DynamicItem.append("Notifications", NS_ADDRESSBOOK).\
+            append("NotificationData", NS_ADDRESSBOOK)
+        StoreService = NotificationData.append("StoreService", NS_ADDRESSBOOK)
+        Info = StoreService.append("Info", NS_ADDRESSBOOK)
+        Handle = Info.append("Handle", NS_ADDRESSBOOK)
+        Handle.append("Id", NS_ADDRESSBOOK, value="0")
+        Handle.append("Type", NS_ADDRESSBOOK, value="Profile")
+        Handle.append("ForeignId", NS_ADDRESSBOOK, value="MyProfile")
+        Info.append("InverseRequired", NS_ADDRESSBOOK, value="false")
+        Info.append("IsBot", NS_ADDRESSBOOK, value="false")
+        StoreService.append("Changes", NS_ADDRESSBOOK)
+        StoreService.append("LastChange", NS_ADDRESSBOOK, value="0001-01-01T00:00:00")
+        StoreService.append("Deleted", NS_ADDRESSBOOK, value="false")
+        NotificationData.append("Status", NS_ADDRESSBOOK, value="Exist Access")
+        NotificationData.append("LastChanged", NS_ADDRESSBOOK, value=last_changed)
+        NotificationData.append("Gleam", NS_ADDRESSBOOK, 
+                                value=SOAPUtils.bool_to_string(gleam))
+        NotificationData.append("InstanceId", NS_ADDRESSBOOK, value="0")
+        DynamicItem.append("Changes", NS_ADDRESSBOOK, value="Notifications")
+        self._send_request()
 
     def _extract_response(self, method, soap_response):
         path = "./%sResponse".replace("/", "/{%s}" % NS_ADDRESSBOOK) % method
