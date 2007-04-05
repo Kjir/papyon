@@ -66,7 +66,7 @@ class Sharing(BaseAddressBook, SOAPService):
         SOAPService.__init__(self, SHARING_SERVICE_URL, http_proxy)
 
     def FindMembership(self, scenario, callback, *callback_args):
-        self.__scenario = scenario
+        self._scenario = scenario
         self._method("FindMembership", callback, callback_args, {})
         ServiceType = self.request.add_argument("serviceFilter", NS_ADDRESSBOOK).\
             append("Types", NS_ADDRESSBOOK)
@@ -83,21 +83,18 @@ class Sharing(BaseAddressBook, SOAPService):
 
     def AddMember(self, scenario, passport, member_role,
                   callback, *callback_args):
-        if True: raise NotImplementedError
-        # TODO : RE to find out fields (case of a not passport member)
-        self.__scenario = scenario
+        self._scenario = scenario
         self._method("AddMember", callback, callback_args, {})
         serviceHandle = self.request.add_argument("serviceHandle", NS_ADDRESSBOOK)
         serviceHandle.append("Id", NS_ADDRESSBOOK, value="0")
-        servicehandle.append("Type", NS_ADDRESSBOOK, value="Messenger")
-        servicehandle.append("ForeignId", NS_ADDRESSBOOK, value="")
+        serviceHandle.append("Type", NS_ADDRESSBOOK, value="Messenger")
+        serviceHandle.append("ForeignId", NS_ADDRESSBOOK, value="")
         Membership = self.request.add_argument("memberships", NS_ADDRESSBOOK).\
             append("Membership", NS_ADDRESSBOOK)
         Membership.append("MemberRole", NS_ADDRESSBOOK, value=member_role)
-        # TODO : take a better look for the xsi thing
-        att = { "xsi:type=" : "PassportMember" }
-        Member = Membership.append("Members").\
-            append("Member", NS_ADDRESSBOOK, attrib=att)
+        Member = Membership.append("Members", NS_ADDRESSBOOK).\
+                append("Member", NS_ADDRESSBOOK, #FIXME: ugly ugly hack
+                    attrib={"xsi:type": "ns1:PassportMember", "xmlns:xsi" : "http://www.w3.org/2001/XMLSchema-instance"})
         Member.append("Type", NS_ADDRESSBOOK, value="Passport")
         Member.append("State", NS_ADDRESSBOOK, value="Accepted")
         Member.append("PassportName", NS_ADDRESSBOOK, value=passport)
@@ -105,20 +102,17 @@ class Sharing(BaseAddressBook, SOAPService):
 
     def DeleteMember(self, scenario, member_role, member_id,
                      callback, *callback_args):
-        if True: raise NotImplementedError
-        # TODO : RE to find out fields
-        self.__scenario = scenario
+        self._scenario = scenario
         self._method("DeleteMember", callback, callback_args, {})
         serviceHandle = self.request.add_argument("serviceHandle", NS_ADDRESSBOOK)
         serviceHandle.append("Id", NS_ADDRESSBOOK, value="0")
-        servicehandle.append("Type", NS_ADDRESSBOOK, value="Messenger")
-        servicehandle.append("ForeignId", NS_ADDRESSBOOK, value="")
+        serviceHandle.append("Type", NS_ADDRESSBOOK, value="Messenger")
+        serviceHandle.append("ForeignId", NS_ADDRESSBOOK, value="")
         Membership = self.request.add_argument("memberships", NS_ADDRESSBOOK).\
             append("Membership", NS_ADDRESSBOOK)
         Membership.append("MemberRole", NS_ADDRESSBOOK, value=member_role)
-        att = { "xsi:type=" : "PassportMember" }
         Member = Membership.append("Members", NS_ADDRESSBOOK).\
-            append("Member", NS_ADDRESSBOOK, attrib=att)
+            append("Member", NS_ADDRESSBOOK, type="PassportMember")
         Member.append("Type", NS_ADDRESSBOOK, value="Passport")
         Member.append("MembershipId", NS_ADDRESSBOOK, value=member_id)
         Member.append("State", NS_ADDRESSBOOK, value="Accepted")

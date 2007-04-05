@@ -43,9 +43,16 @@ class _SOAPElement(object):
     def __init__(self, element):
         self.element = element
 
-    def append(self, tag, namespace=None, attrib={}, value=None, **kwargs):
+    def append(self, tag, namespace=None, type=None, attrib={}, value=None, **kwargs):
         if namespace is not None:
             tag = "{" + namespace + "}" + tag
+        if type:
+            if isinstance(type, str):
+                type = ElementTree.QName(type, NameSpace.XML_SCHEMA)
+            else:
+                type = ElementTree.QName(type[1], type[0])
+            attrib["{" + NameSpace.XML_SCHEMA_INSTANCE + "}type"] = type
+
         child = ElementTree.SubElement(self.element, tag, attrib, **kwargs)
         child.text = value
         return _SOAPElement(child)

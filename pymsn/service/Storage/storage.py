@@ -166,7 +166,7 @@ class StorageService(BaseStorage, SOAPService):
         Alias = parentHandle.append("Alias", NS_STORAGE)
         Alias.append("Name", NS_STORAGE, value=cid)
         Alias.append("NameSpace", NS_STORAGE, value="MyCidStuff")
-        document = self.request.add_argument("document", NS_STORAGE, {"xsi:type"="Photo"})
+        document = self.request.add_argument("document", NS_STORAGE, type="Photo")
         document.append("Name", NS_STORAGE, value=name)
         DocumentStream = document.append("DocumentStreams", NS_STORAGE).\
             append("DocumentStream", NS_STORAGE, { "type" : "PhotoStream" })

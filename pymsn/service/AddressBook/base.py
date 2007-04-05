@@ -29,8 +29,8 @@ NS_ADDRESSBOOK = "http://www.msn.com/webservices/AddressBook"
 
 class BaseAddressBook(object):
     def __init__(self, contacts_security_token):
-        self.__security_token = contacts_security_token
-        self.__scenario = None
+        self._security_token = contacts_security_token
+        self._scenario = None
 
     def _soap_action(self, method):
         return join([NS_ADDRESSBOOK, method], '/')
@@ -44,9 +44,9 @@ class BaseAddressBook(object):
         ABApplicationHeader.append("ApplicationId", NS_ADDRESSBOOK,
                 value="996CDE1E-AA53-4477-B943-2BE802EA6166") 
         ABApplicationHeader.append("IsMigration", NS_ADDRESSBOOK, value="false")
-        ABApplicationHeader.append("PartnerScenario", NS_ADDRESSBOOK, value=self.__scenario)
+        ABApplicationHeader.append("PartnerScenario", NS_ADDRESSBOOK, value=self._scenario)
         #TODO: add <CacheKey>
 
         ABAuthHeader = self.request.add_header("ABAuthHeader", NS_ADDRESSBOOK)
         ABAuthHeader.append("ManagedGroupRequest", NS_ADDRESSBOOK, value="false")
-        ABAuthHeader.append("TicketToken", NS_ADDRESSBOOK, value=self.__security_token.security_token)
+        ABAuthHeader.append("TicketToken", NS_ADDRESSBOOK, value=self._security_token.security_token)

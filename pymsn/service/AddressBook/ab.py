@@ -246,9 +246,8 @@ class AB(BaseAddressBook, SOAPService):
         self.__scenario = scenario
         self._method("UpdateDynamicItem", callback, callback_args, {})
         self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
-        att = { "xsi:type=" : "PassportDynamicItem" }
         DynamicItem = self.request.add_argument("dynamicItems", NS_ADDRESSBOOK).\
-            append("DynamicItem", NS_ADDRESSBOOK, attrib=att)
+            append("DynamicItem", NS_ADDRESSBOOK, type="PassportDynamicItem")
         DynamicItem.append("Type", NS_ADDRESSBOOK, value="Passport")
         DynamicItem.append("PassportName", NS_ADDRESSBOOK, value=passport)
         NotificationData = DynamicItem.append("Notifications", NS_ADDRESSBOOK).\

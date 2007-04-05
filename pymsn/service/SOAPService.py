@@ -65,10 +65,10 @@ class SOAPFault(Exception):
         fault = self._soap_utils.find_ex(xml_node, "./soap:Fault")
         self.code = self._soap_utils.find_ex(fault, "./faultcode").text
         self.string = self._soap_utils.find_ex(fault, "./faultstring").text
-        self.actor = self._soap_utils.find_ex(fault, "./faultactor").text
+        #self.actor = self._soap_utils.find_ex(fault, "./faultactor").text
         
     def __str__(self):
-        return self.string + self.actor
+        return "SOAPFault : " + self.string
 
 class BaseSOAPService(object):
     DEFAULT_PROTOCOL = "http"
