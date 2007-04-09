@@ -43,28 +43,36 @@ class Group(object):
         self.name = soap_utils.find_ex(group_info, "./ab:name").text
         
 class Contact(object):
-    def __init__(self, xml_node):
-        soap_utils = SOAPUtils(NS_SHORTHANDS)
-
-        self.id = soap_utils.find_ex(xml_node, "./ab:contactId").text
-        contact_info = soap_utils.find_ex(xml_node, "./ab:contactInfo")
-
-        self.type = soap_utils.find_ex(contact_info, "./ab:contactType").text
-
-        passport = soap_utils.find_ex(contact_info, "./ab:passportName")
-        if passport is not None:
-            self.account = passport.text
+    def __init__(self, xml_node=None):
+        if xml_node is None:
+            self.id = ""
+            self.type = ""
+            self.account = ""
+            self.display_name = ""
             self.netword_id = NetworkID.MSN
-        else: # Yahoo user
-            self.account = soap_utils.find_ex(contact_info,
-                    "./ab:emails/ab:ContactEmail/ab:email").text
-            self.netword_id = NetworkID.EXTERNAL
-        display_name = soap_utils.find_ex(xml_node, "./ab:DisplayName")
-        if display_name is not None:
-            self.display_name = display_name.text
+            self.CID = ""
         else:
-            self.display_name = self.account.split("@", 1)[0]
-        self.CID = soap_utils.find_ex(contact_info, "./ab:CID").text
+            soap_utils = SOAPUtils(NS_SHORTHANDS)
+
+            self.id = soap_utils.find_ex(xml_node, "./ab:contactId").text
+            contact_info = soap_utils.find_ex(xml_node, "./ab:contactInfo")
+
+            self.type = soap_utils.find_ex(contact_info, "./ab:contactType").text
+
+            passport = soap_utils.find_ex(contact_info, "./ab:passportName")
+            if passport is not None:
+                self.account = passport.text
+                self.netword_id = NetworkID.MSN
+            else: # Yahoo user
+                self.account = soap_utils.find_ex(contact_info,
+                        "./ab:emails/ab:ContactEmail/ab:email").text
+                self.netword_id = NetworkID.EXTERNAL
+            display_name = soap_utils.find_ex(xml_node, "./ab:DisplayName")
+            if display_name is not None:
+                self.display_name = display_name.text
+            else:
+                self.display_name = self.account.split("@", 1)[0]
+            self.CID = soap_utils.find_ex(contact_info, "./ab:CID").text
 
 class AddressBookError(SOAPFault):
     def __init__(self, xml_node):
@@ -74,9 +82,10 @@ class AB(BaseAddressBook, SOAPService):
     def __init__(self, contacts_security_token, http_proxy=None):
         BaseAddressBook.__init__(self, contacts_security_token)
         SOAPService.__init__(self, AB_SERVICE_URL, http_proxy)
+        self._contacts_queue = []
 
     def ABFindAll(self, scenario, deltas_only, callback, *callback_args):
-        self.__scenario = scenario
+        self._scenario = scenario
         self._simple_method("ABFindAll", callback, callback_args,
                 ("abId", "00000000-0000-0000-0000-000000000000"),
                 ("abView", "Full"), # add lastChanges to make deltasOnly usable
@@ -92,15 +101,24 @@ class AB(BaseAddressBook, SOAPService):
            @param messenger : True is this is a messenger contact, else False
            @param type : "Regular" or "LivePending" or "LiveAccepted"
         """
-        self.__scenario = scenario
+        self._scenario = scenario
+        pending_contact = Contact()
+        pending_contact.type = type
+        pending_contact.account = passport
+        pending_contact.display_name = passport
+        self._contacts_queue.append(pending_contact)
+
         self._method("ABContactAdd", callback, callback_args, {})
         self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
         Contact = self.request.add_argument("contacts", NS_ADDRESSBOOK).\
-            append("Contact", NS_ADDRESSBOOK)
+                append("Contact", NS_ADDRESSBOOK)
         ContactInfo = Contact.append("contactInfo", NS_ADDRESSBOOK)
         ContactInfo.append("contactType", NS_ADDRESSBOOK, value=type)
         ContactInfo.append("passportName", NS_ADDRESSBOOK, value=passport)
         ContactInfo.append("isMessengerUser", NS_ADDRESSBOOK, value=SOAPUtils.bool_to_string(messenger))
+        self.request.add_argument("options", NS_ADDRESSBOOK).\
+                append("EnableAllowListManagement", NS_ADDRESSBOOK,
+                        value=SOAPUtils.bool_to_string(True))
         self._send_request()
 
     def ABContactDelete(self, scenario, contact_guid, 
@@ -110,7 +128,7 @@ class AB(BaseAddressBook, SOAPService):
            @param scenario : the scenario to use for the action
            @param contact_guid : the guid of the contact to delete 
         """
-        self.__scenario = scenario
+        self._scenario = scenario
         self._method("ABContactDelete", callback, callback_args, {})
         self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
         Contact = self.request.add_argument("contacts", NS_ADDRESSBOOK).\
@@ -127,7 +145,7 @@ class AB(BaseAddressBook, SOAPService):
            @param contact_guid : the guid of the contact to update
            @param properties : 
         """
-        self.__scenario = scenario
+        self._scenario = scenario
         self._method("ABContactUpdate", callback, callback_args, {})
         self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
         Contact = self.request.add_argument("contacts", NS_ADDRESSBOOK).\
@@ -149,7 +167,7 @@ class AB(BaseAddressBook, SOAPService):
            @param scenario : the scenario to use for the action
            @param group_name : the name of the group to add
         """
-        self.__scenario = scenario
+        self._scenario = scenario
         self._method("ABGroupAdd", callback, callback_args, {})
         self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
         GroupAddOptions = self.request.add_argument("groupAddOptions", NS_ADDRESSBOOK)
@@ -171,7 +189,7 @@ class AB(BaseAddressBook, SOAPService):
            @param scenario : the scenario to use for the action
            @param group_guid : the guid of the group to delete
         """
-        self.__scenario = scenario
+        self._scenario = scenario
         self._method("ABGroupDelete", callback, callback_args, {})
         self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
         self.request.add_argument("groupFilter", NS_ADDRESSBOOK).\
@@ -187,7 +205,7 @@ class AB(BaseAddressBook, SOAPService):
            @param group_guid : the guid of the group to update
            @param group_name : the new name for the group
         """
-        self.__scenario = scenario
+        self._scenario = scenario
         self._method("ABGroupUpdate", callback, callback_args, {})
         self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
         Group = self.request.add_argument("groups", NS_ADDRESSBOOK).\
@@ -206,7 +224,7 @@ class AB(BaseAddressBook, SOAPService):
            @param group_guid : the guid of the group to add the contact to
            @param contact_guid : the guid of the contact to add
         """
-        self.__scenario = scenario
+        self._scenario = scenario
         self._method("ABGroupContactAdd", callback, callback_args, {})
         self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
         self.request.add_argument("groupFilter", NS_ADDRESSBOOK).\
@@ -225,7 +243,7 @@ class AB(BaseAddressBook, SOAPService):
            @param contact_guid : the guid of the contact to delete
            @param group_guid : the guid of the group to delete the contact from
         """
-        self.__scenario = scenario
+        self._scenario = scenario
         self._method("ABGroupContactDelete", callback, callback_args, {})
         self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
         self.request.add_argument("contacts", NS_ADDRESSBOOK).\
@@ -243,7 +261,7 @@ class AB(BaseAddressBook, SOAPService):
            @param scenario : the scenario to use for the action
         """
         # WARNING : this method is not complete at all
-        self.__scenario = scenario
+        self._scenario = scenario
         self._method("UpdateDynamicItem", callback, callback_args, {})
         self.request.add_argument("abId", NS_ADDRESSBOOK, value="00000000-0000-0000-0000-000000000000")
         DynamicItem = self.request.add_argument("dynamicItems", NS_ADDRESSBOOK).\
@@ -284,14 +302,18 @@ class AB(BaseAddressBook, SOAPService):
             for group in groups:
                 groups_result.append(Group(group))
             path = "./ABFindAllResponse/ABFindAllResult/contacts".\
-                replace("/", "/{%s}" % NS_ADDRESSBOOK)
+                    replace("/", "/{%s}" % NS_ADDRESSBOOK)
             contacts = soap_response.body.find(path)
             contacts_result = []
             for contact in contacts:
                 contacts_result.append(Contact(contact))
             return (soap_response, groups_result, contacts_result)
         elif method == "ABContactAdd":
-            return (soap_response,)
+            path = "./ABContactAddResponse/ABContactAddResult/guid".\
+                    replace("/", "/{%s}" % NS_ADDRESSBOOK)
+            contact = self._contacts_queue.pop(0)
+            contact.id = soap_response.body.find(path).text
+            return (soap_response, contact)
         elif method == "ABContactDelete":
             return (soap_response,)
         elif method == "ABContactUpdate":

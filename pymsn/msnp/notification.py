@@ -223,12 +223,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._transport.send_command_ex('OUT')
         self._transport.lose_connection()
 
-    def add_group(self, name):
-        """Create a new group using the given name
-            
-            @param name: the group name"""
-        pass
-
     def add_contact(self, account, network_id=profile.NetworkID.MSN):
         """Add a contact to the contact list.
 
@@ -238,18 +232,23 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             @param network_id: the contact network
             @type network_id: integer
             @see L{pymsn.profile.NetworkID}"""
-        self.add_contact_to_membership(account, network_id, 
-                profile.Membership.FORWARD)
+        result = self._address_book.find_by_account(account)
+        contact = None
+        for c in result:
+            if c.account == account and c.network_id == network_id:
+                contact = c
+                break
 
-        if network_id != profile.NetworkID.MOBILE:
-            payload = '<ml l="2"><d n="%s"><c n="%s"/></d></ml>'% \
-                    (domain, contact)
-            self._transport.send_command_ex("FQY", payload=payload)
+        if contact is None:
+            self._address_book.add_contact(account)
+        else:
+            self.add_contact_to_membership(contact.account, contact.network_id,
+                    profile.Membership.FORWARD)
 
     def remove_contact(self, contact):
         """Remove a contact from the contact list.
 
-            @param contact: the contact to allow
+            @param contact: the contact to remove
             @type contact: L{pymsn.profile.Contact}"""
         self.remove_contact_from_membership(contact.account,
                 contact.network_id, profile.Membership.FORWARD)
@@ -267,6 +266,12 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
         self.add_contact_to_membership(contact.account, contact.network_id,
                 profile.Membership.ALLOW)
+        
+        if contact.network_id != profile.NetworkID.MOBILE:
+            account, domain = contact.account.split('@', 1)
+            payload = '<ml l="2"><d n="%s"><c n="%s"/></d></ml>'% \
+                    (domain, account)
+            self._transport.send_command_ex("FQY", payload=payload)
     
     def block_contact(self, contact):
         """Add a contact to the block list.
@@ -504,14 +509,20 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     self._address_book = AddressBook.AddressBook(token, self._proxies['http'])
                 else:
                     self._address_book = AddressBook.AddressBook(token)
-                self._address_book.connect("notify::status", self._address_book_cb)
-        assert(clear_token is not None and blob is not None)
-        self._transport.send_command_ex("USR", ("SSO", "S", clear_token.security_token, blob))
+                self._address_book.connect("notify::status",
+                        self._address_book_status_cb)
+                self._address_book.connect("contact-added",
+                        self._address_book_contact_added_cb)
 
-    def _address_book_cb(self, address_book, pspec):
+        assert(clear_token is not None and blob is not None)
+        self._transport.send_command_ex("USR",
+                ("SSO", "S", clear_token.security_token, blob))
+
+    def _address_book_status_cb(self, address_book, pspec):
         if address_book.status != AddressBook.AddressBookStatus.SYNCHRONIZED:
             return
-        self._client.profile._server_property_changed("display-name", address_book.profile.display_name)
+        self._client.profile._server_property_changed("display-name",
+                address_book.profile.display_name)
 
         mask = ~(profile.Membership.REVERSE | profile.Membership.PENDING)
         predicate = lambda contact: contact.is_member(mask)
@@ -529,3 +540,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         # FIXME: the payload can reach the maximum (which is 7500 bytes), so
         # we need to split this into multiple ADL in that case
         self._transport.send_command_ex("ADL", payload=s)
+
+    def _address_book_contact_added_cb(self, address_book, contact):
+        # FIXME: only consider Messenger contacts and not addressbook only
+        # contacts
+        self.add_contact_to_membership(contact.account, contact.network_id,
+                profile.Membership.FORWARD)

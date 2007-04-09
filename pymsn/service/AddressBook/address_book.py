@@ -40,6 +40,11 @@ class AddressBookStatus(object):
 
 class AddressBook(gobject.GObject):
 
+    __gsignals__ =  {
+        "contact-added": (gobject.SIGNAL_RUN_FIRST,
+            gobject.TYPE_NONE,
+            (gobject.TYPE_PYOBJECT,)),
+        }
     __gproperties__ = {
         "status":  (gobject.TYPE_INT,
             "Status",
@@ -155,9 +160,14 @@ class AddressBook(gobject.GObject):
         if self.__ab_find_all_contacts_response is not None:
             self.__build_addressbook()
 
-    def _ab_contact_add_cb(self, soap_response):
-        self._ab_client.ABFindAll("Initial", True, 
-                                  self._ab_contact_add_find_all_cb)
+    def _ab_contact_add_cb(self, soap_response, contact):
+        c = profile.Contact(contact.id,
+                            contact.netword_id,
+                            contact.account,
+                            contact.display_name)
+        self._contacts[(contact.netword_id, contact.account)] = c
+        self.emit("contact-added", self._contacts[(contact.netword_id,
+            contact.account)])
 
     def _ab_contact_add_find_all_cb(self, soap_response, groups, contacts):
         # find the new contact in contacts and add it

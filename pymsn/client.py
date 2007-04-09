@@ -81,7 +81,6 @@ class Client(object):
         """Logout from the server."""
         self._protocol.signoff()
 
-
     ### Callbacks
     def on_connect_failure(self, transp):
         """Callback used when the connection to the server fails.
