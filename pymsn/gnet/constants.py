@@ -26,20 +26,21 @@ try:
 except ImportError:
     pass
 
-class GNet:
+class GNet(object):
     NAME = "gnet"
     VERSION = "0.1"
 
-class IoStatus:
+class IoStatus(object):
     """Various networking status"""
     CLOSING = 0
     CLOSED  = 1
     OPENING = 2
     OPEN    = 3
 
-class IoError:
+class IoError(object):
     """I/O error codes"""
     CONNECTION_FAILED = 0
+    CONNECTION_TIMED_OUT = 1
 
     SSL_CONNECTION_FAILED = 10
     SSL_PROTOCOL_ERROR = 11

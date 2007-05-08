@@ -37,7 +37,7 @@ import xml.sax.saxutils as xml_utils
 
 __all__ = ['NotificationProtocolStatus', 'NotificationProtocol']
 
-logger = logging.getLogger('protocol')
+logger = logging.getLogger('protocol:notification')
 
 class ProtocolConstant(object):
     VER = ('MSNP15', 'MSNP14', 'MSNP13', 'CVR0')
@@ -350,7 +350,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         else:
             method = 'TWN'
         self._status = NotificationProtocolStatus.AUTHENTICATING
-        self.notify("status")
         self._transport.send_command_ex('USR',
                 (method, 'I', self._client.profile.account))
 
@@ -445,7 +444,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         if command.arguments[0] == "OK":
             if self._status != NotificationProtocolStatus.OPEN: # Initial ADL
                 self._status = NotificationProtocolStatus.OPEN
-                self.notify("status")
                 self.emit("login-success")
             else: # contact Added
                 raise NotImplementedError("ADL contact add response")
@@ -462,7 +460,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             else:
                 self._transport.send_command_ex("BLP", (self._client.profile.privacy,))
                 self._status = NotificationProtocolStatus.SYNCHRONIZING
-                self.notify("status")
                 self._address_book.sync()
         elif msg.content_type[0] in \
                 ('text/x-msmsgsinitialemailnotification', \
@@ -489,12 +486,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
         self._status = NotificationProtocolStatus.OPENING
-        self.notify("status")
         self._transport.send_command_ex('VER', ProtocolConstant.VER)
 
-    def _disconnect_cb(self, transport):
+    def _disconnect_cb(self, transport, reason):
         self._status = NotificationProtocolStatus.CLOSED
-        self.notify("status")
 
     def _sso_cb(self, nonce, soap_response, *tokens):
         self.__security_tokens = tokens
@@ -509,6 +504,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     self._address_book = AddressBook.AddressBook(token, self._proxies['http'])
                 else:
                     self._address_book = AddressBook.AddressBook(token)
+                self._client.contacts = self._address_book #FIXME: ugly ugly !
                 self._address_book.connect("notify::status",
                         self._address_book_status_cb)
                 self._address_book.connect("contact-added",

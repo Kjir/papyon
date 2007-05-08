@@ -30,7 +30,7 @@ POST requests.
 The classes of this module are structured as follow:
 G{classtree BaseTransport}"""
 
-import gnet.io
+import gnet
 import gnet.protocol
 import msnp
 
@@ -46,6 +46,7 @@ class ServerType(object):
     SWITCHBOARD = 'SB'
     NOTIFICATION = 'NS'
 
+TransportError = gnet.IoError
 
 class BaseTransport(gobject.GObject):
     """Abstract Base Class that modelize a connection to the MSN service, this
@@ -95,7 +96,7 @@ class BaseTransport(gobject.GObject):
     __gsignals__ = {
             "connection-failure" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                ()),
+                (object,)),
 
             "connection-success" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
@@ -107,7 +108,7 @@ class BaseTransport(gobject.GObject):
 
             "connection-lost" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                ()),
+                (object,)),
 
             "command-received": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
@@ -223,7 +224,7 @@ class DirectConnection(BaseTransport):
         
         transport = gnet.io.TCPClient(server[0], server[1])
         transport.connect("notify::status", self.__on_status_change)
-        transport.connect("error", lambda t, msg: self.emit("connection-failure"))
+        transport.connect("error", self.__on_error)
 
         receiver = gnet.parser.DelimiterParser(transport)
         receiver.connect("received", self.__on_received)
@@ -233,6 +234,7 @@ class DirectConnection(BaseTransport):
         self._transport = transport
         self.__pending_chunk = None
         self.__resetting = False
+        self.__error = False
         
     __init__.__doc__ = BaseTransport.__init__.__doc__
 
@@ -269,14 +271,23 @@ class DirectConnection(BaseTransport):
     ### callbacks
     def __on_status_change(self, transport, param):
         status = transport.get_property("status")
-        if status == gnet.constants.IoStatus.OPEN:
+        if status == gnet.IoStatus.OPEN:
             if self.__resetting:
                 self.emit("connection-reset")
                 self.__resetting = False
             self.emit("connection-success")
-        elif status == gnet.constants.IoStatus.CLOSED:
-            if not self.__resetting:
-                self.emit("connection-lost")
+        elif status == gnet.IoStatus.CLOSED:
+            if not self.__resetting and not self.__error:
+                self.emit("connection-lost", None)
+            self.__error = False
+    
+    def __on_error(self, transport, reason):
+        status = transport.get_property("status")
+        self.__error = True
+        if status == gnet.IoStatus.OPEN:
+            self.emit("connection-lost", reason)
+        else:
+            self.emit("connection-failure", reason)
 
     def __on_received(self, receiver, chunk):
         cmd = msnp.Command()
@@ -314,6 +325,7 @@ class HTTPPollConnection(BaseTransport):
         self._command_queue = []
         self._waiting_for_response = False # are we waiting for a response
         self._session_id = None
+        self.__error = False
 
     def _setup_transport(self):
         server = self.server
@@ -324,18 +336,20 @@ class HTTPPollConnection(BaseTransport):
             transport = gnet.protocol.HTTP(server[0], server[1])
         transport.connect("response-received", self.__on_received)
         transport.connect("request-sent", self.__on_sent)
-        transport.connect("error", lambda t, msg: self.emit("connection-lost"))
+        transport.connect("error", self.__on_error)
         self._transport = transport
 
     def establish_connection(self):
         logger.debug('<-> Connecting to %s:%d' % self.server)
-        self._polling_source_id = gobject.timeout_add(3000, self._poll)
+        self._polling_source_id = gobject.timeout_add(5000, self._poll)
         self.emit("connection-success")
 
     def lose_connection(self):
         gobject.source_remove(self._polling_source_id)
         del self._polling_source_id
-        self.emit("connection-lost")
+        if not self.__error:
+            self.emit("connection-lost", None)
+        self.__error = False
 
     def reset_connection(self, server=None):
         if server:
@@ -383,10 +397,15 @@ class HTTPPollConnection(BaseTransport):
         if not self._waiting_for_response:
             self.send_command(None)
         return True
+    
+    def __on_error(self, transport, reason):
+        self.__error = True
+        self.emit("connection-lost", reason)
         
     def __on_received(self, transport, http_response):
         if http_response.status == 403:
             print "Your proxy sucks, error 403 : forbidden !" # FIXME: transmist proper error
+            self.emit("connection-lost", TransportError.PROXY_FORBIDDEN)
             self.lose_connection()
         if 'X-MSN-Messenger' in http_response.headers:
             data = http_response.headers['X-MSN-Messenger'].split(";")

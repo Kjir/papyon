@@ -23,31 +23,37 @@ def get_proxies():
 
 class Client(pymsn.Client):
     def __init__(self, account, quit, http_mode=False):
-        server = ('207.46.109.66', 1863)
+        server = ('messenger.hotmail.com', 1863)
         self.quit = quit
+        self.account = account
         if http_mode:
             from pymsn.transport import HTTPPollConnection
-            pymsn.Client.__init__(self, server, account, get_proxies(), HTTPPollConnection)
+            pymsn.Client.__init__(self, server, get_proxies(), HTTPPollConnection)
         else:
-            pymsn.Client.__init__(self, server, account, proxies = get_proxies())
+            pymsn.Client.__init__(self, server, proxies = get_proxies())
+        self.add_events_handler(self)
         gobject.idle_add(self._connect)
 
     def _connect(self):
-        self.login()
+        self.login(*self.account)
         return False
 
-    def on_connect_failure(self, proto):
-        print "Connect failed"
+    def on_connect_failure(self, reason):
+        print "Connect failed", reason
         self.quit()
 
-    def on_login_failure(self, proto):
+    def on_login_failure(self):
         print "Login failed"
         self.quit()
 
-    def on_login_success(self, proto):
+    def on_login_success(self):
         self.profile.presence = pymsn.Presence.ONLINE
         self.profile.display_name = "Kimbix"
         self.profile.personal_message = "Testing pymsn, and freeing the pandas!"
+
+    def on_disconnected(self, reason):
+        print "Disconnected"
+        self.quit()
 
 def main():
     import sys

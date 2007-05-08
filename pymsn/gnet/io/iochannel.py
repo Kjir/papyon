@@ -22,6 +22,7 @@ from pymsn.gnet.constants import *
 from abstract import AbstractClient
 
 import gobject
+from errno import *
 
 __all__ = ['GIOChannelClient']
 
@@ -83,6 +84,14 @@ class GIOChannelClient(AbstractClient):
         AbstractClient._post_open(self)
         self._watch_remove()
 
+    def _open(self, host, port):
+        err = self._transport.connect_ex((host, port))
+        if err in (0, EINPROGRESS, EALREADY, EWOULDBLOCK, EISCONN):
+            return
+        elif err in (EHOSTUNREACH, EHOSTDOWN, ECONNREFUSED, ECONNABORTED,
+                ENETUNREACH, ENETDOWN):
+            self.emit("error", IoError.CONNECTION_FAILED)
+
     # convenience methods
     def _watch_remove(self):
         if self._source_id is not None:
@@ -114,10 +123,7 @@ class GIOChannelClient(AbstractClient):
         if not self._configure():
             return
         self._pre_open()
-        try:
-            self._transport.connect((self._host, self._port))
-        except:
-            pass
+        self._open(self._host, self._port)
         self._watch_set_cond(gobject.IO_PRI | gobject.IO_IN | gobject.IO_OUT |
                 gobject.IO_HUP | gobject.IO_ERR | gobject.IO_NVAL,
                 lambda chan, cond: self._post_open())

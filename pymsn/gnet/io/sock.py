@@ -24,6 +24,7 @@ from iochannel import GIOChannelClient
 import gobject
 import socket
 
+
 __all__ = ['SocketClient']
 
 class SocketClient(GIOChannelClient):

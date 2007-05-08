@@ -45,36 +45,42 @@ class Client(object):
     
     @group Connection: login, logout"""
 
-    def __init__(self, server, account, proxies={}, transport_class=DirectConnection):
+    def __init__(self, server, proxies={}, transport_class=DirectConnection):
         """Initializer
 
             @param server: the Notification server to connect to.
             @type server: tuple(host, port)
 
-            @param account: the account to use for authentication.
-            @type account: tuple(account, password)
-
             @param proxies: proxies that we can use to connect
             @type proxies: {type: string => L{gnet.proxy.ProxyInfos}}"""
-        self._account = account
+        self._account = None
         self._proxies = proxies
         self._transport = transport_class(server, ServerType.NOTIFICATION, self._proxies)
         self._protocol = msnp.NotificationProtocol(self, self._transport, self._proxies)
-        self.profile = profile.User(self._account, self._protocol)
+        self.profile = None
+        self.contacts = None # FIXME: update when the addressbook get updated
+        self._events_handlers = set()
         self.__setup_callbacks()
 
     def __setup_callbacks(self):
-        self._transport.connect("connection-failure", self.on_connect_failure)
-        self._transport.connect("connection-lost", self.on_disconnected)
-        self._transport.connect("command-received", self.on_command_received)
-        self._transport.connect("command-sent", self.on_command_sent)
+        self._transport.connect("connection-failure", self._on_connect_failure)
+        self._transport.connect("connection-lost", self._on_disconnected)
+        self._transport.connect("command-received", self._on_command_received)
+        self._transport.connect("command-sent", self._on_command_sent)
 
-        self._protocol.connect("login-success", self.on_login_success)
-        self._protocol.connect("login-failure", self.on_login_failure)
+        self._protocol.connect("login-success", self._on_login_success)
+        self._protocol.connect("login-failure", self._on_login_failure)
 
     ### public methods & properties
-    def login(self):
-        """Login to the server."""
+    def login(self, account, password):
+        """Login to the server.
+            
+            @param account: the account to use for authentication.
+            @type account: string
+            
+            @param password: the password needed to authenticate to the account"""
+        self._account = (account, password)
+        self.profile = profile.User(self._account, self._protocol)
         self._transport.establish_connection()
 
     def logout(self):
@@ -82,46 +88,35 @@ class Client(object):
         self._protocol.signoff()
 
     ### Callbacks
-    def on_connect_failure(self, transp):
-        """Callback used when the connection to the server fails.
-        
-            @param transp: an instance of a class that implements the
-                L{transport.BaseTransport} interface"""
-        pass
+    def add_events_handler(self, events_handler):
+        """
+        events_handler:
+            an instance with methods as code of callbacks.
+        """        
+        self._events_handlers.add(events_handler)
 
-    def on_disconnected(self, transp):
-        """Callback used when we get disconnected from the server.
-        
-            @param transp: an instance of a class that implements the
-                L{transport.BaseTransport} interface"""
-        pass
+    def _dispatch(self, name, *args):
+        for event_handler in self._events_handlers:
+            try:
+                handler = getattr(event_handler, name)
+                handler(*args)
+            except Exception, e:
+                print e
 
-    def on_command_received(self, transp, cmd):
-        """Callback used when a command is received.
-            
-            @note: may be used for debugging purposes
-            @param transp: an instance of a class that implements the
-                L{transport.BaseTransport} interface
-            @param cmd: a {structure.Command} instance"""
-        pass
+    def _on_connect_failure(self, transp, reason):
+        self._dispatch("on_connect_failure", reason)
 
-    def on_command_sent(self, transp, cmd):
-        """Callback used when a command is sent.
-            
-            @note: may be used for debugging purposes
-            @param transp: an instance of a class that implements the
-                L{transport.BaseTransport} interface
-            @param cmd: a {structure.Command} instance"""
-        pass
+    def _on_disconnected(self, transp, reason):
+        self._dispatch("on_disconnected", reason)
 
-    def on_login_success(self, proto):
-        """Callback used when the login process succeeds.
+    def _on_login_success(self, proto):
+        self._dispatch("on_login_success")
         
-            @param proto: the L{protocol.NotificationProtocol} instance"""
-        pass
-        
-    def on_login_failure(self, proto):
-        """Callback used when the login process fails.
-        
-            @param proto: the L{protocol.NotificationProtocol} instance"""
-        pass
+    def _on_login_failure(self, proto):
+        self._dispatch("on_login_failure")
+
+    def _on_command_received(self, transp, cmd):
+        self._dispatch("on_command_received", cmd)
+
+    def _on_command_sent(self, transp, cmd):
+        self._dispatch("on_command_sent", cmd)

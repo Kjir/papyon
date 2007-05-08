@@ -95,6 +95,6 @@ class BaseProtocol(object):
     def _connect_cb(self, transport):
         pass
 
-    def _disconnect_cb(self, transport):
+    def _disconnect_cb(self, transport, reason):
         self._status = NotificationProtocolStatus.CLOSED
         self.notify("status")
