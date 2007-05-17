@@ -248,7 +248,6 @@ class AddressBook(gobject.GObject):
 
     # Private
     def __build_addressbook(self):
-        print "Building the Addressbook"
         for group in self.__ab_find_all_groups_response:
             g = profile.Group(group.id, group.name)
             self._groups[group.id] = g
@@ -295,7 +294,6 @@ class AddressBook(gobject.GObject):
         del self.__ab_find_all_contacts_response
         del self.__ab_find_all_groups_response
         del self.__find_membership_response
-        print "Building the Addressbook finished"
         self._state = AddressBookState.SYNCHRONIZED
 
 gobject.type_register(AddressBook)

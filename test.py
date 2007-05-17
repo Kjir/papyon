@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import pymsn
+import pymsn.event
 
 import logging
 import gobject
@@ -21,7 +22,7 @@ def get_proxies():
         result[type] = pymsn.Proxy(url)
     return result
 
-class Client(pymsn.Client):
+class Client(pymsn.Client, pymsn.event.ClientEventInterface):
     def __init__(self, account, quit, http_mode=False):
         server = ('messenger.hotmail.com', 1863)
         self.quit = quit
@@ -31,29 +32,25 @@ class Client(pymsn.Client):
             pymsn.Client.__init__(self, server, get_proxies(), HTTPPollConnection)
         else:
             pymsn.Client.__init__(self, server, proxies = get_proxies())
-        self.add_events_handler(self)
+        self.register_events_handler(self)
         gobject.idle_add(self._connect)
 
     def _connect(self):
         self.login(*self.account)
         return False
 
-    def on_connect_failure(self, reason):
-        print "Connect failed", reason
-        self.quit()
+    def on_client_state_changed(self, state):
+        print "State changed :", state
+        if state == pymsn.event.ClientState.CLOSED:
+            self.quit()
+        elif state == pymsn.event.ClientState.OPEN:
+            self.profile.presence = pymsn.Presence.ONLINE
+            self.profile.display_name = "Kimbix"
+            self.profile.personal_message = "Testing pymsn, and freeing the pandas!"
 
-    def on_login_failure(self):
-        print "Login failed"
-        self.quit()
+    def on_client_error(self, error_type, error):
+        print "ERROR :", error_type, " ->", error
 
-    def on_login_success(self):
-        self.profile.presence = pymsn.Presence.ONLINE
-        self.profile.display_name = "Kimbix"
-        self.profile.personal_message = "Testing pymsn, and freeing the pandas!"
-
-    def on_disconnected(self, reason):
-        print "Disconnected"
-        self.quit()
 
 def main():
     import sys
