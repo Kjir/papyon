@@ -315,7 +315,8 @@ class Contact(gobject.GObject):
 
             }
 
-    def __init__(self, id, network_id, account, display_name, memberships=Membership.UNKNOWN):
+    def __init__(self, id, network_id, account, display_name,
+            memberships=Membership.UNKNOWN):
         """Initializer"""
         gobject.GObject.__init__(self)
         self._id = id
@@ -359,9 +360,18 @@ class Contact(gobject.GObject):
         """Contact client ID"""
         return self._client_id
 
+    @property
+    def domain(self):
+        """Contact domain"""
+        result = self._account.split('@', 1)
+        if len(result) > 1:
+            return result[1]
+        else:
+            return ""
+
     ### membership management
-    def is_member(self, membership):
-        return self.memberships & membership
+    def is_member(self, memberships):
+        return (self.memberships & memberships) == memberships
 
     def _add_membership(self, membership):
         if not self.is_member(Membership.REVERSE) and \

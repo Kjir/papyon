@@ -49,7 +49,7 @@ class Contact(object):
             self.type = ""
             self.account = ""
             self.display_name = ""
-            self.netword_id = NetworkID.MSN
+            self.network_id = NetworkID.MSN
             self.CID = ""
         else:
             soap_utils = SOAPUtils(NS_SHORTHANDS)
@@ -62,11 +62,11 @@ class Contact(object):
             passport = soap_utils.find_ex(contact_info, "./ab:passportName")
             if passport is not None:
                 self.account = passport.text
-                self.netword_id = NetworkID.MSN
+                self.network_id = NetworkID.MSN
             else: # Yahoo user
                 self.account = soap_utils.find_ex(contact_info,
                         "./ab:emails/ab:ContactEmail/ab:email").text
-                self.netword_id = NetworkID.EXTERNAL
+                self.network_id = NetworkID.EXTERNAL
             display_name = soap_utils.find_ex(xml_node, "./ab:DisplayName")
             if display_name is not None:
                 self.display_name = display_name.text

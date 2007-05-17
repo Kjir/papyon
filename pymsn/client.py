@@ -78,6 +78,7 @@ class Client(object):
     def _set_state(self, state):
         self.__state = state
         self._dispatch("on_client_state_changed", state)
+    state = property(_get_state)
     _state = property(_get_state, _set_state)
 
     ### public methods & properties

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2006 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2006-2007 Ali Sabil <ali.sabil@gmail.com>
 # Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
+# Copyright (C) 2007 Ole André Vadla Ravnås <oleavr@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,9 +25,72 @@ import pymsn.profile as profile
 
 import gobject
 
+__all__ = ['AddressBookState', 'AddressBook']
 
-class AddressBookStatus(object):
-    """Addressbook synchronization status.
+class AddressBookStorage(set):
+    def __init__(self, initial_set=()):
+        set.__init__(self, initial_set)
+
+    def __repr__(self):
+        return "AddressBook : %d contact(s)" % len(self)
+
+    def add_contact(self, contact):
+        self.add(contact)
+
+    def remove_contact(self, contact):
+        self.remove(contact)
+
+    def get_first(self):
+        for contact in self:
+            return contact
+        return None
+
+    def __getattr__(self, name):
+        if name.startswith("search_by_"):
+            field = name[10:]
+            def search_by_func(criteria):
+                return self.search_by(field, criteria)
+            search_by_func.__name__ = name
+            return search_by_func
+        elif name.startswith("group_by_"):
+            field = name[9:]
+            def group_by_func():
+                return self.group_by(field)
+            group_by_func.__name__ = name
+            return group_by_func
+        else:
+            raise AttributeError, name
+
+    def search_by_memberships(self, memberships):
+        result = []
+        for contact in self:
+            if contact.is_member(memberships):
+                result.append(contact)
+                # Do not break here, as the account
+                # might exist in multiple networks
+        return AddressBookStorage(result)
+
+    def search_by(self, field, value):
+        result = []
+        for contact in self:
+            if getattr(contact, field) == value:
+                result.append(contact)
+                # Do not break here, as the account
+                # might exist in multiple networks
+        return AddressBookStorage(result)
+
+    def group_by(self, field):
+        result = {}
+        for contact in self:
+            value = getattr(contact, field)
+            if value not in result:
+                result[value] = AddressBookStorage()
+            result[value].add_contact(contact)
+        return result
+
+
+class AddressBookState(object):
+    """Addressbook synchronization state.
 
     An adressbook is said to be synchronized when it
     matches the addressbook stored on the server."""
@@ -46,10 +110,10 @@ class AddressBook(gobject.GObject):
             (gobject.TYPE_PYOBJECT,)),
         }
     __gproperties__ = {
-        "status":  (gobject.TYPE_INT,
-            "Status",
-            "The status of the addressbook.",
-            0, 2, AddressBookStatus.NOT_SYNCHRONIZED,
+        "state":  (gobject.TYPE_INT,
+            "State",
+            "The state of the addressbook.",
+            0, 2, AddressBookState.NOT_SYNCHRONIZED,
             gobject.PARAM_READABLE)
         }
 
@@ -57,49 +121,24 @@ class AddressBook(gobject.GObject):
         gobject.GObject.__init__(self)
         self._ab_client = ab.AB(contacts_security_token, http_proxy)
         self._sharing_client = sharing.Sharing(contacts_security_token, http_proxy)
-        self._status = AddressBookStatus.NOT_SYNCHRONIZED
+        self.__state = AddressBookState.NOT_SYNCHRONIZED
         self.__ab_find_all_groups_response = None
         self.__ab_find_all_contacts_response = None
         self.__find_membership_response = None
 
         self._groups = {}
-        self._contacts = {}
+        #self._contacts = {}
+        self.contacts = AddressBookStorage()
         self._profile = None
 
     def sync(self):
-        if self._status != AddressBookStatus.NOT_SYNCHRONIZED:
+        if self._state != AddressBookState.NOT_SYNCHRONIZED:
             return
-        self._status = AddressBookStatus.SYNCHRONIZING
-        self.notify("status")
+        self._state = AddressBookState.SYNCHRONIZING
         self._ab_client.ABFindAll("Initial", False, self._ab_find_all_cb)
         self._sharing_client.FindMembership("Initial", self._find_membership_cb)
-
-    def find_by_account(self, account):
-        result = []
-        for network in (profile.NetworkID.MSN, profile.NetworkID.EXTERNAL):
-            key = (network, account)
-            if key in self._contacts:
-                result.append(self._contacts[key])
-        return result
-
-    def find_by_memberships(self, memberships):
-        result = []
-        for key, contact in self._contacts.iteritems():
-            if contact.is_member(memberships):
-                result.append(contact)
-        return result
-
-    def contacts_by_domain(self, predicate=None):
-        result = {}
-        for key, contact in self._contacts.iteritems():
-            if predicate is not None and not predicate(contact):
-                continue
-            domain = key[1].split("@", 1)[1]
-            if domain not in result:
-                result[domain] = []
-            result[domain].append(contact)
-        return result
-
+    
+    # Manipulation
     def add_contact(self, passport, messenger=True):
         self._ab_client.ABContactAdd("ContactSave", passport, messenger,
                                      "LivePending", self._ab_contact_add_cb)
@@ -140,9 +179,13 @@ class AddressBook(gobject.GObject):
                                       self._ab_delete_contact_from_group_cb)
 
     # Properties
-    @property
-    def status(self):
-        return self._status
+    def __get_state(self):
+        return self.__state
+    def __set_state(self, state):
+        self.__state = state
+        self.notify("state")
+    state = property(__get_state)
+    _state = property(__get_state, __set_state)
 
     @property
     def profile(self):
@@ -162,12 +205,11 @@ class AddressBook(gobject.GObject):
 
     def _ab_contact_add_cb(self, soap_response, contact):
         c = profile.Contact(contact.id,
-                            contact.netword_id,
+                            contact.network_id,
                             contact.account,
                             contact.display_name)
-        self._contacts[(contact.netword_id, contact.account)] = c
-        self.emit("contact-added", self._contacts[(contact.netword_id,
-            contact.account)])
+        self.contacts.add_contact(c)
+        self.emit("contact-added", c)
 
     def _ab_contact_add_find_all_cb(self, soap_response, groups, contacts):
         # find the new contact in contacts and add it
@@ -196,8 +238,8 @@ class AddressBook(gobject.GObject):
 
     ### gobject properties
     def do_get_property(self, pspec):
-        if pspec.name == "status":
-            return self._status
+        if pspec.name == "state":
+            return self._state
         else:
             raise AttributeError, "unknown property %s" % pspec.name
 
@@ -206,20 +248,21 @@ class AddressBook(gobject.GObject):
 
     # Private
     def __build_addressbook(self):
+        print "Building the Addressbook"
         for group in self.__ab_find_all_groups_response:
             g = profile.Group(group.id, group.name)
             self._groups[group.id] = g
 
         for contact in self.__ab_find_all_contacts_response:
             c = profile.Contact(contact.id,
-                                contact.netword_id,
+                                contact.network_id,
                                 contact.account,
                                 contact.display_name)
             if contact.type == "Me":
                 self._profile = c
             else:
                 c._add_membership(profile.Membership.FORWARD)
-                self._contacts[(contact.netword_id, contact.account)] = c
+                self.contacts.add_contact(c)
 
         for membership, members in self.__find_membership_response.iteritems():
             if membership == "Allow":
@@ -233,20 +276,26 @@ class AddressBook(gobject.GObject):
             else:
                 raise NotImplementedError("Unknown Membership Type : " + membership)
             for member in members:
-                key = (member.netword_id, member.account)
-                if key in self._contacts:
-                    self._contacts[key]._add_membership(membership)
+                key = (member.network_id, member.account)
+                result_set = self.contacts\
+                        .search_by_account(member.account)\
+                        .search_by_network_id(member.network_id)
+                if len(result_set) > 0:
+                    assert(len(result_set) == 1)
+                    for contact in result_set:
+                        contact._add_membership(membership)
                 else:
-                    self._contacts[key] = profile.Contact(
+                    contact = profile.Contact(
                             "00000000-0000-0000-0000-000000000000",
-                            member.netword_id,
+                            member.network_id,
                             member.account,
                             member.display_name,
                             membership)
+                    self.contacts.add_contact(contact)
         del self.__ab_find_all_contacts_response
         del self.__ab_find_all_groups_response
         del self.__find_membership_response
-        self._status = AddressBookStatus.SYNCHRONIZED
-        self.notify("status")
+        print "Building the Addressbook finished"
+        self._state = AddressBookState.SYNCHRONIZED
 
 gobject.type_register(AddressBook)

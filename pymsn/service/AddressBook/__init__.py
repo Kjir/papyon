@@ -21,4 +21,4 @@
 from sharing import *
 from ab import *
 
-from address_book import AddressBook, AddressBookStatus
+from address_book import *

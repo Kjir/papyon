@@ -216,13 +216,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             @param network_id: the contact network
             @type network_id: integer
             @see L{pymsn.profile.NetworkID}"""
-        result = self._address_book.find_by_account(account)
-        contact = None
-        for c in result:
-            if c.account == account and c.network_id == network_id:
-                contact = c
-                break
-
+        contact = self._address_book.contacts.search_by_account(account).\
+                search_by_network_id(network_id).get_first()
+        
         if contact is None:
             self._address_book.add_contact(account)
         else:
@@ -391,12 +387,12 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._handle_NLN(command)
 
     def _handle_FLN(self,command):
-        contacts = self._address_book.find_by_account(command.arguments[0])
+        contacts = self._address_book.contacts.search_by_account(command.arguments[0])
         for contact in contacts:
             contact._server_property_changed("presence", PresenceStatus.OFFLINE)
 
     def _handle_NLN(self,command):
-        contacts = self._address_book.find_by_account(command.arguments[1])
+        contacts = self._address_book.contacts.search_by_account(command.arguments[1])
         for contact in contacts:
             presence = command.arguments[0]
             display_name = urllib.unquote(command.arguments[3])
@@ -417,7 +413,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         pass
 
     def _handle_UBX(self,command): # contact infos
-        contacts = self._address_book.find_by_account(command.arguments[0])
+        contacts = self._address_book.contacts.search_by_account(command.arguments[0])
         if command.payload:
             for contact in contacts:
                 data = et.fromstring(command.payload)
@@ -487,8 +483,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 else:
                     self._address_book = AddressBook.AddressBook(token)
                 self._client.contacts = self._address_book #FIXME: ugly ugly !
-                self._address_book.connect("notify::status",
-                        self._address_book_state_cb)
+                self._address_book.connect("notify::state",
+                        self._address_book_state_changed_cb)
                 self._address_book.connect("contact-added",
                         self._address_book_contact_added_cb)
 
@@ -496,16 +492,17 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._transport.send_command_ex("USR",
                 ("SSO", "S", clear_token.security_token, blob))
 
-    def _address_book_state_cb(self, address_book, pspec):
-        if address_book.status != AddressBook.AddressBookStatus.SYNCHRONIZED:
+    def _address_book_state_changed_cb(self, address_book, pspec):
+        if address_book.state != AddressBook.AddressBookState.SYNCHRONIZED:
             return
         self._client.profile._server_property_changed("display-name",
                 address_book.profile.display_name)
 
-        mask = ~(profile.Membership.REVERSE | profile.Membership.PENDING)
-        predicate = lambda contact: contact.is_member(mask)
-        contacts = address_book.contacts_by_domain(predicate)
+        contacts = address_book.contacts\
+                .search_by_memberships(profile.Membership.FORWARD)\
+                .group_by_domain()
         s = '<ml l="1">'
+        mask = ~(profile.Membership.REVERSE | profile.Membership.PENDING)
         for domain, contacts in contacts.iteritems():
             s += '<d n="%s">' % domain
             for contact in contacts:

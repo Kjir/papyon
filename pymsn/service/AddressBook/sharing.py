@@ -45,10 +45,10 @@ class Member(object):
         passport = soap_utils.find_ex(xml_node, "./ab:PassportName")
         if passport is not None:
             self.account = passport.text
-            self.netword_id = NetworkID.MSN
+            self.network_id = NetworkID.MSN
         else:
             self.account = soap_utils.find_ex(xml_node, "./ab:Email").text
-            self.netword_id = NetworkID.EXTERNAL
+            self.network_id = NetworkID.EXTERNAL
 
         display_name = soap_utils.find_ex(xml_node, "./ab:DisplayName")
         if display_name is not None:
