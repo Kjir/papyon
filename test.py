@@ -59,7 +59,7 @@ def main():
     import sys
     import getpass
     import signal
-    
+
     if "--http" in sys.argv:
         http_mode = True
         sys.argv.remove('--http')
@@ -70,7 +70,7 @@ def main():
         account = raw_input('Account: ')
     else:
         account = sys.argv[1]
-    
+
     if len(sys.argv) < 3:
         passwd = getpass.getpass('Password: ')
     else:

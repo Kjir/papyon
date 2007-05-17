@@ -27,7 +27,7 @@ __all__ = ['Presence', 'User', 'Contact']
 
 
 class ClientCapabilities(object):
-    
+
     _CAPABILITIES = {
             'is_bot': 0x00020000,
             'is_mobile_device': 0x00000001,
@@ -79,7 +79,7 @@ class ClientCapabilities(object):
         else:
             raise AttributeError("object 'ClientCapabilities' has no attribute '%s'" % name)
         return (self.client_id & mask != 0)
-            
+
     def __setattr__(self, name, value):
         if name in self._CAPABILITIES:
             mask = self._CAPABILITIES[name]
@@ -109,7 +109,7 @@ class Presence(object):
 
     The members of this class are used to identify the Presence that a user
     wants to advertise to the contacts on his/her contact list.
-        
+
         @cvar ONLINE: online
         @cvar BUSY: busy
         @cvar IDLE: idle
@@ -133,7 +133,7 @@ class Presence(object):
 class Privacy(object):
     """User privacy, defines the default policy concerning contacts
     not belonging to the ALLOW list nor to the BLOCK list
-    
+
         @cvar ALLOW: allow by default
         @cvar BLOCK: block by default"""
     ALLOW = 'AL'
@@ -151,16 +151,16 @@ class Membership(object):
 
 class User(gobject.GObject):
     """Profile of the User connecting to the service
-    
+
         @undocumented: do_get_property, do_set_property, __gproperties__
-        
+
         @ivar account: the account name
         @ivar password: the password used to authenticate
         @ivar profile: the profile sent by the server
         @ivar display_name: the display name shown to contacts
         @ivar presence: the presence advertised
         @ivar personal_message: the personal message shown to contacts"""""
-    
+
     __gproperties__ = {
             "display-name": (gobject.TYPE_STRING,
                 "Friendly name",
@@ -173,7 +173,7 @@ class User(gobject.GObject):
                 "The personal message that the user wants to display",
                 "",
                 gobject.PARAM_READABLE),
-            
+
             "profile": (gobject.TYPE_STRING,
                 "Profile",
                 "the text/x-msmsgsprofile sent by the server",
@@ -204,9 +204,9 @@ class User(gobject.GObject):
         self._presence = Presence.OFFLINE
         self._privacy = Privacy.BLOCK
         self._personal_message = ""
-        
+
         self.client_id = ClientCapabilities()
-        
+
         #FIXME: Display Picture
 
     @property
@@ -226,7 +226,7 @@ class User(gobject.GObject):
     def __get_display_name(self):
         return self._display_name
     display_name = property(__get_display_name, __set_display_name)
-        
+
     def __set_presence(self, presence):
         self._ns_client.set_presence(presence)
     def __get_presence(self):
@@ -261,7 +261,7 @@ gobject.type_register(User)
 class Contact(gobject.GObject):
     """Contact related information
         @undocumented: do_get_property, do_set_property, __gproperties__"""
-    
+
     __gsignals__ =  {
             "added": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
@@ -306,7 +306,7 @@ class Contact(gobject.GObject):
                 "The presence to show to others",
                 Presence.OFFLINE,
                 gobject.PARAM_READABLE),
-            
+
             "client-id": (gobject.TYPE_UINT64,
                 "Client ID",
                 "The client ID specifying capabilities of the contact 's client",
@@ -348,7 +348,7 @@ class Contact(gobject.GObject):
     def display_name(self):
         """Contact display name"""
         return self._display_name
-    
+
     @property
     def memberships(self):
         """Contact membership value"""
@@ -358,11 +358,11 @@ class Contact(gobject.GObject):
     def client_id(self):
         """Contact client ID"""
         return self._client_id
-    
+
     ### membership management
     def is_member(self, membership):
         return self.memberships & membership
-    
+
     def _add_membership(self, membership):
         if not self.is_member(Membership.REVERSE) and \
                 membership == Membership.REVERSE:
@@ -414,7 +414,7 @@ class Group(gobject.GObject):
                     ()),
         "updated": (gobject.SIGNAL_RUN_FIRST,
                     gobject.TYPE_NONE,
-                    ()) 
+                    ())
         }
 
     __gproperties__ = {

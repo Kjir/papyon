@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007  Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007  Ole André Vadla Ravnås <oleavr@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,11 +18,17 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-"""MSN Core protocol client implementation.
-Contains a set of class abstracting the MSNP protocol used to communicate
-with the Notification Server as well as the Switchboard Server"""
+__all__ = ["BaseEventInterface"]
 
-from command import *
-from message import *
-from notification import *
-from base import ProtocolState
+class BaseEventInterface(object):
+    def __init__(self, client):
+        self._client = client
+        self._client.register_events_handler(self)
+
+    def _dispatch_event(self, event_name, *params):
+        try:
+            handler = getattr(self, event_name)
+        except Exception, e:
+            return
+
+        handler(*params)

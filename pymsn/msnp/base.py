@@ -27,6 +27,16 @@ __all__ = ['BaseProtocol']
 
 logger = logging.getLogger('protocol')
 
+class ProtocolState(object):
+    CLOSED = 0
+    OPENING = 1
+    AUTHENTICATING = 2
+    AUTHENTICATED = 3
+    SYNCHRONIZING = 4
+    SYNCHRONIZED = 5
+    OPEN = 6
+
+
 class BaseProtocol(object):
     """Base class used to implement the Notification protocol as well
     as the Switchboard protocol
@@ -96,5 +106,4 @@ class BaseProtocol(object):
         pass
 
     def _disconnect_cb(self, transport, reason):
-        self._status = NotificationProtocolStatus.CLOSED
-        self.notify("status")
+        pass

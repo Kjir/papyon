@@ -17,11 +17,9 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-"""MSN Core protocol client implementation.
-Contains a set of class abstracting the MSNP protocol used to communicate
-with the Notification Server as well as the Switchboard Server"""
+"""pymsn event interfaces.
 
-from command import *
-from message import *
-from notification import *
-from base import ProtocolState
+Defines the interfaces that the client can implement to benefit from the
+client event notifications."""
+
+from client import *

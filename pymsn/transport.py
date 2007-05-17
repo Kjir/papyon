@@ -23,9 +23,9 @@
 """Network Transport Layer
 
 This module provides an abstraction of the transport to be used to communicate
-with the MSN servers, actually MSN servers can communicate either through direct
-connection using TCP/1863 or using TCP/80 by tunelling the protocol inside HTTP
-POST requests.
+with the MSN servers, actually MSN servers can communicate either through
+direct connection using TCP/1863 or using TCP/80 by tunelling the protocol
+inside HTTP POST requests.
 
 The classes of this module are structured as follow:
 G{classtree BaseTransport}"""
@@ -377,7 +377,8 @@ class HTTPPollConnection(BaseTransport):
         
         str_command = str(command)
         if self._session_id is None:            
-            resource += "?Action=open&Server=%s&IP=%s" % (self.server_type, self._target_server[0])
+            resource += "?Action=open&Server=%s&IP=%s" % (self.server_type,
+                    self._target_server[0])
         elif command == None:# Polling the server for queued messages
             resource += "?Action=poll&SessionID=%s" % self._session_id 
             str_command = ""
@@ -404,7 +405,6 @@ class HTTPPollConnection(BaseTransport):
         
     def __on_received(self, transport, http_response):
         if http_response.status == 403:
-            print "Your proxy sucks, error 403 : forbidden !" # FIXME: transmist proper error
             self.emit("connection-lost", TransportError.PROXY_FORBIDDEN)
             self.lose_connection()
         if 'X-MSN-Messenger' in http_response.headers:

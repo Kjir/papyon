@@ -39,8 +39,10 @@ class IoStatus(object):
 
 class IoError(object):
     """I/O error codes"""
-    CONNECTION_FAILED = 0
-    CONNECTION_TIMED_OUT = 1
+    UNKNOWN = 0
+
+    CONNECTION_FAILED = 1
+    CONNECTION_TIMED_OUT = 2
 
     SSL_CONNECTION_FAILED = 10
     SSL_PROTOCOL_ERROR = 11
@@ -49,4 +51,3 @@ class IoError(object):
     PROXY_AUTHENTICATION_REQUIRED = 21
     PROXY_FORBIDDEN = 22
 
-    UNKNOWN_ERROR = 99

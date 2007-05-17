@@ -27,10 +27,10 @@ import gobject
 
 class AddressBookStatus(object):
     """Addressbook synchronization status.
-    
+
     An adressbook is said to be synchronized when it
     matches the addressbook stored on the server."""
-    
+
     NOT_SYNCHRONIZED = 0
     """The addressbook is not synchronized yet"""
     SYNCHRONIZING = 1
@@ -101,7 +101,7 @@ class AddressBook(gobject.GObject):
         return result
 
     def add_contact(self, passport, messenger=True):
-        self._ab_client.ABContactAdd("ContactSave", passport, messenger, 
+        self._ab_client.ABContactAdd("ContactSave", passport, messenger,
                                      "LivePending", self._ab_contact_add_cb)
 
     def delete_contact(self, contact, messenger_only=False):
@@ -120,7 +120,7 @@ class AddressBook(gobject.GObject):
         pass
 
     def add_group(self, group_name):
-        self._ab_client.ABGroupAdd("GroupSave", group_name, 
+        self._ab_client.ABGroupAdd("GroupSave", group_name,
                                    self._ab_add_group_cb)
 
     def delete_group(self, group):

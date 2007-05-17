@@ -3,7 +3,7 @@
 # pymsn - a python client library for Msn
 #
 # Copyright (C) 2005-2007 Ali Sabil <ali.sabil@gmail.com>
-# Copyright (C) 2005-2006 Ole André Vadla Ravnås <oleavr@gmail.com> 
+# Copyright (C) 2005-2006 Ole André Vadla Ravnås <oleavr@gmail.com>
 # Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 """Notification protocol Implementation
 Implements the protocol used to communicate with the Notification Server."""
 
-from base import BaseProtocol
+from base import BaseProtocol, ProtocolState
 from message import IncomingMessage
 import pymsn.gnet.util.ElementTree as et #FIXME: maybe this should be moved to pymsn
 import pymsn.profile as profile
@@ -35,7 +35,7 @@ import urllib
 import gobject
 import xml.sax.saxutils as xml_utils
 
-__all__ = ['NotificationProtocolStatus', 'NotificationProtocol']
+__all__ = ['NotificationProtocol']
 
 logger = logging.getLogger('protocol:notification')
 
@@ -45,15 +45,6 @@ class ProtocolConstant(object):
     PRODUCT_ID = "PROD0114ES4Z%Q5W"
     PRODUCT_KEY = "PK}_A_0N_K%O?A9S"
     CHL_MAGIC_NUM = 0x0E79A9C1
-
-
-class NotificationProtocolStatus(object):
-    CLOSED = 0
-    OPENING = 1
-    AUTHENTICATING = 2
-    SYNCHRONIZING = 3
-    OPEN = 4
-
 
 def _msn_challenge(data):
     """
@@ -112,22 +103,14 @@ def _msn_challenge(data):
 
 class NotificationProtocol(BaseProtocol, gobject.GObject):
     """Protocol used to communicate with the Notification Server
-        
+
         @undocumented: do_get_property, do_set_property
         @group Handlers: _handle_*, _default_handler, _error_handler
 
-        @ivar _status: the current protocol status
-        @type _status: integer
-        @see L{NotificationProtocolStatus}"""
+        @ivar state: the current protocol state
+        @type state: integer
+        @see L{base.ProtocolState}"""
     __gsignals__ = {
-            "login-failure" : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-
-            "login-success" : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-
             "mail-received" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -142,10 +125,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             }
 
     __gproperties__ = {
-            "status":  (gobject.TYPE_INT,
-                "Status",
-                "The status of the communication with the server.",
-                0, 4, NotificationProtocolStatus.CLOSED,
+            "state":  (gobject.TYPE_INT,
+                "State",
+                "The state of the communication with the server.",
+                0, 6, ProtocolState.CLOSED,
                 gobject.PARAM_READABLE)
             }
 
@@ -157,35 +140,35 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
             @param transport: The transport to use to speak the protocol
             @type transport: L{transport.BaseTransport}
-            
+
             @param proxies: a dictonary mapping the proxy type to a
                 L{gnet.proxy.ProxyInfos} instance
             @type proxies: {type: string, proxy:L{gnet.proxy.ProxyInfos}}
         """
         BaseProtocol.__init__(self, client, transport, proxies)
         gobject.GObject.__init__(self)
-        self.__status = NotificationProtocolStatus.CLOSED
+        self.__state = ProtocolState.CLOSED
         self._address_book = None
         self._protocol_version = 0
-    
+
     # Properties ------------------------------------------------------------
-    def __get_status(self):
-        return self.__status
-    def __set_status(self, status):
-        self.__status = status
-        self.notify("status")
-    status = property(__get_status)
-    _status = property(__get_status, __set_status)
-        
+    def __get_state(self):
+        return self.__state
+    def __set_state(self, state):
+        self.__state = state
+        self.notify("state")
+    state = property(__get_state)
+    _state = property(__get_state, __set_state)
+
     def do_get_property(self, pspec):
-        if pspec.name == "status":
-            return self.__status
+        if pspec.name == "state":
+            return self.__state
         else:
             raise AttributeError, "unknown property %s" % pspec.name
 
     def do_set_property(self, pspec, value):
         raise AttributeError, "unknown property %s" % pspec.name
-    
+
     # Public API -------------------------------------------------------------
     def set_presence(self, presence):
         """Publish the new user presence.
@@ -195,18 +178,19 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         if presence == profile.Presence.OFFLINE:
             self.signoff()
         else:
-            self._transport.send_command_ex('CHG', (presence, str(self._client.profile.client_id)))
-    
+            client_id = self._client.profile.client_id
+            self._transport.send_command_ex('CHG', (presence, str(client_id)))
+
     def set_display_name(self, display_name):
         """Sets the new display name
-            
+
             @param friendly_name: the new friendly name
             @type friendly_name: string"""
         self._transport.send_command_ex('PRP', ('MFN', urllib.quote(display_name)))
 
     def set_personal_message(self, personal_message=''):
         """Sets the new personal message
-            
+
             @param personal_message: the new personal message
             @type personal_message: string"""
         message = xml_utils.escape(personal_message)
@@ -228,7 +212,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
             @param account: the contact identifier
             @type account: string
-            
+
             @param network_id: the contact network
             @type network_id: integer
             @see L{pymsn.profile.NetworkID}"""
@@ -266,13 +250,13 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
         self.add_contact_to_membership(contact.account, contact.network_id,
                 profile.Membership.ALLOW)
-        
+
         if contact.network_id != profile.NetworkID.MOBILE:
             account, domain = contact.account.split('@', 1)
             payload = '<ml l="2"><d n="%s"><c n="%s"/></d></ml>'% \
                     (domain, account)
             self._transport.send_command_ex("FQY", payload=payload)
-    
+
     def block_contact(self, contact):
         """Add a contact to the block list.
 
@@ -286,18 +270,18 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
         self.add_contact_to_membership(contact.account, contact.network_id,
                 profile.Membership.BLOCK)
-    
+
     def add_contact_to_membership(self, account, network_id=profile.NetworkID.MSN,
             membership=profile.Membership.FORWARD):
         """Add a contact to a given membership.
 
             @param account: the contact identifier
             @type account: string
-            
+
             @param network_id: the contact network
             @type network_id: integer
             @see L{pymsn.profile.NetworkID}
-            
+
             @param membership: the list to be added to
             @type membership: integer
             @see L{pymsn.profile.Membership}"""
@@ -318,11 +302,11 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
             @param account: the contact identifier
             @type account: string
-            
+
             @param network_id: the contact network
             @type network_id: integer
             @see L{pymsn.profile.NetworkID}
-            
+
             @param membership: the list to be added to
             @type membership: integer
             @see L{pymsn.profile.Membership}"""
@@ -349,7 +333,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             method = 'SSO'
         else:
             method = 'TWN'
-        self._status = NotificationProtocolStatus.AUTHENTICATING
+        self._state = ProtocolState.AUTHENTICATING
         self._transport.send_command_ex('USR',
                 (method, 'I', self._client.profile.account))
 
@@ -368,19 +352,18 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     def _handle_USR(self, command):
         args_len = len(command.arguments)
-        
+
         # MSNP15 have only 4 params for final USR
         assert(args_len == 3 or args_len == 4), "Received USR with invalid number of params : " + str(command)
 
         if command.arguments[0] == "OK":
-            #raise NotImplementedError("Missing Implementation, please fix")
-            pass
+            self._state = ProtocolState.AUTHENTICATED
 
         # we need to authenticate with a passport server
         elif command.arguments[1] == "S":
             account = self._client.profile.account
             password = self._client.profile.password
-            
+
             if command.arguments[0] == "SSO":
                 if 'https' in self._proxies:
                     sso = SSO.SingleSignOn(account, password, self._proxies['https'])
@@ -396,7 +379,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     def _handle_OUT(self, command):
         raise NotImplementedError, "Missing Implementation, please fix"
-    
+
     # --------- Presence & Privacy -------------------------------------------
     def _handle_BLP(self, command):
         self._client.profile._server_property_changed("privacy", command.arguments[0])
@@ -442,9 +425,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     # --------- Contact List -------------------------------------------------
     def _handle_ADL(self, command):
         if command.arguments[0] == "OK":
-            if self._status != NotificationProtocolStatus.OPEN: # Initial ADL
-                self._status = NotificationProtocolStatus.OPEN
-                self.emit("login-success")
+            if self._state != ProtocolState.OPEN: # Initial ADL
+                self._state = ProtocolState.OPEN
             else: # contact Added
                 raise NotImplementedError("ADL contact add response")
 
@@ -453,13 +435,13 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         msg = IncomingMessage(command)
         if msg.content_type[0] == 'text/x-msmsgsprofile':
             self._client.profile._server_property_changed("profile", command.payload)
-            
+
             if self._protocol_version < 15:
                 #self._transport.send_command_ex('SYN', ('0', '0'))
                 raise NotImplementedError, "Missing Implementation, please fix"
             else:
                 self._transport.send_command_ex("BLP", (self._client.profile.privacy,))
-                self._status = NotificationProtocolStatus.SYNCHRONIZING
+                self._state = ProtocolState.SYNCHRONIZING
                 self._address_book.sync()
         elif msg.content_type[0] in \
                 ('text/x-msmsgsinitialemailnotification', \
@@ -485,11 +467,11 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
-        self._status = NotificationProtocolStatus.OPENING
+        self._state = ProtocolState.OPENING
         self._transport.send_command_ex('VER', ProtocolConstant.VER)
 
     def _disconnect_cb(self, transport, reason):
-        self._status = NotificationProtocolStatus.CLOSED
+        self._state = ProtocolState.CLOSED
 
     def _sso_cb(self, nonce, soap_response, *tokens):
         self.__security_tokens = tokens
@@ -506,7 +488,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     self._address_book = AddressBook.AddressBook(token)
                 self._client.contacts = self._address_book #FIXME: ugly ugly !
                 self._address_book.connect("notify::status",
-                        self._address_book_status_cb)
+                        self._address_book_state_cb)
                 self._address_book.connect("contact-added",
                         self._address_book_contact_added_cb)
 
@@ -514,7 +496,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._transport.send_command_ex("USR",
                 ("SSO", "S", clear_token.security_token, blob))
 
-    def _address_book_status_cb(self, address_book, pspec):
+    def _address_book_state_cb(self, address_book, pspec):
         if address_book.status != AddressBook.AddressBookStatus.SYNCHRONIZED:
             return
         self._client.profile._server_property_changed("display-name",
@@ -536,6 +518,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         # FIXME: the payload can reach the maximum (which is 7500 bytes), so
         # we need to split this into multiple ADL in that case
         self._transport.send_command_ex("ADL", payload=s)
+        self._state = ProtocolState.SYNCHRONIZED
 
     def _address_book_contact_added_cb(self, address_book, contact):
         # FIXME: only consider Messenger contacts and not addressbook only
