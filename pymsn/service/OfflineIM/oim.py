@@ -34,8 +34,13 @@ class OIMService(BaseOIM, SOAPService):
         BaseOIM.__init__(self, passport_security_token)
         SOAPService.__init__(self, OIM_SERVICE_URL)
 
-    def Store(self, callback, *callback_args):
-        raise NotImplementedError
+    def Store(self, source_passport, fname, dest_passport,
+              callback, *callback_args):
+        self._source_passport = source_passport
+        self._fname = fname
+        self._dest_passport = dest_passport
+        if True: raise NotImplementedError
+        # ouch...
 
     def _extract_response(self, method, soap_response):
         path = "./%sResponse".replace("/", "/{%s}" % NS_STORAGE) % method

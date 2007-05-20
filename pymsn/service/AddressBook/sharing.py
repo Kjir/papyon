@@ -100,7 +100,7 @@ class Sharing(BaseAddressBook, SOAPService):
         Member.append("PassportName", NS_ADDRESSBOOK, value=passport)
         self._send_request()
 
-    def DeleteMember(self, scenario, member_role, member_id,
+    def DeleteMember(self, scenario, member_role, member_id, passport,
                      callback, *callback_args):
         self._scenario = scenario
         self._method("DeleteMember", callback, callback_args, {})
@@ -112,10 +112,12 @@ class Sharing(BaseAddressBook, SOAPService):
             append("Membership", NS_ADDRESSBOOK)
         Membership.append("MemberRole", NS_ADDRESSBOOK, value=member_role)
         Member = Membership.append("Members", NS_ADDRESSBOOK).\
-            append("Member", NS_ADDRESSBOOK, type="PassportMember")
+                append("Member", NS_ADDRESSBOOK, #FIXME: ugly ugly hack
+                    attrib={"xsi:type": "ns1:PassportMember", "xmlns:xsi" : "http://www.w3.org/2001/XMLSchema-instance"})
         Member.append("Type", NS_ADDRESSBOOK, value="Passport")
-        Member.append("MembershipId", NS_ADDRESSBOOK, value=member_id)
+        #Member.append("MembershipId", NS_ADDRESSBOOK, value=member_id)
         Member.append("State", NS_ADDRESSBOOK, value="Accepted")
+        Member.append("PassportName", NS_ADDRESSBOOK, value=passport)
         self._send_request()
 
     def _extract_response(self, method, soap_response):

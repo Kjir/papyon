@@ -40,7 +40,6 @@ class Client(pymsn.Client, pymsn.event.ClientEventInterface):
         return False
 
     def on_client_state_changed(self, state):
-        print "State changed :", state
         if state == pymsn.event.ClientState.CLOSED:
             self.quit()
         elif state == pymsn.event.ClientState.OPEN:

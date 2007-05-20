@@ -53,7 +53,12 @@ class BaseOIM(object):
 
     def __init__(self, security_token):
         self.__security_token = security_token
+        self._source_passport = ""
+        self._fname = ""
+        self._dest_passport = ""
 
+        self._lock_key = None 
+        
     def _soap_action(self, method):
         return join([NS_OIM, method], '/')
 
@@ -63,19 +68,19 @@ class BaseOIM(object):
     def _soap_headers(self, method):
         """Needed headers for the current method"""
         fname = "=?%s?%s?%s?=" % ("utf-8", "B", 
-                                  b64encode(""))
-        attrib = { "memberName" : "",
+                                  b64encode(self._fname))
+        attrib = { "memberName" : self._source_passport,
                    "friendlyName" : fname,
-                   "xml:lang" : "",
+                   "xml:lang" : "nl-nl",
                    "proxy" : "MSNMSGR",
                    "msnpVer" : "MSNP13",
                    "buildVer" : "8.0.0328" }
         self.request.add_header("From", NS_OIM, attrib)
-        attrib = { "memberName" : "" }
+        attrib = { "memberName" : self._dest_passport }
         self.request.add_header("To", NS_OIM, attrib)
         attrib = { "passport" : self.__security_token,
                    "appid" : "",
-                   "lockkey" : "" }
+                   "lockkey" : "" } # lots of work here with the lockkey
         self.request.add_header("Ticket", NS_OIM, attrib)
         Sequence = self.request.add_header("Sequence", NS_RM)
         Sequence.append("Identifier", NS_UTILITY,

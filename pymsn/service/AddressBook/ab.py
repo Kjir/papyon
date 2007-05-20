@@ -99,7 +99,7 @@ class AB(BaseAddressBook, SOAPService):
            @param scenario : the scenario to use for the action
            @param passport : the passport address of the contact to add
            @param messenger : True is this is a messenger contact, else False
-           @param type : "Regular" or "LivePending" or "LiveAccepted"
+           @param type : "Regular" or "LivePending" or "LiveAccepted" or "Messenger2"
         """
         self._scenario = scenario
         pending_contact = Contact()
