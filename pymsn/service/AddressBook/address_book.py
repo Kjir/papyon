@@ -109,6 +109,7 @@ class AddressBook(gobject.GObject):
             gobject.TYPE_NONE,
             (gobject.TYPE_PYOBJECT,)),
         }
+
     __gproperties__ = {
         "state":  (gobject.TYPE_INT,
             "State",
@@ -117,17 +118,16 @@ class AddressBook(gobject.GObject):
             gobject.PARAM_READABLE)
         }
 
-    def __init__(self, contacts_security_token, http_proxy=None): #TODO: pass an SSO client instead of the security token
+    def __init__(self, sso, http_proxy=None):
         gobject.GObject.__init__(self)
-        self._ab_client = ab.AB(contacts_security_token, http_proxy)
-        self._sharing_client = sharing.Sharing(contacts_security_token, http_proxy)
+        self._ab_client = ab.AB(sso, http_proxy)
+        self._sharing_client = sharing.Sharing(sso, http_proxy)
         self.__state = AddressBookState.NOT_SYNCHRONIZED
         self.__ab_find_all_groups_response = None
         self.__ab_find_all_contacts_response = None
         self.__find_membership_response = None
 
         self._groups = {}
-        #self._contacts = {}
         self.contacts = AddressBookStorage()
         self._profile = None
 
@@ -137,7 +137,7 @@ class AddressBook(gobject.GObject):
         self._state = AddressBookState.SYNCHRONIZING
         self._ab_client.ABFindAll("Initial", False, self._ab_find_all_cb)
         self._sharing_client.FindMembership("Initial", self._find_membership_cb)
-    
+
     # Manipulation
     def add_contact(self, passport, messenger=True):
         self._ab_client.ABContactAdd("ContactSave", passport, messenger,

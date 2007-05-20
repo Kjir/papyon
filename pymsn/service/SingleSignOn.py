@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2006-2007  Ole André Vadla Ravnås <oleavr@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -84,7 +85,7 @@ class SecurityToken(object):
 
         # Create a HMAC-SHA-1 hash of nonce using key2
         hash = HMAC.new(key2, nonce, SHA).digest()
-       
+
         #
         # Encrypt nonce with DES3 using key3
         #
@@ -92,17 +93,17 @@ class SecurityToken(object):
         # IV (Initialization Vector): 8 bytes of random data
         iv = randpool.RandomPool().get_bytes(8)
         obj = DES3.new(key3, DES3.MODE_CBC, iv)
-        
+
         # XXX: win32's Crypt API seems to pad the input with 0x08 bytes
         # to align on 72/36/18/9 boundary
         ciph = obj.encrypt(nonce + "\x08\x08\x08\x08\x08\x08\x08\x08")
-    
+
         blob = struct.pack("<LLLLLLL", 28, WinCrypt.CRYPT_MODE_CBC,
                 WinCrypt.CALC_3DES, WinCrypt.CALC_SHA1, len(iv), len(hash),
                 len(ciph))
         blob += iv + hash + ciph
         return base64.b64encode(blob)
-        
+
     def _derive_key(self, key, magic):
         hash1 = HMAC.new(key, magic, SHA).digest()
         hash2 = HMAC.new(key, hash1 + magic, SHA).digest()
@@ -119,26 +120,27 @@ class SecurityToken(object):
         return "<SecurityToken type=\"%s\" address=\"%s\" lifetime=\"%s\">" % \
                 (self.type, self.service_address, str(self.lifetime))
 
-
 class SingleSignOn(SOAPService):
     def __init__(self, username, password, https_proxy=None):
         self.__credentials = (username, password)
         self.__storage = pymsn.storage.get_storage(username, "security_tokens")
         self.__response_tokens = []
         SOAPService.__init__(self, SERVICE_URL, https_proxy)
-    
+
     def RequestMultipleSecurityTokens(self, callback, callback_args, *services):
         assert(len(services) > 0), "RequestMultipleSecurityTokens requires at least 1 service"
-        self._method("RequestMultipleSecurityTokens", callback, callback_args, {"Id": "RSTS"})
+
+        self._method("RequestMultipleSecurityTokens", callback, callback_args,
+                {"Id" : "RSTS"})
         services = list(services)
-        
+
         for service in services: # filter already available tokens
             if service[0] in self.__storage:
                 token = self.__storage[service[0]]
                 if not token.is_expired():
                     services.remove(service)
                     self.__response_tokens.append(token)
-        
+
         if len(services) == 0: # FIXME: do something cleaner
             method, callback, callback_args = self.request_queue.pop(0)
             if callback is not None:

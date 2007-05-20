@@ -36,7 +36,7 @@ class SOAPUtils(object):
         for sh, ns in ns_shorthands.iteritems():
             path = path.replace("/%s:" % sh, "/{%s}" % ns)
         return xml_node.find(path)
-    
+
     @staticmethod
     def bool_type(s):
         if s.lower() in ("false", "no", "f", "n", "0", ""):
@@ -56,7 +56,7 @@ class SOAPUtils(object):
             return 0
 
 class SOAPFault(Exception):
-    
+
     SOAP_ENVELOPE = "http://schemas.xmlsoap.org/soap/envelope/"
     NS_SHORTHANDS = { "soap": SOAP_ENVELOPE }
 
@@ -66,7 +66,7 @@ class SOAPFault(Exception):
         self.code = self._soap_utils.find_ex(fault, "./faultcode").text
         self.string = self._soap_utils.find_ex(fault, "./faultstring").text
         #self.actor = self._soap_utils.find_ex(fault, "./faultactor").text
-        
+
     def __str__(self):
         return "SOAPFault : " + self.string
 
@@ -96,13 +96,12 @@ class BaseSOAPService(object):
         logger.debug("<<< " + str(response))
         soap_response = SOAP.SOAPResponse(response.body)
         #logger.debug("<<< SOAP Response: " + soap_response.body[0].tag)
-        
 
     def _request_handler(self, transport, request):
         logger.debug(">>> " + str(request))
         soap_request = SOAP.SOAPResponse(request.body)
         #logger.debug(">>> SOAP Request: " + soap_request.body[0].tag)
-    
+
     def _error_handler(self, transport, error):
         logger.warning("Transport Error :" + str(error))
 
@@ -119,7 +118,7 @@ class BaseSOAPService(object):
 
 class SOAPService(BaseSOAPService):
     """Base class for all Windows Live Services."""
-    
+
     def __init__(self, url, proxy=None):
         BaseSOAPService.__init__(self, url, proxy)
         self._response_extractor = {}
@@ -129,28 +128,28 @@ class SOAPService(BaseSOAPService):
             self._simple_method(name, callback, *params)
         method.__name__ = name
         return method
-    
-    def _method(self, method_name, callback, callback_args, attributes, *params):
+
+    def _method(self, method_name, request, attributes, *params):
         """Used for method construction, the SOAP tree is built
         but not sent, so that the ComplexMethods can use it and add
         various things to the SOAP tree before sending it.
-            
+
             @param method_name: the SOAP method name
             @type method_name: string
-            
+
             @param callback: the callback to use when the response is received
             @type callback: callable(callback_args, response)
 
             @param callback_args: additional arguments to be passed to the callback
             @type callback_args: tuple(callback)
-            
+
             @param attributes: the attributes to be attached to the method call
             @type attributes: dict
-            
+
             @param params: tuples containing the attribute name and the
                 attribute value
             @type params: tuple(name, value) or tuple(type, name, value)
-            
+
             @note: this method does not actually send the request and
             L{_send_request} must be called"""
         ns = self._method_namespace(method_name)
@@ -164,24 +163,24 @@ class SOAPService(BaseSOAPService):
         self.request = request
         self._soap_headers(method_name)
         self._http_headers(method_name)
-        self.request_queue.append((method_name, callback, callback_args))
+        self.request_queue.append((method_name, request))
 
-    def _simple_method(self, method_name, callback, callback_args, *params):
+    def _simple_method(self, method_name, request, *params):
         """Methods that are auto handled.
-                    
+
             @param method_name: the SOAP method name
             @type method_name: string
-            
+
             @param callback: the callback to use when the response is received
             @type callback: callable(response)
-            
+
             @param callback_args: additional arguments to be passed to the callback
             @type callback_args: tuple(callback)
 
             @param params: tuples containing the attribute name and the
                 attribute value
             @type params: tuple(name, value) or tuple(type, name, value)"""
-        self._method(method_name, callback, callback_args, {}, *params)
+        self._method(method_name, request, {}, *params)
         self._send_request()
 
     def _response_handler(self, transport, response):
@@ -193,7 +192,7 @@ class SOAPService(BaseSOAPService):
             arguments = tuple(callback_args)
             if result is not None: arguments += tuple(result)
             callback(*arguments)
-    
+
     def _extract_response(self, method, soap_response):
         if method in self._response_extractor:
             result = [soap_response]
@@ -206,14 +205,14 @@ class SOAPService(BaseSOAPService):
     def _soap_action(self, method):
         """return the SOAPAction header value to be used
         for the given method.
-            
+
             @param method: the method name
             @type method: string"""
         raise NotImplementedError
 
     def _method_namespace(self, method):
         """return the namespace of the given method.
-            
+
             @param method: the method name
             @type method: string"""
         raise NotImplementedError
@@ -232,3 +231,9 @@ class SOAPService(BaseSOAPService):
         # fix : (to be removed later)
         self.http_headers["Proxy-Connection"] = "Keep-Alive"
         self.http_headers["Connection"] = "Keep-Alive"
+
+
+class SOAPServiceRequest(object):
+    def __init__(callback, callback_args):
+        pass
+
