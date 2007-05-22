@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007  Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007  Ole André Vadla Ravnås <oleavr@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,11 +18,17 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-"""pymsn event interfaces.
+from base import BaseEventInterface
 
-Defines the interfaces that the client can implement to benefit from the
-client event notifications."""
+__all__ = ["ContactListEventInterface"]
 
-from client import *
-from contact import *
-from contact_list import *
+class ContactListEventInterface(BaseEventInterface):
+    def __init__(self, client):
+        BaseEventInterface.__init__(self, client)
+
+    def on_contact_list_contact_added(self, contact):
+        pass
+
+    def on_contact_list_contact_removed(self, contact):
+        pass
+
