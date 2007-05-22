@@ -25,8 +25,6 @@ of the library."""
 
 from transport import *
 from event import ClientState, ClientErrorType
-import pymsn.service.SingleSignOn as SSO
-import pymsn.service.AddressBook as AddressBook
 
 import profile
 import msnp
@@ -57,16 +55,13 @@ class Client(object):
         self.__state = ClientState.CLOSED
         self._account = None
         self._proxies = proxies
-
-        self.sso = None
-        self.addressbook = None
-
         self._transport = transport_class(server, ServerType.NOTIFICATION,
                 self._proxies)
         self._protocol = msnp.NotificationProtocol(self, self._transport,
                 self._proxies)
 
         self.profile = None
+        self.address_book = None # FIXME: update when the addressbook get updated
 
         self._events_handlers = set()
         self.__setup_callbacks()
@@ -96,14 +91,6 @@ class Client(object):
             @param password: the password needed to authenticate to the account
             """
         assert(self._state == ClientState.CLOSED, "Login already in progress")
-
-        https_proxy = None
-        if "https" in self._proxies:
-            https_proxy = self._proxies["https"]
-        if "http" in self._proxies:
-            https_proxy = self._proxies["http"]
-        self.sso = SSO.SingleSignOn(account, password, https_proxy)
-        self.address_book = AddressBook.AddressBook(self.sso, http_proxy)
 
         self._account = (account, password)
         self.profile = profile.User(self._account, self._protocol)

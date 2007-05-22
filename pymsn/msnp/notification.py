@@ -357,11 +357,16 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
         # we need to authenticate with a passport server
         elif command.arguments[1] == "S":
+            account = self._client.profile.account
+            password = self._client.profile.password
+
             if command.arguments[0] == "SSO":
-                self._client.sso.RequestMultipleSecurityTokens(self._sso_cb,
-                        (command.arguments[3],),
-                        SSO.LiveService.MESSENGER_CLEAR,
-                        SSO.LiveService.CONTACTS)
+                if 'https' in self._proxies:
+                    sso = SSO.SingleSignOn(account, password, self._proxies['https'])
+                else:
+                    sso = SSO.SingleSignOn(account, password)
+                sso.RequestMultipleSecurityTokens(self._sso_cb, (command.arguments[3],),
+                        SSO.LiveService.MESSENGER_CLEAR, SSO.LiveService.CONTACTS)
             elif command.arguments[0] == "TWN":
                 raise NotImplementedError, "Missing Implementation, please fix"
 
@@ -477,7 +482,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     self._address_book = AddressBook.AddressBook(token, self._proxies['http'])
                 else:
                     self._address_book = AddressBook.AddressBook(token)
-                self._client.contacts = self._address_book.contacts #FIXME: ugly ugly !
+                self._client.address_book = self._address_book #FIXME: ugly ugly !
                 self._address_book.connect("notify::state",
                         self._address_book_state_changed_cb)
                 self._address_book.connect("contact-added",

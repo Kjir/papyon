@@ -129,7 +129,7 @@ class SOAPService(BaseSOAPService):
         method.__name__ = name
         return method
 
-    def _method(self, method_name, request, attributes, *params):
+    def _method(self, method_name, callback, callback_args, attributes, *params):
         """Used for method construction, the SOAP tree is built
         but not sent, so that the ComplexMethods can use it and add
         various things to the SOAP tree before sending it.
@@ -163,9 +163,9 @@ class SOAPService(BaseSOAPService):
         self.request = request
         self._soap_headers(method_name)
         self._http_headers(method_name)
-        self.request_queue.append((method_name, request))
+        self.request_queue.append((method_name, callback, callback_args))
 
-    def _simple_method(self, method_name, request, *params):
+    def _simple_method(self, method_name, callback, callback_args, *params):
         """Methods that are auto handled.
 
             @param method_name: the SOAP method name
@@ -180,7 +180,7 @@ class SOAPService(BaseSOAPService):
             @param params: tuples containing the attribute name and the
                 attribute value
             @type params: tuple(name, value) or tuple(type, name, value)"""
-        self._method(method_name, request, {}, *params)
+        self._method(method_name, callback, callback_args, {}, *params)
         self._send_request()
 
     def _response_handler(self, transport, response):
