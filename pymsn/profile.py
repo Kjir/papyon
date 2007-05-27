@@ -307,9 +307,9 @@ class Contact(gobject.GObject):
                 Presence.OFFLINE,
                 gobject.PARAM_READABLE),
 
-            "client-id": (gobject.TYPE_UINT64,
-                "Client ID",
-                "The client ID specifying capabilities of the contact 's client",
+            "client-capabilities": (gobject.TYPE_UINT64,
+                "Client capabilities",
+                "The client capabilities of the contact 's client",
                 0, 0xFFFFFFFF, 0,
                 gobject.PARAM_READABLE),
 
@@ -328,12 +328,18 @@ class Contact(gobject.GObject):
         self._personal_message = ""
 
         self._memberships = memberships
-        self._client_id = ClientCapabilities()
+        self._client_capabilities = ClientCapabilities()
+        self._attributes = {'im_contact' : False}
 
     @property
     def id(self):
         """Contact identifier in a GUID form"""
         return self._id
+
+    @property
+    def attributes(self):
+        """Contact attributes"""
+        return self._attributes.copy()
 
     @property
     def network_id(self):
@@ -344,11 +350,21 @@ class Contact(gobject.GObject):
     def account(self):
         """Contact account"""
         return self._account
+    
+    @property
+    def presence(self):
+        """Contact presence"""
+        return self._presence
 
     @property
     def display_name(self):
         """Contact display name"""
         return self._display_name
+    
+    @property
+    def personal_message(self):
+        """Contact personal message"""
+        return self._personal_message
 
     @property
     def memberships(self):
@@ -356,9 +372,9 @@ class Contact(gobject.GObject):
         return self._memberships
 
     @property
-    def client_id(self):
-        """Contact client ID"""
-        return self._client_id
+    def client_capabilities(self):
+        """Contact client capabilities"""
+        return self._client_capabilities
 
     @property
     def domain(self):
@@ -400,13 +416,17 @@ class Contact(gobject.GObject):
         self.notify("memberships")
 
     def _server_property_changed(self, name, value): #FIXME, should not be used for memberships
-        if name == "client-id":
+        if name == "client-capabilities":
             value = ClientCapabilities(client_id=value)
         attr_name = "_" + name.lower().replace("-", "_")
         old_value = getattr(self, attr_name)
         if value != old_value:
             setattr(self, attr_name, value)
         self.notify(name)
+
+    def _server_contact_attribute_changed(self, name, value):
+        self._attributes[name] = value
+
 
     def do_get_property(self, pspec):
         name = pspec.name.lower().replace("-", "_")

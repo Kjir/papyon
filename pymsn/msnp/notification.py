@@ -389,7 +389,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _handle_FLN(self,command):
         contacts = self._address_book.contacts.search_by_account(command.arguments[0])
         for contact in contacts:
-            contact._server_property_changed("presence", PresenceStatus.OFFLINE)
+            contact._server_property_changed("presence", profile.Presence.OFFLINE)
 
     def _handle_NLN(self,command):
         contacts = self._address_book.contacts.search_by_account(command.arguments[1])
@@ -398,7 +398,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             display_name = urllib.unquote(command.arguments[3])
             contact._server_property_changed("presence", presence)
             contact._server_property_changed("display-name", display_name)
-            contact._server_property_changed("client-id", int(command.arguments[4]))
+            contact._server_property_changed("client-capabilities",
+                    int(command.arguments[4]))
 
     # --------- Display name and co ------------------------------------------
     def _handle_PRP(self, command):

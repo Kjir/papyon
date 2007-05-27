@@ -138,4 +138,22 @@ class Client(object):
             self._state = ClientState.SYNCHRONIZED
         elif state == msnp.ProtocolState.OPEN:
             self._state = ClientState.OPEN
+            im_contacts = [contact for contact in self.address_book.contacts \
+                    if contact.attributes['im_contact']]
+            for contact in im_contacts:
+                contact.connect("notify::presence",
+                        self._on_contact_property_changed)
+                contact.connect("notify::display-name",
+                        self._on_contact_property_changed)
+                contact.connect("notify::personal-message",
+                        self._on_contact_property_changed)
+                #contact.connect("notify::display-picture",
+                #        self._on_contact_property_changed)
+                contact.connect("notify::client-capabilities",
+                        self._on_contact_property_changed)
+    
+    # - - Contact
+    def _on_contact_property_changed(self, contact, pspec):
+        method_name = "on_contact_%s_changed" % pspec.name.replace("-", "_")
+        self._dispatch(method_name, contact)
 

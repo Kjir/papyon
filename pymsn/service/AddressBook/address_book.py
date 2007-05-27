@@ -256,6 +256,8 @@ class AddressBook(gobject.GObject):
                                 contact.network_id,
                                 contact.account,
                                 contact.display_name)
+            c._server_contact_attribute_changed("im_contact",
+                    contact.is_messenger_user)
             if contact.type == "Me":
                 self._profile = c
             else:

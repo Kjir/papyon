@@ -40,7 +40,7 @@ def sso_cb2(soap_response, *tokens):
             abook = AddressBook.AB(token)
             sharing = AddressBook.Sharing(token)
             break
-    abook.ABFindAll("Initial", contacts_cb)
+    abook.ABFindAll("Initial", False, contacts_cb)
     sharing.FindMembership("Initial", membership_cb)
 
 

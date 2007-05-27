@@ -51,6 +51,7 @@ class Contact(object):
             self.display_name = ""
             self.network_id = NetworkID.MSN
             self.CID = ""
+            self.is_messenger = False
         else:
             soap_utils = SOAPUtils(NS_SHORTHANDS)
 
@@ -63,17 +64,24 @@ class Contact(object):
             if passport is not None:
                 self.account = passport.text
                 self.network_id = NetworkID.MSN
-            else: # Yahoo user
+                m = soap_utils.find_ex(contact_info, "./ab:isMessengerUser").text
+                self.is_messenger_user = soap_utils.bool_type(m)
+            else: # Yahoo user FIXME: this is not realiable, basically a
+                                    # contact can have many emails attached,
+                                    # and select one or more with isMessengerEnabled
                 self.account = soap_utils.find_ex(contact_info,
                         "./ab:emails/ab:ContactEmail/ab:email").text
                 self.network_id = NetworkID.EXTERNAL
+                m = soap_utils.find_ex(contact_info,
+                        "./ab:emails/ab:ContactEmail/ab:isMessengerEnabled").text
+                self.is_messenger_user = soap_utils.bool_type(m)
             display_name = soap_utils.find_ex(xml_node, "./ab:DisplayName")
             if display_name is not None:
                 self.display_name = display_name.text
             else:
                 self.display_name = self.account.split("@", 1)[0]
             self.CID = soap_utils.find_ex(contact_info, "./ab:CID").text
-
+            
 class AddressBookError(SOAPFault):
     def __init__(self, xml_node):
         SOAPFault.__init__(self, xml_node)
