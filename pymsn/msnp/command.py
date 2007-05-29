@@ -144,7 +144,7 @@ class Command(object):
             result += ' ' + str(self.transaction_id)
 
         if self.arguments is not None and len(self.arguments) > 0:
-            result += ' ' + ' '.join(self.arguments)
+            result += ' ' + ' '.join(self.arguments) 
 
         if self.payload is not None:
             length = len(self.payload)

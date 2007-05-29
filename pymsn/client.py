@@ -53,7 +53,8 @@ class Client(object):
             @param proxies: proxies that we can use to connect
             @type proxies: {type: string => L{gnet.proxy.ProxyInfos}}"""
         self.__state = ClientState.CLOSED
-        self._account = None
+        self._proxies = proxies
+        self._transport_class = transport_class
         self._proxies = proxies
         self._transport = transport_class(server, ServerType.NOTIFICATION,
                 self._proxies)
@@ -91,9 +92,7 @@ class Client(object):
             @param password: the password needed to authenticate to the account
             """
         assert(self._state == ClientState.CLOSED, "Login already in progress")
-
-        self._account = (account, password)
-        self.profile = profile.User(self._account, self._protocol)
+        self.profile = profile.User((account, password), self._protocol)
         self._transport.establish_connection()
         self._state = ClientState.CONNECTING
 

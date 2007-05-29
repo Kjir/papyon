@@ -46,6 +46,7 @@ class Client(pymsn.Client, pymsn.event.ClientEventInterface):
             self.profile.presence = pymsn.Presence.ONLINE
             self.profile.display_name = "Kimbix"
             self.profile.personal_message = "Testing pymsn, and freeing the pandas!"
+            conv = pymsn.Conversation(self)
 
     def on_client_error(self, error_type, error):
         print "ERROR :", error_type, " ->", error

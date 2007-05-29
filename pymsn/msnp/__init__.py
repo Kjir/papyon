@@ -24,4 +24,5 @@ with the Notification Server as well as the Switchboard Server"""
 from command import *
 from message import *
 from notification import *
+from switchboard import *
 from base import ProtocolState

@@ -46,6 +46,7 @@ class ProtocolConstant(object):
     PRODUCT_KEY = "PK}_A_0N_K%O?A9S"
     CHL_MAGIC_NUM = 0x0E79A9C1
 
+
 def _msn_challenge(data):
     """
     Compute an answer for MSN Challenge from a given data
@@ -206,6 +207,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         """Logout from the server"""
         self._transport.send_command_ex('OUT')
         self._transport.lose_connection()
+        
+    def request_switchboard(self, callback, *callback_args):
+        self.__switchboard_callbacks.append((callback, callback_args))
+        self._transport.send_command_ex('XFR', ('SB',))
 
     def add_contact(self, account, network_id=profile.NetworkID.MSN):
         """Add a contact to the contact list.
@@ -344,7 +349,15 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             logger.debug("<-> Redirecting to " + command.arguments[1])
             self._transport.reset_connection((host,port))
         else: # connect to a switchboard
-            raise NotImplementedError("Missing Implementation, please fix")
+            try:
+                host, port = command.arguments[1].split(":", 1)
+                port = int(port)
+            except ValueError:
+                host = command.arguments[1]
+                port = self._transport.server[1]
+            session_id = command.arguments[3]
+            callback, callback_args = self.__switchboard_callbacks.pop(0)
+            callback(((host, port), session_id, None), *callback_args)
 
     def _handle_USR(self, command):
         args_len = len(command.arguments)
@@ -464,6 +477,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
+        self.__switchboard_callbacks = []
         self._state = ProtocolState.OPENING
         self._transport.send_command_ex('VER', ProtocolConstant.VER)
 

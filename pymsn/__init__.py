@@ -27,6 +27,7 @@ instant messaging service.
 """
 
 from client import *
+from conversation import *
 from profile import NetworkID, Presence, Privacy, Membership, Contact
 import event
 

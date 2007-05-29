@@ -23,7 +23,7 @@
 """Switchboard protocol Implementation
 Implements the protocol used to communicate with the Switchboard Server."""
 
-from base import BaseProtocol
+from base import BaseProtocol, ProtocolState
 from message import IncomingMessage
 import pymsn.profile
 
@@ -31,23 +31,9 @@ import logging
 import urllib 
 import gobject
 
-__all__ = ['SwitchboardProtocolStatus', 'SwitchboardProtocol']
+__all__ = ['SwitchboardProtocol']
 
 logger = logging.getLogger('protocol:switchboard')
-
-class NotificationProtocolStatus(object):
-    CLOSED = 0
-    """Disconnected from the switchboard"""
-    OPENING = 1
-    """Opening the switchboard"""
-    AUTHENTICATING = 3
-    """Connected to the switchboard, authenticating"""
-    SYNCHRONIZING = 4
-    """Authenticated, receiving initial participants"""
-    OPEN = 5
-    """The switchboard is open, and it is possible to send messages"""
-    IDLE = 6
-    """Disconnected from the switchboard because of idle status"""
 
 
 class SwitchboardProtocol(BaseProtocol, gobject.GObject):
@@ -56,9 +42,9 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         @undocumented: do_get_property, do_set_property
         @group Handlers: _handle_*, _default_handler, _error_handler
 
-        @ivar _status: the current protocol status
-        @type _status: integer
-        @see L{SwitchboardProtocolStatus}"""
+        @ivar _state: the current protocol state
+        @type _state: integer
+        @see L{ProtocolState}"""
     __gsignals__ = {
             "message-received": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
@@ -82,73 +68,76 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
 
             "user-left": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object,))
+                (object,))}
 
     __gproperties__ = {
-            "status":  (gobject.TYPE_INT,
-                "Status",
-                "The status of the communication with the server.",
-                0, 4, NotificationProtocolStatus.CLOSED,
+            "state":  (gobject.TYPE_INT,
+                "State",
+                "The state of the communication with the server.",
+                0, 7, ProtocolState.CLOSED,
                 gobject.PARAM_READABLE)
             }
 
-    def __init__(self, client, transport, key, session=None, proxies={}):
+    def __init__(self, conversation, transport, session_id, key=None, proxies={}):
         """Initializer
 
-            @param client: the parent instance of L{client.Client}
-            @type client: L{client.Client}
+            @param conversation: the parent object
+            @type conversation: L{conversation.Conversation}
 
             @param transport: The transport to use to speak the protocol
             @type transport: L{transport.BaseTransport}
             
+            @param session_id: the session to join if any
+            @type session_id: string
+
             @param key: the key used to authenticate to server when connecting
             @type key: string
-            
-            @param session: the session to join if any
-            @type session: string
 
             @param proxies: a dictonary mapping the proxy type to a
                 L{gnet.proxy.ProxyInfos} instance
             @type proxies: {type: string, proxy:L{gnet.proxy.ProxyInfos}}
         """
-        BaseProtocol.__init__(self, client, transport, proxies)
+        BaseProtocol.__init__(self, conversation, transport, proxies)
         gobject.GObject.__init__(self)
         self.participants = {}
-        self.__status = SwitchboardProtocolStatus.CLOSED
+        self._conversation = self._client
+        self.__session_id = session_id
+        self.__key = key
+        self.__state = ProtocolState.CLOSED
     
     # Properties ------------------------------------------------------------
-    def __get_status(self):
-        return self.__status
-    def __set_status(self, status):
-        self.__status = status
-        self.notify("status")
-    status = property(__get_status)
-    _status = property(__get_status, __set_status)
+    def __get_state(self):
+        return self.__state
+    def __set_state(self, state):
+        self.__state = state
+        self.notify("state")
+    state = property(__get_state)
+    _state = property(__get_state, __set_state)
         
     def do_get_property(self, pspec):
-        if pspec.name == "status":
-            return self.__status
+        if pspec.name == "state":
+            return self.__state
         else:
             raise AttributeError, "unknown property %s" % pspec.name
 
     def do_set_property(self, pspec, value):
         raise AttributeError, "unknown property %s" % pspec.name
     
-    # Public API -------------------------------------------------------------
+    # Public API -------------------------------------------------------------        
     def invite_user(self, contact):
         """Invite user to join in the conversation
             
             @param contact: the contact to invite
             @type contact: L{profile.Contact}"""
-        assert(self.status == SwitchboardProtocolStatus.OPEN)
-        self._transport.send_command_ex('CAL', (contact.get_property("passport"),) )
+        assert(self.state == ProtocolState.OPEN)
+        self._transport.send_command_ex('CAL', (contact.account,) )
 
     def send_message(self, message, callback=None, cb_args=()):
         """Send a message to all contacts in this switchboard
         
             @param message: the message to send
             @type message: L{message.OutgoingMessage}"""
-        assert(self.status == SwitchboardProtocolStatus.OPEN)
+        assert(self.state == ProtocolState.OPEN)
         our_cb_args = (message, callback, cb_args)
         self._transport.send_command(message,
                 callback=self.__on_message_sent, cb_args=our_cb_args)
@@ -160,24 +149,27 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
 
     def leave_conversation(self):
         """Leave the conversation"""
-        assert(self.status == SwitchboardProtocolStatus.OPEN)
+        assert(self.state == ProtocolState.OPEN)
         self._transport.send_command_ex('OUT')
     # Handlers ---------------------------------------------------------------
     # --------- Authentication -----------------------------------------------
     def _handle_ANS(self, command):
+        self._state = ProtocolState.AUTHENTICATED
         if command.arguments[0] == 'OK':
-            self._status = SwitchboardStatus.OPEN
+            self._state = ProtocolState.OPEN
         else:
-            self._status = SwitchboardStatus.SYNCHRONIZING
+            self._state = ProtocolState.SYNCHRONIZING
 
     def _handle_USR(self, command):
-        self._status(SwitchboardStatus.OPEN)
+        self._state = ProtocolState.AUTHENTICATED
+        self._state = ProtocolState.OPEN
     
     def _handle_OUT(self, command):
         pass
     # --------- Invitation ---------------------------------------------------
     def __participant_join(self, account, display_name, client_id):
-        contacts = self._client.contacts.find_by_account(account)
+        contacts = self._conversation._client.addressbook.contacts.\
+                search_by_account(account)
         if len(contacts) == 0:
             contact = pymsn.profile.Contact(id=0,
                     network_id=pymsn.profile.NetworkID.MSN,
@@ -185,7 +177,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
                     display_name=display_name)
         else:
             contact = contacts[0]
-        contact._server_property_changed("client-id", client_id)
+        contact._server_property_changed("client-capabilities", client_id)
 
         self.participants[account] = contact
         self.emit("user-joined", contact)
@@ -195,6 +187,8 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         display_name = urllib.unquote(command.arguments[3])
         client_id = command.arguments[4]
         self.__participant_join(account, display_name, client_id)
+        if int(command.arguments[0]) == int(command.arguments[1]):
+            self._state = ProtocolState.SYNCHRONIZED
 
     def _handle_JOI(self, command):
         account = command.arguments[0]
@@ -208,7 +202,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             self.emit("user-left", self.participants[passport])
             del self.participants[passport]
         else:
-            self._status = SwitchboardProtocolStatus.IDLE
+            self._state = ProtocolState.IDLE
             self.participants = {}
 
     # --------- Messenging ---------------------------------------------------
@@ -223,17 +217,17 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
 
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
-        self._status = SwitchboardProtocolStatus.OPENING
-        account = self._client.profile.account
-        if self.__session is not None:
-            arguments = (account, self.__key, self.__session)
-            self._transport.send_command_ex('ANS', arguments )
+        self._state = ProtocolState.OPENING
+        account = self._conversation._client.profile.account
+        if self.__key is not None:
+            arguments = (account, self.__session_id, self.__key)
+            self._transport.send_command_ex('ANS', arguments)
         else:
-            arguments = (account, self.__key) 
+            arguments = (account, self.__session_id)
             self._transport.send_command_ex('USR', arguments)
-        self._status = SwitchboardProtocolStatus.AUTHENTICATING
+        self._state = ProtocolState.AUTHENTICATING
 
-    def _disconnect_cb(self, transport):
-        self._status = SwitchboardProtocolStatus.CLOSED
+    def _disconnect_cb(self, transport, reason):
+        self._state = ProtocolState.CLOSED
 
 

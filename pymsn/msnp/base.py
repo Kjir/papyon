@@ -35,6 +35,7 @@ class ProtocolState(object):
     SYNCHRONIZING = 4
     SYNCHRONIZED = 5
     OPEN = 6
+    IDLE = 7
 
 
 class BaseProtocol(object):
