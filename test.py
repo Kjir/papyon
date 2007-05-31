@@ -22,7 +22,33 @@ def get_proxies():
         result[type] = pymsn.Proxy(url)
     return result
 
-class Client(pymsn.Client, pymsn.event.ClientEventInterface):
+
+class ClientEvents(pymsn.event.ClientEventInterface):
+    def on_client_state_changed(self, state):
+        if state == pymsn.event.ClientState.CLOSED:
+            self._client.quit()
+        elif state == pymsn.event.ClientState.OPEN:
+            self._client.profile.presence = pymsn.Presence.ONLINE
+            self._client.profile.display_name = "Kimbix"
+            self._client.profile.personal_message = "Testing pymsn, and freeing the pandas!"
+            gobject.timeout_add(5000, self._client.start_conversation)
+
+    def on_client_error(self, error_type, error):
+        print "ERROR :", error_type, " ->", error
+
+class AnnoyingConversation(pymsn.event.ConversationEventInterface):
+    def on_conversation_user_joined(self, contact):
+        gobject.timeout_add(5000, self.annoy_user)
+
+    def annoy_user(self):
+        self._client.send_text_message("Let's free the pandas ! (testing pymsn)")
+        self._client.send_nudge()
+        return True
+
+    def on_conversation_error(self, error_type, error):
+        print "ERROR :", error_type, " ->", error
+
+class Client(pymsn.Client):
     def __init__(self, account, quit, http_mode=False):
         server = ('messenger.hotmail.com', 1863)
         self.quit = quit
@@ -32,25 +58,29 @@ class Client(pymsn.Client, pymsn.event.ClientEventInterface):
             pymsn.Client.__init__(self, server, get_proxies(), HTTPPollConnection)
         else:
             pymsn.Client.__init__(self, server, proxies = get_proxies())
-        self.register_events_handler(self)
+        ClientEvents(self)
         gobject.idle_add(self._connect)
 
     def _connect(self):
         self.login(*self.account)
         return False
 
-    def on_client_state_changed(self, state):
-        if state == pymsn.event.ClientState.CLOSED:
-            self.quit()
-        elif state == pymsn.event.ClientState.OPEN:
-            self.profile.presence = pymsn.Presence.ONLINE
-            self.profile.display_name = "Kimbix"
-            self.profile.personal_message = "Testing pymsn, and freeing the pandas!"
+    def start_conversation(self):
+        contacts = self.address_book.contacts.\
+                search_by_presence(pymsn.Presence.ONLINE)
+        if len(contacts) == 0:
+            print "No online contacts"
+            return True
+        else:
             conv = pymsn.Conversation(self)
-
-    def on_client_error(self, error_type, error):
-        print "ERROR :", error_type, " ->", error
-
+            AnnoyingConversation(conv)
+            for contact in contacts:
+                if contact.account == "im_a_jabber_monkey@hotmail.com":
+                #if contact.account == "tp-butterfly@hotmail.com":
+                #if contact.account == "johann.prieur@gmail.com":
+                    print "Inviting %s for a conversation" % contact.display_name
+                    conv.invite_user(contact)
+            return False
 
 def main():
     import sys

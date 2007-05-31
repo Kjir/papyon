@@ -305,7 +305,9 @@ class AB(BaseAddressBook, SOAPService):
         if method == "ABFindAll":
             path = "./ABFindAllResponse/ABFindAllResult/groups".\
                 replace("/", "/{%s}" % NS_ADDRESSBOOK)
-            groups =  soap_response.body.find(path)
+            groups = soap_response.body.find(path)
+            if groups is None:
+                groups = []
             groups_result = []
             for group in groups:
                 groups_result.append(Group(group))

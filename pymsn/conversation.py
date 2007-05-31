@@ -55,6 +55,7 @@ class Conversation(object):
         else:
             gobject.idle_add(self.__open, session)
         self.__action_queue = []
+        self.__members = []
 
     def __setup_callbacks(self):
         self._transport.connect("connection-success", self._on_connect_success)
@@ -62,15 +63,16 @@ class Conversation(object):
         self._transport.connect("connection-lost", self._on_disconnected)
 
         self._protocol.connect("notify::state", self._on_protocol_state_changed)
+        self._protocol.connect("user-joined", self._on_protocol_user_joined)
+        self._protocol.connect("user-left", self._on_protocol_user_left)
 
     def __open(self, session):
-        print "*********", session
         server, session_id, key = session
         transport_class = self._client._transport_class
         self._transport = transport_class(server, ServerType.SWITCHBOARD,
                 self._client._proxies)
         self._protocol = msnp.SwitchboardProtocol(self, self._transport,
-                session_id, key, proxies=self._client._proxies)
+                session_id, key, self.__members, proxies=self._client._proxies)
         self.__setup_callbacks()
         
         self._transport.establish_connection()
@@ -95,20 +97,30 @@ class Conversation(object):
         
             @param text: the text message to send.
             @type text: string"""
-        self.__queue_action(self._do_send_text_message, text)
+        self.__push_action(self._do_send_text_message, text)
+
+    def send_nudge(self):
+        """Sends a nudge to the contacts on this switchboard."""
+        self.__push_action(self._do_send_nudge)
 
     def invite_user(self, contact):
         """Request a contact to join in the conversation.
             
             @param contact: the contact to invite.
             @type contact: L{profile.Contact}"""
-        self.__queue_action(self._do_invite_contact, contact)
+        self.__push_action(self._do_invite_contact, contact)
 
     def leave_conversation(self):
         """Leave the conversation."""
-        #:TODO: enhance this
-        if self._protocol and self._protocol.state == msnp.ProtocolState.OPEN:
+        if self._protocol is None: # currently requesting a switchboard
+            self.__push_action(self._protocol.leave_conversation)
+        elif self._protocol.state == msnp.ProtocolState.CLOSED or \
+                self._protocol.state == msnp.ProtocolState.IDLE:
+            return
+        elif self._protocol.state == msnp.ProtocolState.OPEN:
             self._protocol.leave_conversation()
+        else:
+            self.__push_action(self._protocol.leave_conversation)
     
     ### Callbacks
     def register_events_handler(self, events_handler):
@@ -131,8 +143,7 @@ class Conversation(object):
         self._state = ClientState.CLOSED
 
     def _on_disconnected(self, transp, reason):
-        self._dispatch("on_conversation_error", ClientErrorType.NETWORK, reason)
-        if self._protocol.state != msnp.ProtocolState.IDLE:
+        if self._state != msnp.ProtocolState.OPEN:
             self._state = ClientState.CLOSED
 
     # - - Switchboard Protocol
@@ -148,21 +159,28 @@ class Conversation(object):
             self._state = ClientState.SYNCHRONIZED
         elif state == msnp.ProtocolState.OPEN:
             self._state = ClientState.OPEN
-            self.__process_action_queue()
+            self.__process_action_queues()
         elif state == msnp.ProtocolState.IDLE:
             pass
+    
+    def _on_protocol_user_joined(self, proto, contact):
+        self.__members.append(contact)
+        self._dispatch("on_conversation_user_joined", contact)
+
+    def _on_protocol_user_left(self, proto, contact):
+        if len(self.__members) != 1: # last user is sticky
+            self.__members.remove(contact)
+        self._dispatch("on_conversation_user_left", contact)
     
     # - - Queue
     def __push_action(self, action, *args):
         self.__action_queue.append((action, args))
-        self.__process_action_queue()
+        self.__process_action_queues()
     
-    def __process_action_queue(self):
-        if self._protocol is not None:
-            protocol_state = self._protocol.state
-        else:
-            protocol_state = msnp.ProtocolState.CLOSED
-        
+    def __process_action_queues(self):
+        if self._protocol is None: # already requesting a switchboard
+            return
+        protocol_state = self._protocol.state
         if protocol_state == msnp.ProtocolState.OPEN:
             for action, args in self.__action_queue:
                 action(*args)
@@ -182,4 +200,9 @@ class Conversation(object):
         msg.body = text.encode('UTF-8')
         self._protocol.send_message(msg)
         
-
+    def _do_send_nudge(self):
+        msg = msnp.OutgoingMessage(self._transport.transaction_id,
+                msnp.MessageAcknowledgement.NONE)
+        msg.content_type = "text/x-msnmsgr-datacast"
+        msg.body = "ID: 1\r\n\r\n".encode('UTF-8') #FIXME: we need to figure out the datacast objects :D
+        self._protocol.send_message(msg)

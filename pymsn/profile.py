@@ -205,7 +205,7 @@ class User(gobject.GObject):
         self._privacy = Privacy.BLOCK
         self._personal_message = ""
 
-        self.client_id = ClientCapabilities()
+        self.client_id = ClientCapabilities(7)
 
         #FIXME: Display Picture
 

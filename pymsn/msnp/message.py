@@ -91,9 +91,8 @@ class Message(HTTPMessage):
         return ('text/plain', 'UTF-8')
     
     def __set_content_type(self, content_type):
-        if len(content_type) == 1:
-            content_type = (content_type, 'UTF-8')
-        content_type = '; charset='.join(content_type)
+        if not isinstance(content_type, str):
+            content_type = '; charset='.join(content_type)
         self.headers['Content-Type'] = content_type
 
     content_type = property(__get_content_type, __set_content_type,
