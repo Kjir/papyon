@@ -33,3 +33,4 @@ import event
 
 import gnet.proxy
 Proxy = gnet.proxy.ProxyFactory
+ProxyInfos = gnet.proxy.ProxyInfos

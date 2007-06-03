@@ -39,20 +39,6 @@ logger = logging.getLogger('protocol:switchboard')
 #        basically it would be very nice to be able to reorder the messages
 #        so that the invites happen automatically before the message sending
 
-class SwitchboardCommandQueue(object):
-    def __init__(self):
-        self._invite_queue = {}
-        self._message_queue = {}
-    
-    def invite(self, transaction_id, contact):
-        self._invite_queue[transaction_id] = contact
-    
-    def invite_response(self, transaction_id):
-        del self._invite_queue[transaction_id]
-    
-    def pending_invites(self):
-        return len(self._invite_queue) > 0
-
 
 class SwitchboardProtocol(BaseProtocol, gobject.GObject):
     """Protocol used to communicate with the Switchboard Server
