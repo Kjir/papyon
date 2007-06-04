@@ -98,7 +98,11 @@ class Client(object):
 
     def logout(self):
         """Logout from the server."""
+        if self.__state == ClientState.CLOSED: # FIXME: we need something better
+            return
         self._protocol.signoff()
+        self.__state = ClientState.CLOSED
+
 
     ### Callbacks
     def register_events_handler(self, events_handler):
