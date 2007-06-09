@@ -72,14 +72,13 @@ class Client(pymsn.Client):
             print "No online contacts"
             return True
         else:
-            conv = pymsn.Conversation(self)
-            AnnoyingConversation(conv)
             for contact in contacts:
                 if contact.account == "im_a_jabber_monkey@hotmail.com":
                 #if contact.account == "tp-butterfly@hotmail.com":
                 #if contact.account == "johann.prieur@gmail.com":
                     print "Inviting %s for a conversation" % contact.display_name
-                    conv.invite_user(contact)
+                    self.conv = pymsn.Conversation(self, [contact])
+                    AnnoyingConversation(self.conv)
             return False
 
 def main():

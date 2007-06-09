@@ -136,10 +136,10 @@ class BaseTransport(gobject.GObject):
         self.server_type = server_type
         self.proxies = proxies
         self._transaction_id = 0
-    
-    def __get_transaction_id(self):
+   
+    @property
+    def transaction_id(self):
         return self._transaction_id
-    transaction_id = property(__get_transaction_id)
 
     # Connection
     def establish_connection(self):

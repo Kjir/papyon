@@ -122,7 +122,11 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
             "oim-deleted" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object,))
+                (object,)),
+
+            "switchboard-invitation-received" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object, object))
             }
 
     __gproperties__ = {
@@ -463,6 +467,19 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             self.emit("oim-received", msg)
         elif msg.content_type[0] == 'text/x-msmsgsactivemailnotification':
             self.emit("oim-deleted", msg)
+
+    # --------- Invitation ---------------------------------------------------
+    def _handle_RNG(self,command):
+        session_id = command.arguments[0]
+        host, port = command.arguments[1].split(':',1)
+        port = int(port)
+        key = command.arguments[3]
+        account = command.arguments[4]
+        display_name = urllib.unquote(command.arguments[5])
+
+        session = ((host, port), session_id, key)
+        inviter = (account, display_name)
+        self.emit("switchboard-invitation-received", session, inviter)
 
     # --------- Challenge ----------------------------------------------------
     def _handle_QNG(self,command):

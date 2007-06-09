@@ -35,10 +35,6 @@ __all__ = ['SwitchboardProtocol']
 
 logger = logging.getLogger('protocol:switchboard')
 
-# FIXME: add a helper class for commands reordering
-#        basically it would be very nice to be able to reorder the messages
-#        so that the invites happen automatically before the message sending
-
 
 class SwitchboardProtocol(BaseProtocol, gobject.GObject):
     """Protocol used to communicate with the Switchboard Server
@@ -72,22 +68,24 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
 
             "user-left": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
+                (object,)),
+
+            "user-invitation-failed": (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
                 (object,))}
 
     __gproperties__ = {
             "state":  (gobject.TYPE_INT,
                 "State",
                 "The state of the communication with the server.",
-                0, 7, ProtocolState.CLOSED,
+                0, 6, ProtocolState.CLOSED,
                 gobject.PARAM_READABLE)
             }
 
-    def __init__(self, conversation, transport, session_id, key=None,
-                 auto_invite=(), proxies={}):
+    def __init__(self, client, transport, session_id, key=None, proxies={}):
         """Initializer
 
-            @param conversation: the parent object
-            @type conversation: L{conversation.Conversation}
+            @param client: the Client instance
 
             @param transport: The transport to use to speak the protocol
             @type transport: L{transport.BaseTransport}
@@ -102,16 +100,14 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
                 L{gnet.proxy.ProxyInfos} instance
             @type proxies: {type: string, proxy:L{gnet.proxy.ProxyInfos}}
         """
-        BaseProtocol.__init__(self, conversation, transport, proxies)
+        BaseProtocol.__init__(self, client, transport, proxies)
         gobject.GObject.__init__(self)
         self.participants = {}
-        self._conversation = self._client
         self.__session_id = session_id
         self.__key = key
         self.__state = ProtocolState.CLOSED
-        
-        self.__auto_invite_queue = list(auto_invite)
-        self.__pending_auto_invite = {}
+
+        self.__invitations = {}
     
     # Properties ------------------------------------------------------------
     def __get_state(self):
@@ -137,6 +133,8 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             
             @param contact: the contact to invite
             @type contact: L{profile.Contact}"""
+        assert(self.state == ProtocolState.OPEN)
+        self.__invitations[self._transport.transaction_id] = contact
         self._transport.send_command_ex('CAL', (contact.account,) )
 
     def send_message(self, message, callback=None, cb_args=()):
@@ -144,6 +142,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         
             @param message: the message to send
             @type message: L{message.OutgoingMessage}"""
+        assert(self.state == ProtocolState.OPEN)
         our_cb_args = (message, callback, cb_args)
         self._transport.send_command(message,
                 True, self.__on_message_sent, *our_cb_args)
@@ -159,47 +158,25 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self._transport.send_command_ex('OUT')
     # Handlers ---------------------------------------------------------------
     # --------- Authentication -----------------------------------------------
-    def __autoinvite_request(self):
-        if len(self.__auto_invite_queue) == 0:
-            return False
-        for contact in self.__auto_invite_queue:
-            next_tid = self._transport.transaction_id
-            self.__pending_auto_invite[next_tid] = contact
-            self.invite_user(contact)
-        del self.__auto_invite_queue
-        return True
-    
-    def __autoinvite_response(self, transaction_id):
-        if len(self.__pending_auto_invite) > 0:
-            try:
-                del self.__pending_auto_invite[transaction_id]
-            except:
-                pass
-            
-            if len(self.__pending_auto_invite) == 0:
-                self._state = ProtocolState.SYNCHRONIZED
-                self._state = ProtocolState.OPEN
-    
     def _handle_ANS(self, command):
         if command.arguments[0] == 'OK':
+            self._state = ProtocolState.SYNCHRONIZED
+            self._state = ProtocolState.OPEN
+        else:
             self._state = ProtocolState.AUTHENTICATED
             self._state = ProtocolState.SYNCHRONIZING
-            if not self.__autoinvite_request():
-                self._state = ProtocolState.SYNCHRONIZED
-                self._state = ProtocolState.OPEN
 
     def _handle_USR(self, command):
         self._state = ProtocolState.AUTHENTICATED
         self._state = ProtocolState.SYNCHRONIZING
-        if not self.__autoinvite_request():
-            self._state = ProtocolState.SYNCHRONIZED
-            self._state = ProtocolState.OPEN
+        self._state = ProtocolState.SYNCHRONIZED
+        self._state = ProtocolState.OPEN
     
     def _handle_OUT(self, command):
         pass
     # --------- Invitation ---------------------------------------------------
     def __participant_join(self, account, display_name, client_id):
-        contacts = self._conversation._client.address_book.contacts.\
+        contacts = self._client.address_book.contacts.\
                 search_by_account(account)
         if len(contacts) == 0:
             contact = pymsn.profile.Contact(id=0,
@@ -223,16 +200,19 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         display_name = urllib.unquote(command.arguments[1])
         client_id = int(command.arguments[2])
         self.__participant_join(account, display_name, client_id)
-        self.__autoinvite_response(command.transaction_id)
-        
+
+    def _handle_CAL(self, command):
+        del self.__invitations[command.transaction_id]
 
     def _handle_BYE(self, command):
         if len(command.arguments) == 1:
             account = command.arguments[0]
             self.emit("user-left", self.participants[account])
             del self.participants[account]
+            if len(self.participants) == 0:
+                self._state = ProtocolState.CLOSED
         else:
-            self._state = ProtocolState.IDLE
+            self._state = ProtocolState.CLOSED
             self.participants = {}
 
     # --------- Messenging ---------------------------------------------------
@@ -251,16 +231,19 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             @param error: an error command object
             @type error: L{command.Command}
         """
-        if error.arguments[0] in ('208', '215', '216', '217', '713'):
+        if error.name in ('208', '215', '216', '217', '713'):
             try:
-                self.__autoinvite_response(error.transaction_id)
+                contact = self.__invitations[error.transaction_id]
+                self.emit("user-invitation-failed", contact)
+                del self.__invitations[error.transaction_id]
             except:
                 pass
-        logger.error('Notification got error :' + repr(error))
+        else:
+            logger.error('Notification got error :' + repr(error))
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
         self._state = ProtocolState.OPENING
-        account = self._conversation._client.profile.account
+        account = self._client.profile.account
         if self.__key is not None:
             arguments = (account, self.__session_id, self.__key)
             self._transport.send_command_ex('ANS', arguments)

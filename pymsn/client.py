@@ -28,6 +28,7 @@ from event import ClientState, ClientErrorType
 
 import profile
 import msnp
+from switchboard_manager import SwitchboardManager
 
 import logging
 
@@ -60,6 +61,7 @@ class Client(object):
                 self._proxies)
         self._protocol = msnp.NotificationProtocol(self, self._transport,
                 self._proxies)
+        self._switchboard_manager = SwitchboardManager(self)
 
         self.profile = None
         self.address_book = None # FIXME: update when the addressbook get updated
