@@ -105,7 +105,6 @@ class Client(object):
         self._protocol.signoff()
         self.__state = ClientState.CLOSED
 
-
     ### Callbacks
     def register_events_handler(self, events_handler):
         """

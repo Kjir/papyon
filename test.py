@@ -19,6 +19,8 @@ def get_proxies():
         result['https'] = pymsn.Proxy(url)
     for type, url in proxies.items():
         if type == 'no': continue
+        if type == 'https' and url.startswith('http://'):
+            url = url.replace('http://', 'https://', 1)
         result[type] = pymsn.Proxy(url)
     return result
 

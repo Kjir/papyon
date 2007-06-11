@@ -49,38 +49,24 @@ class SwitchboardClient(object):
             self._switchboard_requested = True
 
     @staticmethod
-    def mime_type(self):
+    def mime_types(self):
         return ("*",)
 
-    def __message(self, content_type, body, ack):
-        trd_id = self._switchboard._transport.transaction_id
-        message = msnp.OutgoingMessage(trd_id, ack)
-        message.content_type = content_type
-        message.body = body
-        return message
+
 
     def _send_message(self,
             content_type, body, ack=msnp.MessageAcknowledgement.HALF):
         if self._switchboard is None or \
                 self._switchboard.state != msnp.ProtocolState.OPEN:
-            if not self._switchboard_requested:
-                logger.info("requesting new switchboard")
-                self._switchboard_manager.request_switchboard(self)
-                self._invite_queue.extend(self._contacts)
-                self._switchboard_requested = True
+            self.__request_switchboard()
             self._message_queue.append((content_type, body, ack))
         else:
-            message = self.__message(content_type, body, ack)
-            self._switchboard.send_message(message)
+            self.__send_message(content_type, body, ack)
 
     def _invite_user(self, contact):
         if self._switchboard is None or \
                 self._switchboard.state != msnp.ProtocolState.OPEN:
-            if not self._switchboard_requested:
-                logger.info("requesting new switchboard")
-                self._switchboard_manager.request_switchboard(self)
-                self._invite_queue.extend(self._contacts)
-                self._switchboard_requested = True
+            self.__request_switchboard()
             self._invite_queue.append(contact)
         else:
             self._switchboard.invite_user(message)
@@ -109,12 +95,9 @@ class SwitchboardClient(object):
         self._switchboard_requested = False
         self._contacts = set(self._switchboard.participants.values())
         if len(self._invite_queue) > 0:
-            for contact in self._invite_queue:
-                self._switchboard.invite_user(contact)
+            self.__process_invite_queue()
         else:
-            for message in self._message_queue:
-                self._switchboard.send_message(message)
-            self._message_queue = []
+            self.__process_message_queue()
         self._switchboard.connect("user-joined",
                 lambda sb, contact: self.__on_user_joined(contact))
         self._switchboard.connect("user-left",
@@ -127,10 +110,7 @@ class SwitchboardClient(object):
         if contact in self._invite_queue:
             self._invite_queue.remove(contact)
             if len(self._invite_queue) == 0:
-                for message_params in self._message_queue:
-                    message = self.__message(*message_params)
-                    self._switchboard.send_message(message)
-                self._message_queue = []
+                self.__process_message_queue()
 
         self._on_contact_joined(contact)
 
@@ -143,10 +123,31 @@ class SwitchboardClient(object):
         if contact in self._invite_queue:
             self._invite_queue.remove(contact)
             if len(self._invite_queue) == 0:
-                for message_params in self._message_queue:
-                    message = self.__message(*message_params)
-                    self._switchboard.send_message(message)
-                self._message_queue = []
+                self.__process_message_queue()
+    
+    # Helper functions
+    def __send_message(self, content_type, body, ack):
+        trd_id = self._switchboard._transport.transaction_id
+        message = msnp.OutgoingMessage(trd_id, ack)
+        message.content_type = content_type
+        message.body = body
+        self._switchboard.send_message(message)
+
+    def __request_switchboard(self):
+        if not self._switchboard_requested:
+            logger.info("requesting new switchboard")
+            self._switchboard_manager.request_switchboard(self)
+            self._invite_queue.extend(self._contacts)
+            self._switchboard_requested = True
+
+    def __process_invite_queue(self):
+        for contact in self._invite_queue:
+            self._switchboard.invite_user(contact)
+
+    def __process_message_queue(self):
+        for message_params in self._message_queue:
+            self.__send_message(*message_params)
+        self._message_queue = []
 
 
 class SwitchboardManager(gobject.GObject):
@@ -207,6 +208,12 @@ class SwitchboardManager(gobject.GObject):
             del self._switchboards[switchboard]
 
     def __sb_message_received(self, switchboard, message):
-        pass
+        for handler in self._handlers:
+            if handler._switchboard != switchboard:
+                continue
+            mime_types = handler.mime_types()
+            if message.content_type[0] in mime_types or \
+                    '*' in mime_types:
+                handler._on_message_received(message)
 
 
