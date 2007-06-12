@@ -429,6 +429,8 @@ class HTTPPollConnection(BaseTransport):
         self._send_command()
 
     def __on_sent(self, transport, http_request):
+        if len(self._command_queue) == 0:
+            return
         command, increment, callback, cb_args = self._command_queue.pop(0)
         if command is not None:
             if callback:
