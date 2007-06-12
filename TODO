@@ -1,0 +1,38 @@
+The current file lists a set of features/fixes we need to implement, those
+fixes are listed per module, no priority is assigned, just pick the task you
+want to achieve, and try to get it done, once finished remove it from this
+file.
+
+gnet
+====
+- Add support for Socks4, Socks4a and Socks5 proxies
+
+msnp
+====
+- Fix the ADL max size limit (look for the FIXME:)
+- Enhance the Switchboard implementation, by Adding an invite-state property
+that enables us to know if all the contacts that we just invited joined or
+not yet (this enable a better queuing of messages)
+
+msnp2p
+======
+- Start the implementation
+
+service
+=======
+- Redesign completely the SOAP sublibrary
+- Add Error handling
+- Implement the missing methods/services
+
+tests
+=====
+- We need them
+
+profile.py
+==========
+- Use the SOAP service to save the Friendly Name
+
+switchboard_manager.py
+======================
+- Handle conversationsinvite correctly, by dispatching the messages
+to the corrent handler, or creating a new handler when necessary
