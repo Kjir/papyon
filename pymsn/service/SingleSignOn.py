@@ -164,7 +164,7 @@ class SingleSignOn(SOAPService):
                     "./wst:RequestedSecurityToken/wsse:BinarySecurityToken",
                     "./wst:RequestedSecurityToken/xmlenc:EncryptedData/xmlenc:CipherData/xmlenc:CipherValue",
                     "./wst:RequestedProofToken/wst:BinarySecret")
-            result = self.__response_tokens + [soap_response]
+            result = self.__response_tokens
             soap_utils = SOAPUtils(NS_SHORTHANDS)
 
             responses = soap_utils.find_ex(soap_response.body, paths[0])
@@ -185,6 +185,7 @@ class SingleSignOn(SOAPService):
                 self.__storage[token.service_address] = token
                 result.append(token)
             self.__response_tokens = []
+            result.insert(0, soap_response)
             return result
         else:
             return SOAPService._extract_response(self, method, soap_response)
