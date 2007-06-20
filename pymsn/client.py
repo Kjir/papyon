@@ -29,6 +29,7 @@ from event import ClientState, ClientErrorType
 import profile
 import msnp
 from switchboard_manager import SwitchboardManager
+from conversation import Conversation
 
 import logging
 
@@ -62,6 +63,7 @@ class Client(object):
         self._protocol = msnp.NotificationProtocol(self, self._transport,
                 self._proxies)
         self._switchboard_manager = SwitchboardManager(self)
+        self._switchboard_manager.register_handler_class(Conversation)
 
         self.profile = None
         self.address_book = None # FIXME: update when the addressbook get updated
@@ -75,6 +77,8 @@ class Client(object):
         self._transport.connect("connection-lost", self._on_disconnected)
 
         self._protocol.connect("notify::state", self._on_protocol_state_changed)
+
+        self._switchboard_manager.connect("handler-created", self._on_switchboard_handler_created)
 
     def _get_state(self):
         return self.__state
@@ -160,4 +164,9 @@ class Client(object):
     def _on_contact_property_changed(self, contact, pspec):
         method_name = "on_contact_%s_changed" % pspec.name.replace("-", "_")
         self._dispatch(method_name, contact)
+
+    # - - Switchboard Manage
+    def _on_switchboard_handler_created(self, switchboard_manager, handler_class, handler):
+        logger.info("New Handler %s" % handler)
+        handler.leave_conversation()
 

@@ -49,16 +49,16 @@ class SwitchboardClient(object):
             self._switchboard_requested = True
 
     @staticmethod
-    def mime_types(self):
-        return ("*",)
-
-
+    def can_handle_message(message):
+        return False
 
     def _send_message(self,
             content_type, body, ack=msnp.MessageAcknowledgement.HALF):
         if self._switchboard is None or \
                 self._switchboard.state != msnp.ProtocolState.OPEN:
             self.__request_switchboard()
+            self._message_queue.append((content_type, body, ack))
+        elif self._switchboard.inviting:
             self._message_queue.append((content_type, body, ack))
         else:
             self.__send_message(content_type, body, ack)
@@ -72,6 +72,9 @@ class SwitchboardClient(object):
             self._switchboard.invite_user(message)
 
     def _close(self):
+        if self._switchboard is not None and \
+                self._switchboard.state != msnp.ProtocolState.CLOSED:
+            self._switchboard.leave()
         self._switchboard_manager.close_handler(self)
 
     def _on_message_received(self, message):
@@ -98,20 +101,23 @@ class SwitchboardClient(object):
             self.__process_invite_queue()
         else:
             self.__process_message_queue()
+        self._switchboard.connect("notify::inviting",
+                lambda sb, pspec: self.__on_user_inviting())
         self._switchboard.connect("user-joined",
                 lambda sb, contact: self.__on_user_joined(contact))
         self._switchboard.connect("user-left",
                 lambda sb, contact: self.__on_user_left(contact))
         self._switchboard.connect("user-invitation-failed",
                 lambda sb, contact: self.__on_user_invitation_failed(contact))
+    
+    def __on_user_inviting(self):
+        if not self._switchboard.inviting:
+            self.__process_message_queue()
 
     def __on_user_joined(self, contact):
         self._contacts.add(contact)
         if contact in self._invite_queue:
             self._invite_queue.remove(contact)
-            if len(self._invite_queue) == 0:
-                self.__process_message_queue()
-
         self._on_contact_joined(contact)
 
     def __on_user_left(self, contact):
@@ -122,8 +128,6 @@ class SwitchboardClient(object):
     def __on_user_invitation_failed(self, contact):
         if contact in self._invite_queue:
             self._invite_queue.remove(contact)
-            if len(self._invite_queue) == 0:
-                self.__process_message_queue()
     
     # Helper functions
     def __send_message(self, content_type, body, ack):
@@ -137,7 +141,9 @@ class SwitchboardClient(object):
         if not self._switchboard_requested:
             logger.info("requesting new switchboard")
             self._switchboard_manager.request_switchboard(self)
-            self._invite_queue.extend(self._contacts)
+            # store the current contacts, to get them reinvited
+            # automagically :p
+            self._invite_queue.extend(self._contacts) 
             self._switchboard_requested = True
 
     def __process_invite_queue(self):
@@ -155,6 +161,11 @@ class SwitchboardManager(gobject.GObject):
         
         @undocumented: do_get_property, do_set_property
         @group Handlers: _handle_*, _default_handler, _error_handler"""
+    __gsignals__ = {
+            "handler-created": (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object, object))
+            }
 
     def __init__(self, client):
         """Initializer
@@ -162,24 +173,31 @@ class SwitchboardManager(gobject.GObject):
             @param client: the main Client instance"""
         gobject.GObject.__init__(self)
         self._client = client
-        self._handlers = set()
+        self._handlers_instance = set()
+        self._handlers_class = set()
         self._switchboards = {}
         self._pending_switchboards = {}
         self._client._protocol.connect("switchboard-invitation-received",
                 self.__ns_switchboard_invite)
+
+    def register_handler_class(self, handler_class):
+        self._handlers_class.add(handler_class)
 
     def request_switchboard(self, handler):
         self._client._protocol.\
                 request_switchboard(self.__ns_request_response, handler)
 
     def close_handler(self, handler):
-        pass
+        try:
+            self._handlers_instance.remove(handler)
+        except KeyError:
+            pass
 
     def __ns_request_response(self, session, handler):
         sb = self.__build_switchboard(session)
         self._pending_switchboards[sb] = handler
 
-    def __ns_switchboard_invite(self, session, inviter):
+    def __ns_switchboard_invite(self, protocol, session, inviter):
         self.__build_switchboard(session)
 
     def __build_switchboard(self, session):
@@ -190,6 +208,7 @@ class SwitchboardManager(gobject.GObject):
         sb = msnp.SwitchboardProtocol(self._client, transport,
                 session_id, key, self._client._proxies)
         sb.connect("notify::state", self.__sb_state_change)
+        sb.connect("message-received", self.__sb_message_received)
         transport.establish_connection()
         return sb
 
@@ -202,18 +221,35 @@ class SwitchboardManager(gobject.GObject):
                 self._switchboards[switchboard].add(handler)
                 del self._pending_switchboards[switchboard]
                 handler._on_switchboard_update(switchboard)
+                self._handlers_instance.add(handler)
             except:
                 pass
         elif state == msnp.ProtocolState.CLOSED:
             del self._switchboards[switchboard]
 
     def __sb_message_received(self, switchboard, message):
-        for handler in self._handlers:
+        for handler in self._handlers_instance:
             if handler._switchboard != switchboard:
                 continue
-            mime_types = handler.mime_types()
-            if message.content_type[0] in mime_types or \
-                    '*' in mime_types:
+            if handler.can_handle_message(message):
                 handler._on_message_received(message)
 
+        for handler_class in self._handlers_class:
+            if not handler_class.can_handle_message(message):
+                continue
+
+            skip = False
+            for handler in self._handlers_instance:
+                if isinstance(handler, handler_class) and \
+                        handler._switchboard == switchboard:
+                    skip = True
+                    break
+            if skip:
+                continue
+            
+            handler = handler_class(self._client, ())
+            handler._on_switchboard_update(switchboard)
+            self.emit("handler-created", handler_class, handler)
+            self._handlers_instance.add(handler)
+            handler._on_message_received(message)
 

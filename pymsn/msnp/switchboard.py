@@ -79,6 +79,12 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
                 "State",
                 "The state of the communication with the server.",
                 0, 6, ProtocolState.CLOSED,
+                gobject.PARAM_READABLE),
+
+            "inviting":  (gobject.TYPE_BOOLEAN,
+                "Inviting",
+                "True if an invite was sent, and the contact didn't join yet",
+                False,
                 gobject.PARAM_READABLE)
             }
 
@@ -106,6 +112,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self.__session_id = session_id
         self.__key = key
         self.__state = ProtocolState.CLOSED
+        self.__inviting = False
 
         self.__invitations = {}
     
@@ -117,10 +124,21 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self.notify("state")
     state = property(__get_state)
     _state = property(__get_state, __set_state)
+
+    def __get_inviting(self):
+        return self.__inviting
+    def __set_inviting(self, value):
+        if self.__inviting != value:
+            self.__inviting = value
+            self.notify("inviting")
+    inviting = property(__get_inviting)
+    _inviting = property(__get_inviting, __set_inviting)
         
     def do_get_property(self, pspec):
         if pspec.name == "state":
             return self.__state
+        elif pspec.name == "inviting":
+            return self.__inviting
         else:
             raise AttributeError, "unknown property %s" % pspec.name
 
@@ -135,6 +153,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             @type contact: L{profile.Contact}"""
         assert(self.state == ProtocolState.OPEN)
         self.__invitations[self._transport.transaction_id] = contact
+        self._inviting = True
         self._transport.send_command_ex('CAL', (contact.account,) )
 
     def send_message(self, message, callback=None, cb_args=()):
@@ -152,7 +171,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         if user_callback:
             user_callback(*user_cb_args)
 
-    def leave_conversation(self):
+    def leave(self):
         """Leave the conversation"""
         assert(self.state == ProtocolState.OPEN)
         self._transport.send_command_ex('OUT')
@@ -200,8 +219,12 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         display_name = urllib.unquote(command.arguments[1])
         client_id = int(command.arguments[2])
         self.__participant_join(account, display_name, client_id)
+        if len(self.__invitations) == 0:
+            self._inviting = False
 
-    def _handle_CAL(self, command):
+    def _handle_CAL(self, command): 
+        # this should be followed by a JOI, so we only change
+        # the self._inviting state until we get the actual JOI
         del self.__invitations[command.transaction_id]
 
     def _handle_BYE(self, command):
@@ -236,6 +259,8 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
                 contact = self.__invitations[error.transaction_id]
                 self.emit("user-invitation-failed", contact)
                 del self.__invitations[error.transaction_id]
+                if len(self.__invitations) == 0:
+                    self._inviting = False
             except:
                 pass
         else:
@@ -245,7 +270,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self._state = ProtocolState.OPENING
         account = self._client.profile.account
         if self.__key is not None:
-            arguments = (account, self.__session_id, self.__key)
+            arguments = (account, self.__key, self.__session_id)
             self._transport.send_command_ex('ANS', arguments)
         else:
             arguments = (account, self.__session_id)
@@ -253,6 +278,6 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self._state = ProtocolState.AUTHENTICATING
 
     def _disconnect_cb(self, transport, reason):
+        logger.info("Disconnected")
         self._state = ProtocolState.CLOSED
-
 

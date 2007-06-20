@@ -41,6 +41,11 @@ class Conversation(SwitchboardClient):
         SwitchboardClient.__init__(self, client, contacts)
         self._events_handlers = set()
     
+    @staticmethod
+    def can_handle_message(message):
+        return message.content_type[0] in ('text/plain',
+                'text/x-msmsgscontrol', 'text/x-msnmsgr-datacast')
+
     def send_text_message(self, text):
         """Build and send a text message to all persons in this
         switchboard.
@@ -68,7 +73,7 @@ class Conversation(SwitchboardClient):
 
     def leave_conversation(self):
         """Leave the conversation."""
-        pass
+        self._close()
 
     ### Callbacks
     def register_events_handler(self, events_handler):
