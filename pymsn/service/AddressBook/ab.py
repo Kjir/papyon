@@ -58,7 +58,7 @@ class Contact(object):
 
                 self.id = soap_utils.find_ex(xml_node, "./ab:contactId").text
                 contact_info = soap_utils.find_ex(xml_node, "./ab:contactInfo")
-
+                
                 self.type = soap_utils.find_ex(contact_info, "./ab:contactType").text
 
                 passport = soap_utils.find_ex(contact_info, "./ab:passportName")
@@ -83,9 +83,8 @@ class Contact(object):
                     self.display_name = self.account.split("@", 1)[0]
                 self.CID = soap_utils.find_ex(contact_info, "./ab:CID").text
             except Exception, e:
-                exception_str = repr(e)
-                xml_dump = str(xml_node)
-                raise NotImplementedError("%s\n\nNode Dump:\n%s" % (exception_str, xml_dump))
+                exception_str = str(e)
+                raise NotImplementedError("Contact ID : %s\n%s" % (self.id, exception_str))
             
 class AddressBookError(SOAPFault):
     def __init__(self, xml_node):
