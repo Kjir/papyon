@@ -84,7 +84,7 @@ class Contact(object):
                 self.CID = soap_utils.find_ex(contact_info, "./ab:CID").text
             except Exception, e:
                 exception_str = repr(e)
-                xml_dump = str(xml_dump)
+                xml_dump = str(xml_node)
                 raise NotImplementedError("%s\n\nNode Dump:\n%s" % (exception_str, xml_dump))
             
 class AddressBookError(SOAPFault):
