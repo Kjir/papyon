@@ -19,26 +19,12 @@
 
 from base import BaseEventInterface
 
-__all__ = ["ConversationEventInterface"]
+__all__ = ["InviteEventInterface"]
 
-class ConversationEventInterface(BaseEventInterface):
-    def __init__(self, conversation):
-        BaseEventInterface.__init__(self, conversation)
+class InviteEventInterface(BaseEventInterface):
+    def __init__(self, client):
+        BaseEventInterface.__init__(self, client)
 
-    def on_conversation_state_changed(self, state):
+    def on_invite_conversation(self, conversation):
         pass
 
-    def on_conversation_error(self, type, error):
-        pass
-
-    def on_conversation_user_joined(self, contact):
-        pass
-
-    def on_conversation_user_left(self, contact):
-        pass
-
-    def on_conversation_message_received(self, sender, message, formatting):
-        pass
-    
-    def on_conversation_nudge_received(self, sender):
-        pass

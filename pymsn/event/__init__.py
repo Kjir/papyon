@@ -26,3 +26,4 @@ from client import *
 from conversation import *
 from contact import *
 from contact_list import *
+from invite import *

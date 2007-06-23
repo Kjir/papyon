@@ -35,7 +35,6 @@ __all__ = ['Conversation']
 
 logger = logging.getLogger('conversation')
 
-
 class Conversation(SwitchboardClient):
     def __init__(self, client, contacts):
         SwitchboardClient.__init__(self, client, contacts)
@@ -92,4 +91,32 @@ class Conversation(SwitchboardClient):
 
     def _on_contact_left(self, contact):
         self._dispatch("on_conversation_user_left", contact)
+    
+    def _on_message_received(self, message):
+        message_type = message.content_type[0]
+        sender_account = message.account
+        sender_friendly_name = message.friendly_name
+        
+        senders = self._client.address_book.contacts.\
+                search_by_account(sender_account)
+        if len(senders) == 0:
+            sender = pymsn.profile.Contact(id=0,
+                    network_id=pymsn.profile.NetworkID.MSN,
+                    account=account,
+                    display_name=display_name)
+        else:
+            sender = contacts.get_first()
 
+        if message_type == 'text/plain':
+            # FIXME: expose formattings
+            self._dispatch("on_conversation_message_received",
+                    sender, message.body, None)
+        if message_type == 'text/x-msnmsgr-datacast' and \
+                message.body.strip() == "ID: 1":
+            self._dispatch("on_conversation_nudge_received",
+                    sender)
+
+
+
+    def _on_message_sent(self, message):
+        pass

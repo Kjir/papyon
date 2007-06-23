@@ -76,7 +76,8 @@ class SwitchboardClient(object):
                 self._switchboard.state != msnp.ProtocolState.CLOSED:
             self._switchboard.leave()
         self._switchboard_manager.close_handler(self)
-
+    
+    # callbacks
     def _on_message_received(self, message):
         pass
 
@@ -92,6 +93,7 @@ class SwitchboardClient(object):
     def _on_error(self, switchboard, error_type, error):
         pass
 
+    # private
     def _on_switchboard_update(self, switchboard):
         del self._switchboard
         self._switchboard = switchboard

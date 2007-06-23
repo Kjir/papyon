@@ -42,8 +42,8 @@ class MessageAcknowledgement(object):
 class Message(HTTPMessage):
     """Base Messages class.
     
-        @ivar passport: sender passport
-        @type passport: string
+        @ivar account: sender account
+        @type account: string
         
         @ivar friendly_name: sender friendly name
         @type friendly_name: string
@@ -63,7 +63,7 @@ class Message(HTTPMessage):
             @param body: The body of the message, it is put after the headers
             @type body: string"""
         HTTPMessage.__init__(self)
-        self.passport = 'Hotmail'
+        self.account = 'Hotmail'
         self.friendly_name = 'Hotmail'
         self.body = body
         self.headers = {'MIME-Version' : '1.0', 'Content-Type' : 'text/plain'}
@@ -108,7 +108,7 @@ class IncomingMessage(Message):
             @param command: the MSG command received from the server
             @type command: L{command.Command}"""
         Message.__init__(self)
-        self.passport = command.arguments[0]
+        self.account = command.arguments[0]
         self.friendly_name = unquote(command.arguments[1])
         self.parse(command.payload)
 
@@ -116,7 +116,7 @@ class IncomingMessage(Message):
         """Represents the message
         
         the representation looks like this ::
-            MSG sender-passport sender-friendly-name payload-size\\r\\n
+            MSG sender-account sender-friendly-name payload-size\\r\\n
             header1: header-content\\r\\n
             ...\\r\\n
             \\r\\n
@@ -124,7 +124,7 @@ class IncomingMessage(Message):
             
         @rtype: string"""
         message = Message.__str__(self)
-        command = 'MSG %s %s %u\r\n' % (   self.passport,
+        command = 'MSG %s %s %u\r\n' % (   self.account,
                                             quote(self.friendly_name),
                                             len(message))
         return command + message
@@ -133,7 +133,7 @@ class IncomingMessage(Message):
         """Represents the message"""
         message = Message.__repr__(self)
         length = len(Message.__str__(self))
-        command = 'MSG %s %s %u\r\n' % (   self.passport,
+        command = 'MSG %s %s %u\r\n' % (   self.account,
                                             quote(self.friendly_name),
                                             length)
         return command + message
@@ -153,7 +153,7 @@ class OutgoingMessage(Message):
         Message.__init__(self)
         self.transaction_id = transaction_id
         self.ack = ack
-        self.passport = ''
+        self.account = ''
         self.friendly_name = ''
 
     def __str__(self):

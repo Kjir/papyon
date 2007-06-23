@@ -76,9 +76,11 @@ class Client(object):
         self._transport.connect("connection-failure", self._on_connect_failure)
         self._transport.connect("connection-lost", self._on_disconnected)
 
-        self._protocol.connect("notify::state", self._on_protocol_state_changed)
+        self._protocol.connect("notify::state",
+                self._on_protocol_state_changed)
 
-        self._switchboard_manager.connect("handler-created", self._on_switchboard_handler_created)
+        self._switchboard_manager.connect("handler-created",
+                self._on_switchboard_handler_created)
 
     def _get_state(self):
         return self.__state
@@ -165,8 +167,12 @@ class Client(object):
         method_name = "on_contact_%s_changed" % pspec.name.replace("-", "_")
         self._dispatch(method_name, contact)
 
-    # - - Switchboard Manage
-    def _on_switchboard_handler_created(self, switchboard_manager, handler_class, handler):
+    # - - Switchboard Manager
+    def _on_switchboard_handler_created(self, sb_mgr, handler_class, handler):
         logger.info("New Handler %s" % handler)
-        handler.leave_conversation()
+        if handler_class is Conversation:
+            self._dispatch("on_invite_conversation", handler)
+        else:
+            logger.warning("Unknown Switchboard Handler class %s" % handler_class)
+            handler.leave_conversation()
 
