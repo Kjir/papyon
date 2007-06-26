@@ -29,6 +29,7 @@ class BaseEventInterface(object):
         try:
             handler = getattr(self, event_name)
         except Exception, e:
-            return
+            return False
 
         handler(*params)
+        return True

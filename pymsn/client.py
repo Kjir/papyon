@@ -120,8 +120,11 @@ class Client(object):
         self._events_handlers.add(events_handler)
 
     def _dispatch(self, name, *args):
+        count = 0
         for event_handler in self._events_handlers:
-            event_handler._dispatch_event(name, *args)
+            if event_handler._dispatch_event(name, *args):
+                count += 1
+        return count
 
     # - - Transport
     def _on_connect_success(self, transp):
@@ -169,10 +172,9 @@ class Client(object):
 
     # - - Switchboard Manager
     def _on_switchboard_handler_created(self, sb_mgr, handler_class, handler):
-        logger.info("New Handler %s" % handler)
         if handler_class is Conversation:
-            self._dispatch("on_invite_conversation", handler)
+            if self._dispatch("on_invite_conversation", handler) == 0:
+                logger.warning("No event handler attached for conversations")
         else:
             logger.warning("Unknown Switchboard Handler class %s" % handler_class)
-            handler.leave_conversation()
 

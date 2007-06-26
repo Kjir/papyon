@@ -71,7 +71,7 @@ class SwitchboardClient(object):
         else:
             self._switchboard.invite_user(message)
 
-    def _close(self):
+    def _leave(self):
         if self._switchboard is not None and \
                 self._switchboard.state != msnp.ProtocolState.CLOSED:
             self._switchboard.leave()
@@ -186,6 +186,11 @@ class SwitchboardManager(gobject.GObject):
         self._handlers_class.add(handler_class)
 
     def request_switchboard(self, handler):
+        #FIXME: check if a usable switchboard is already available 
+        #contacts = set(contacts)
+        #for switchboard in self._switchboards:
+        #    if set(switchboard.participants.values()) == contacts:
+
         self._client._protocol.\
                 request_switchboard(self.__ns_request_response, handler)
 

@@ -51,8 +51,8 @@ class Conversation(SwitchboardClient):
         
             @param text: the text message to send.
             @type text: string"""
-        content_type = ("text/plain","UTF-8")
-        body = text.encode('UTF-8')
+        content_type = ("text/plain","utf-8")
+        body = text.encode("utf-8")
         ack = msnp.MessageAcknowledgement.HALF
         self._send_message(content_type, body, ack)
 
@@ -70,9 +70,9 @@ class Conversation(SwitchboardClient):
             @type contact: L{profile.Contact}"""
         self._invite_user(contact)
 
-    def leave_conversation(self):
+    def leave(self):
         """Leave the conversation."""
-        self._close()
+        self._leave()
 
     ### Callbacks
     def register_events_handler(self, events_handler):
@@ -105,18 +105,16 @@ class Conversation(SwitchboardClient):
                     account=account,
                     display_name=display_name)
         else:
-            sender = contacts.get_first()
+            sender = senders.get_first()
 
         if message_type == 'text/plain':
             # FIXME: expose formattings
             self._dispatch("on_conversation_message_received",
-                    sender, message.body, None)
+                    sender, unicode(message.body, message.content_type[1]), None)
         if message_type == 'text/x-msnmsgr-datacast' and \
                 message.body.strip() == "ID: 1":
             self._dispatch("on_conversation_nudge_received",
                     sender)
-
-
 
     def _on_message_sent(self, message):
         pass
