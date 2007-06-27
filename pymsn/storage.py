@@ -141,7 +141,7 @@ class DbmStorage(AbstractStorage):
         import os.path
         AbstractStorage.__init__(self, account, identifier)
         
-        storage_path = os.path.expanduser(STORAGE_PATH)
+        storage_path = os.path.expanduser(self.STORAGE_PATH)
         
         file_dir = os.path.join(storage_path, self.account)
         file_path = os.path.join(file_dir, self.storage_id)
