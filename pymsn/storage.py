@@ -147,7 +147,7 @@ class DbmStorage(AbstractStorage):
         file_path = os.path.join(file_dir, self.storage_id)
         try:
             import os
-            os.mkdirs(file_dir)
+            os.makedirs(file_dir)
         except:
             pass
         self._dict = anydbm.open(file_path, 'c')
