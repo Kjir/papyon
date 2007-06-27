@@ -135,18 +135,22 @@ class MemoryStorage(AbstractStorage):
 class DbmStorage(AbstractStorage):
 
     PICKLING_PROTOCOL = -1 #use the highest possible version
+    STORAGE_PATH = "~/.pymsn"
 
-    def __init__(self, account, filename):
+    def __init__(self, account, identifier):
         import os.path
         AbstractStorage.__init__(self, account, identifier)
-        head, tail = os.path.split(filename)
-        filename = os.path.join(head, account, tail)
+        
+        storage_path = os.path.expanduser(STORAGE_PATH)
+        
+        file_dir = os.path.join(storage_path, self.account)
+        file_path = os.path.join(file_dir, self.storage_id)
         try:
             import os
-            os.mkdirs(os.path.join(head, account))
+            os.mkdirs(file_dir)
         except:
             pass
-        self._dict = anydbm.open(filename, 'c')
+        self._dict = anydbm.open(file_path, 'c')
     
     def keys(self):
         return self._dict.keys()
