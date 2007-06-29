@@ -422,7 +422,7 @@ class Contact(gobject.GObject):
         old_value = getattr(self, attr_name)
         if value != old_value:
             setattr(self, attr_name, value)
-        self.notify(name)
+            self.notify(name)
 
     def _server_contact_attribute_changed(self, name, value):
         self._attributes[name] = value
