@@ -42,7 +42,7 @@ class SwitchboardClient(object):
         self._invite_queue = list(contacts)
         self._message_queue = []
 
-        self._contacts = set()
+        self.participants = set()
 
         if len(self._invite_queue) > 0:
             self._switchboard_manager.request_switchboard(self)
@@ -98,7 +98,7 @@ class SwitchboardClient(object):
         del self._switchboard
         self._switchboard = switchboard
         self._switchboard_requested = False
-        self._contacts = set(self._switchboard.participants.values())
+        self.participants = set(self._switchboard.participants.values())
         if len(self._invite_queue) > 0:
             self.__process_invite_queue()
         else:
@@ -117,14 +117,14 @@ class SwitchboardClient(object):
             self.__process_message_queue()
 
     def __on_user_joined(self, contact):
-        self._contacts.add(contact)
+        self.participants.add(contact)
         if contact in self._invite_queue:
             self._invite_queue.remove(contact)
         self._on_contact_joined(contact)
 
     def __on_user_left(self, contact):
-        if len(self._contacts) > 1:
-            self._contacts.remove(contact)
+        if len(self.participants) > 1:
+            self.participants.remove(contact)
             self._on_contact_left(contact)
 
     def __on_user_invitation_failed(self, contact):
@@ -145,7 +145,7 @@ class SwitchboardClient(object):
             self._switchboard_manager.request_switchboard(self)
             # store the current contacts, to get them reinvited
             # automagically :p
-            self._invite_queue.extend(self._contacts) 
+            self._invite_queue.extend(self.participants) 
             self._switchboard_requested = True
 
     def __process_invite_queue(self):
@@ -195,10 +195,7 @@ class SwitchboardManager(gobject.GObject):
                 request_switchboard(self.__ns_request_response, handler)
 
     def close_handler(self, handler):
-        try:
-            self._handlers_instance.remove(handler)
-        except KeyError:
-            pass
+        self._handlers_instance.remove(handler)
 
     def __ns_request_response(self, session, handler):
         sb = self.__build_switchboard(session)
@@ -235,9 +232,16 @@ class SwitchboardManager(gobject.GObject):
             del self._switchboards[switchboard]
 
     def __sb_message_received(self, switchboard, message):
+        switchboard_participants = set(switchboard.participants.values())
+
         for handler in self._handlers_instance:
-            if handler._switchboard != switchboard:
-                continue
+            handler_switchboard = handler._switchboard
+            if handler_switchboard != switchboard:
+                if handler_switchboard is not None and \
+                        handler_switchboard.state != msnp.ProtocolState.CLOSED:
+                    continue
+                if handler.participants == switchboard_participants:
+                    handler._on_switchboard_update(switchboard)
             if handler.can_handle_message(message):
                 handler._on_message_received(message)
 

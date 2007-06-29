@@ -34,5 +34,10 @@ profile.py
 
 switchboard_manager.py
 ======================
-- Handle conversationsinvite correctly, by dispatching the messages
+- Handle conversations invite correctly, by dispatching the messages
 to the corrent handler, or creating a new handler when necessary
+- Make a member list available to all SwitchboardClient implementations
+
+storage.py
+==========
+- Make the DbmStorage STORAGE_PATH more flexible
