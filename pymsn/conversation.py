@@ -41,9 +41,12 @@ class Conversation(SwitchboardClient):
         self._events_handlers = set()
     
     @staticmethod
-    def can_handle_message(message):
-        return message.content_type[0] in ('text/plain',
-                'text/x-msmsgscontrol', 'text/x-msnmsgr-datacast')
+    def can_handle_message(message, switchboard_client=None):
+        content_type = message.content_type[0]
+        if switchboard_client is None:
+            return content_type in ('text/plain', 'text/x-msnmsgr-datacast')
+        return content_type in ('text/plain', 'text/x-msmsgscontrol',
+                'text/x-msnmsgr-datacast')
 
     def send_text_message(self, text):
         """Build and send a text message to all persons in this

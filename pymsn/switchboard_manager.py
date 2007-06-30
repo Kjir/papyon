@@ -49,7 +49,7 @@ class SwitchboardClient(object):
             self._switchboard_requested = True
 
     @staticmethod
-    def can_handle_message(message):
+    def can_handle_message(message, switchboard_client=None):
         return False
 
     def _send_message(self,
@@ -242,7 +242,7 @@ class SwitchboardManager(gobject.GObject):
                     continue
                 if handler.participants == switchboard_participants:
                     handler._on_switchboard_update(switchboard)
-            if handler.can_handle_message(message):
+            if handler.can_handle_message(message, handler):
                 handler._on_message_received(message)
 
         for handler_class in self._handlers_class:
