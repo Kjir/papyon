@@ -10,9 +10,6 @@ gnet
 msnp
 ====
 - Fix the ADL max size limit (look for the FIXME:)
-- Enhance the Switchboard implementation, by Adding an invite-state property
-that enables us to know if all the contacts that we just invited joined or
-not yet (this enable a better queuing of messages)
 
 msnp2p
 ======
@@ -34,9 +31,6 @@ profile.py
 
 switchboard_manager.py
 ======================
-- Handle conversations invite correctly, by dispatching the messages
-to the corrent handler, or creating a new handler when necessary
-- Make a member list available to all SwitchboardClient implementations
 
 storage.py
 ==========

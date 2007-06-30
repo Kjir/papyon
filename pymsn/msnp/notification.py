@@ -434,8 +434,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         contacts = self._address_book.contacts.search_by_account(command.arguments[0])
         if command.payload:
             for contact in contacts:
-                data = et.fromstring(command.payload)
-                contact._server_property_changed("personal-message", data.find("./PSM").text)
+                pm = et.fromstring(command.payload).find("./PSM").text
+                if pm is None: pm = ""
+                contact._server_property_changed("personal-message", pm)
     # --------- Contact List -------------------------------------------------
     def _handle_ADL(self, command):
         if command.arguments[0] == "OK":
