@@ -526,6 +526,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 ("SSO", "S", clear_token.security_token, blob))
 
     def _address_book_state_changed_cb(self, address_book, pspec):
+        MAX_PAYLOAD_SIZE = 7500
         if address_book.state != AddressBook.AddressBookState.SYNCHRONIZED:
             return
         self._client.profile._server_property_changed("display-name",
@@ -534,20 +535,28 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         contacts = address_book.contacts\
                 .search_by_memberships(profile.Membership.FORWARD)\
                 .group_by_domain()
-        s = '<ml l="1">'
+        
+        payloads = ['<ml l="1">']
+        payload_id = 0
         mask = ~(profile.Membership.REVERSE | profile.Membership.PENDING)
         for domain, contacts in contacts.iteritems():
-            s += '<d n="%s">' % domain
+            payloads[payload_id] += '<d n="%s">' % domain
             for contact in contacts:
                 user = contact.account.split("@", 1)[0]
                 lists = contact.memberships & mask
                 network_id = contact.network_id
-                s += '<c n="%s" l="%d" t="%d"/>' % (user, lists, network_id)
-            s += '</d>'
-        s += '</ml>'
-        # FIXME: the payload can reach the maximum (which is 7500 bytes), so
-        # we need to split this into multiple ADL in that case
-        self._transport.send_command_ex("ADL", payload=s)
+                node = '<c n="%s" l="%d" t="%d"/>' % (user, lists, network_id)
+                size = len(payloads[payload_id]) + len(node) + len('</d></ml>')
+                if size >= MAX_PAYLOAD_SIZE:
+                    payloads[payload_id] += '</d></ml>'
+                    payload_id += 1
+                    payloads[payload_id] = '<ml l="1"><d n="%s">' % domain
+                payloads[payload_id] += node 
+            payloads[payload_id] += '</d>'
+        payloads[payload_id] += '</ml>'
+        
+        for payload in payloads:
+            self._transport.send_command_ex("ADL", payload=payload)
         self._state = ProtocolState.SYNCHRONIZED
 
     def _address_book_contact_added_cb(self, address_book, contact):
