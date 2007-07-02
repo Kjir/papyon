@@ -36,65 +36,37 @@ def url_split(self, url, default_scheme='http'):
         url = default_scheme + "://" + url
     protocol, host, path, query, fragment = urlsplit(url)
     if path == "": path = "/"
+    try:
+        host, port = host.rsplit(":", 1)
+    except:
+        port = None
     resource = urlunsplit(('', '', path, query, fragment))
-    return protocol, host, resource
+    return protocol, host, port, resource
 
 
-def SOAPBinding(ZSI.client._Binding):
-
-    def __init__(self, nsdict=None, transport=None, url=None, tracefile=None,
-                 readerclass=None, writerclass=None, soapaction='', 
-                 wsAddressURI=None, sig_handler=None, transdict=None, **kw):
+def _SOAPBinding(ZSI.client._Binding):
+    def __init__(self, nsdict=None, url=None, soapaction='', proxies=None):
         '''Initialize.
         Keyword arguments include:
-            transport -- default use HTTPConnection. 
-            transdict -- dict of values to pass to transport.
+            ns_dict -- namespace entries to add
             url -- URL of resource, POST is path 
-            soapaction -- value of SOAPAction header
-            auth -- (type, name, password) triplet; default is unauth
-            nsdict -- namespace entries to add
-            tracefile -- file to dump packet traces
-            cert_file, key_file -- SSL data (q.v.)
-            readerclass -- DOM reader class
-            writerclass -- DOM writer class, implements MessageInterface
-            wsAddressURI -- namespaceURI of WS-Address to use.  By default 
-            it's not used.
-            sig_handler -- XML Signature handler, must sign and verify.
-            endPointReference -- optional Endpoint Reference.
-            proxy -- dict mapping protocol to a ProxyInfos instance
+            soap_action -- value of SOAPAction header
+            proxies -- dict mapping protocol to a ProxyInfos instance
         '''
-        self.data = None
-        self.ps = None
-        self.user_headers = []
-        self.nsdict = nsdict or {}
-        self.transport = transport
-        self.transdict = transdict or {}
-        self.url = url
-        self.trace = tracefile
-        self.readerclass = readerclass
-        self.writerclass = writerclass
-        self.soapaction = soapaction
-        self.wsAddressURI = wsAddressURI
-        self.sig_handler = sig_handler
-        self.address = None
-        self.endPointReference = kw.get('endPointReference', None)
-        self.cookies = Cookie.SimpleCookie()
-        self.http_callbacks = {}
-
-        if kw.has_key('auth'):
-            self.SetAuth(*kw['auth'])
-        else:
-            self.SetAuth(ZSI.auth.AUTH.none)
-
-        self.proxy = kw.get('proxy', None)
-
-        if self.transport:
-            self._transport_connect_signals(self.transport)
-
-    def _transport_connect_signals(self, transport):
-        transport.connect("response-received", self._response_handler)
-        transport.connect("request-sent", self._request_handler)
-        transport.connect("error", self._error_handler)
+        ZSI.client._Binding.__init__(self, nsdict, transport=None, url=url,
+                tracefile=None, readerclass=None, writerclass=None,
+                soapaction=soapaction, wsAddressURI=None, sig_handler=None,
+                transdict=None)
+        self._proxies = proxies or {}
+        self._active_transports = {}
+        
+        del self.RPC
+        del self.SendSOAPDataHTTPDigestAuth
+        del self.ReceiveRaw
+        del self.IsSOAP
+        del self.ReceiveSOAP
+        del self.IsAFault
+        del self.Receive
 
     def Send(self, url, opname, obj, nsdict={}, soapaction=None, wsaction=None, 
              endPointReference=None, **kw):
@@ -176,189 +148,63 @@ def SOAPBinding(ZSI.client._Binding):
         if self.sig_handler is not None:
             self.sig_handler.sign(sw)
 
-        scheme, host , resource = url_split(url)
-        transport = self.transport
-        if transport is None and url is not None:
-            transport = pymsn.gnet.protocol.ProtocolFactory(scheme,
-                    host, proxy=self.proxy)
-            self._transport_connect_signals(transport)
+        scheme, host, port, resource = url_split(url)
+        transport = self._get_transport(scheme, host, port)
 
-        soapdata = str(sw)
-        self.SendSOAPData(soapdata, url, soapaction, **kw)
+        self.SendSOAPData(transport, str(sw), url, soapaction, **kw)
 
-    def _response_handler(self, transport, response):
-        pass
+    def SendSOAPData(self, transport, soapdata, url, soapaction, headers={}, **kw):
+        url = url or self.url
+        #request_uri = ZSI._get_postvalue_from_absoluteURI(url)
+        scheme, host, port, resource = url_split(url)
+        
+        h = headers.copy()
+        h["SOAAction"] = '"%s"' % (soapaction or self.soapaction)
+        h["Content-Type"] = 'text/xml; charset=utf-8'
+        h["Cache-Control"] ="no-cache"
+        h["Accept"] = "text/*"
+        # fix : (to be removed later)
+        h["Proxy-Connection"] = "Keep-Alive"
+        h["Connection"] = "Keep-Alive"
 
-    def _request_handler(self, transport, request):
-        pass
-
-    def _error_handler(self, transport, error):
-        logger.warning("Transport Error :" + str(error))
-
-class BaseSOAPService(object):
-    DEFAULT_PROTOCOL = "http"
-
-    def __init__(self, url, proxy=None):
-        protocol, host, self.resource = self._url_split(url)
-        self.http_headers = {}
-        self.request = None
-        self.request_queue = []
-        self.transport = pymsn.gnet.protocol.ProtocolFactory(protocol, host, proxy=proxy)
-        self.transport.connect("response-received", self._response_handler)
-        self.transport.connect("request-sent", self._request_handler)
-        self.transport.connect("error", self._error_handler)
-
-    def _url_split(self, url):
-        from urlparse import urlsplit, urlunsplit
-        if "://" not in url: # fix a bug in urlsplit
-            url = self.DEFAULT_PROTOCOL + "://" + url
-        protocol, host, path, query, fragment = urlsplit(url)
-        if path == "": path = "/"
-        resource = urlunsplit(('', '', path, query, fragment))
-        return protocol, host, resource
+        transport.request(resource, h, soapdata, 'POST')
+        self.ps = None
 
     def _response_handler(self, transport, response):
         logger.debug("<<< " + str(response))
-        soap_response = SOAP.SOAPResponse(response.body)
-        #logger.debug("<<< SOAP Response: " + soap_response.body[0].tag)
+        self.ps = ParsedSoap(response.body, 
+                        readerclass=self.readerclass)
+        self._unref_transport(transport)
 
     def _request_handler(self, transport, request):
-        logger.debug(">>> " + str(request))
-        soap_request = SOAP.SOAPResponse(request.body)
-        #logger.debug(">>> SOAP Request: " + soap_request.body[0].tag)
+        logger.debug("<<< " + str(request))
 
     def _error_handler(self, transport, error):
         logger.warning("Transport Error :" + str(error))
+        self._unref_transport(transport)
 
-    def _send_request(self):
-        """This method sends the SOAP request over the wire"""
-        self.transport.request(resource = self.resource,
-                headers = self.http_headers,
-                data = str(self.request),
-                method = 'POST')
-        self.http_headers = {}
-        self.soap_headers = None
-        self.request = None
+    def _get_transport(self, scheme, host, port):
+        if (scheme, host, port) in self._active_transports:
+            trans = self._active_transports[(scheme, host, port)]
+            transport = trans[0]
+            trans[1] + = 1 # increment the usage
+        else:
+            proxy = self._proxies.get(scheme, None)
+            transport = pymsn.gnet.protocol.ProtocolFactory(scheme,
+                    host, port, proxy=proxy)
+            trans = [transport, 1, []]
+            trans[2].append(transport.connect("response-received", self._response_handler))
+            trans[2].append(transport.connect("request-sent", self._request_handler))
+            trans[2].append(transport.connect("error", self._error_handler))
+            self._active_transports[(scheme, host, port)] = trans
+        return transport
 
-
-class SOAPService(BaseSOAPService):
-    """Base class for all Windows Live Services."""
-
-    def __init__(self, url, proxy=None):
-        BaseSOAPService.__init__(self, url, proxy)
-        self._response_extractor = {}
-
-    def __getattr__(self, name):
-        def method(callback, *params):
-            self._simple_method(name, callback, *params)
-        method.__name__ = name
-        return method
-
-    def _method(self, method_name, callback, callback_args, attributes, *params):
-        """Used for method construction, the SOAP tree is built
-        but not sent, so that the ComplexMethods can use it and add
-        various things to the SOAP tree before sending it.
-
-            @param method_name: the SOAP method name
-            @type method_name: string
-
-            @param callback: the callback to use when the response is received
-            @type callback: callable(callback_args, response)
-
-            @param callback_args: additional arguments to be passed to the callback
-            @type callback_args: tuple(callback)
-
-            @param attributes: the attributes to be attached to the method call
-            @type attributes: dict
-
-            @param params: tuples containing the attribute name and the
-                attribute value
-            @type params: tuple(name, value) or tuple(type, name, value)
-
-            @note: this method does not actually send the request and
-            L{_send_request} must be called"""
-        ns = self._method_namespace(method_name)
-        request = SOAP.SOAPRequest(method_name, ns, **attributes)
-        for param in params:
-            assert(len(param) == 2 or len(param) == 3)
-            if len(param) == 2:
-                request.add_argument(param[0], value=param[1])
-            elif len(param) == 3:
-                request.add_argument(param[1], type=param[0], value=param[2])
-        self.request = request
-        self._soap_headers(method_name)
-        self._http_headers(method_name)
-        self.request_queue.append((method_name, callback, callback_args))
-
-    def _simple_method(self, method_name, callback, callback_args, *params):
-        """Methods that are auto handled.
-
-            @param method_name: the SOAP method name
-            @type method_name: string
-
-            @param callback: the callback to use when the response is received
-            @type callback: callable(response)
-
-            @param callback_args: additional arguments to be passed to the callback
-            @type callback_args: tuple(callback)
-
-            @param params: tuples containing the attribute name and the
-                attribute value
-            @type params: tuple(name, value) or tuple(type, name, value)"""
-        self._method(method_name, callback, callback_args, {}, *params)
-        self._send_request()
-
-    def _response_handler(self, transport, response):
-        BaseSOAPService._response_handler(self, transport, response)
-        soap_response = SOAP.SOAPResponse(response.body)
-        method, callback, callback_args = self.request_queue.pop(0)
-        if callback is not None:
-            result = self._extract_response(method, soap_response)
-            arguments = tuple(callback_args)
-            if result is not None: arguments += tuple(result)
-            callback(*arguments)
-
-    def _extract_response(self, method, soap_response):
-        if method in self._response_extractor:
-            result = [soap_response]
-            values = self._response_extractor[method]
-            for value in values:
-                result.append(soap_response.find(value))
-            return tuple(result)
-        return (soap_response,)
-
-    def _soap_action(self, method):
-        """return the SOAPAction header value to be used
-        for the given method.
-
-            @param method: the method name
-            @type method: string"""
-        raise NotImplementedError
-
-    def _method_namespace(self, method):
-        """return the namespace of the given method.
-
-            @param method: the method name
-            @type method: string"""
-        raise NotImplementedError
-
-    def _soap_headers(self, method):
-        """Add the needed headers for the current method"""
-        pass
-
-    def _http_headers(self, method):
-        """Sets the needed http headers for the current method"""
-        if self._soap_action(method):
-            self.http_headers['SOAPAction'] = self._soap_action(method)
-        self.http_headers['Content-Type'] = "text/xml; charset=utf-8"
-        self.http_headers['Cache-Control'] ="no-cache"
-        self.http_headers['Accept'] = "text/*"
-        # fix : (to be removed later)
-        self.http_headers["Proxy-Connection"] = "Keep-Alive"
-        self.http_headers["Connection"] = "Keep-Alive"
-
-
-class SOAPServiceRequest(object):
-    def __init__(callback, callback_args):
-        pass
+    def _unref_transport(self, transport):
+        for key, trans in self._active_transports:
+            if trans[0] == transport:
+                trans[1] -= 1
+                if trans[1] == 0:
+                    for handle in trans[2]:
+                        transport.disconnect(handle)
+                    del self._active_transports[key]
 
