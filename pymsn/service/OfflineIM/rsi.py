@@ -17,25 +17,19 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-from pymsn.service.SOAPService import SOAPService, SOAPUtils, SOAPFault
+from base import BaseRSI
+from pymsn.service.SOAPService import SOAPService, SOAPUtils
 
 RSI_SERVICE_URL = "https://rsi.hotmail.com/rsi/rsi.amx"
 NS_RSI = "http://www.hotmail.msn.com/ws/2004/09/oim/rsi"
 
 NS_SHORTHANDS = { "rsi" : NS_RSI }
 
-class Message(Object):
-    def __init__(self, xml_node):
-
-class RSIError(SOAPFault):
-    def __init__(self, xml_node):
-        SOAPFault.__init__(self, xml_node)
-
 class RSIService(BaseRSI, SOAPService):
 
-    def __init__(self, passport_security_token):
+    def __init__(self, passport_security_token, http_proxy=None):
         BaseRSI.__init__(self, passport_security_token)
-        SOAPService.__init__(self, RSI_SERVICE_URL)
+        SOAPService.__init__(self, RSI_SERVICE_URL, http_proxy)
 
     def GetMetadata(self, callback, *callback_args):
         self._simple_method("GetMetadata", callback, callback_args)
@@ -55,10 +49,7 @@ class RSIService(BaseRSI, SOAPService):
         self._send_request()
 
     def _extract_response(self, method, soap_response):
-        path = "./%sResponse".replace("/", "/{%s}" % NS_STORAGE) % method
-        if soap_response.body.find(path) is None: 
-            raise RSIError(soap_response.body)
-
+        #path = "./%sResponse".replace("/", "/{%s}" % NS_STORAGE) % method
         if method == "GetMetadata":
             # TODO : process xml metadata
             return (soap_response,)

@@ -19,6 +19,7 @@
 
 from pymsn.service.SOAPService import SOAPService
 
+from pymsn.msnp.notification import ProtocolConstant
 from xml.utils import iso8601
 from base64 import b64encode
 from string import join, split
@@ -71,15 +72,15 @@ class BaseOIM(object):
                                   b64encode(self._fname))
         attrib = { "memberName" : self._source_passport,
                    "friendlyName" : fname,
-                   "xml:lang" : "nl-nl",
-                   "proxy" : "MSNMSGR",
-                   "msnpVer" : "MSNP13",
-                   "buildVer" : "8.0.0328" }
+                   #"xml:lang" : "nl-nl",
+                   "proxy" : ProtocolConstant.CVR[4],
+                   "msnpVer" : ProtocolConstant.VER[2],
+                   "buildVer" : ProtocolConstant.CVR[5] }
         self.request.add_header("From", NS_OIM, attrib)
-        attrib = { "memberName" : self._dest_passport }
+        attrib = { "memberName" : self._recipient_passport }
         self.request.add_header("To", NS_OIM, attrib)
         attrib = { "passport" : self.__security_token,
-                   "appid" : "",
+                   "appid" : ProtocolConstant.PRODUCT_ID,
                    "lockkey" : "" } # lots of work here with the lockkey
         self.request.add_header("Ticket", NS_OIM, attrib)
         Sequence = self.request.add_header("Sequence", NS_RM)

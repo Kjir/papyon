@@ -3,6 +3,7 @@
 # pymsn - a python client library for Msn
 #
 # Copyright (C) 2005-2007 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,8 +31,9 @@ from switchboard_manager import SwitchboardClient
 
 import logging
 import gobject
+from urllib import quote, unquote
 
-__all__ = ['Conversation']
+__all__ = ['Conversation','TextFormat']
 
 logger = logging.getLogger('conversation')
 
@@ -48,7 +50,7 @@ class Conversation(SwitchboardClient):
         return content_type in ('text/plain', 'text/x-msmsgscontrol',
                 'text/x-msnmsgr-datacast')
 
-    def send_text_message(self, text):
+    def send_text_message(self, text, formatting=None):
         """Build and send a text message to all persons in this
         switchboard.
         
@@ -57,14 +59,25 @@ class Conversation(SwitchboardClient):
         content_type = ("text/plain","utf-8")
         body = text.encode("utf-8")
         ack = msnp.MessageAcknowledgement.HALF
-        self._send_message(content_type, body, ack)
+        headers = {}
+        if formatting is not None: 
+            headers["X-MMS-IM-Format"] = str(formatting)
+        self._send_message(content_type, body, headers, ack)
 
     def send_nudge(self):
         """Sends a nudge to the contacts on this switchboard."""
         content_type = "text/x-msnmsgr-datacast"
         body = "ID: 1\r\n\r\n".encode('UTF-8') #FIXME: we need to figure out the datacast objects :D
         ack = msnp.MessageAcknowledgement.NONE
-        self._send_message(content_type, body, ack)
+        self._send_message(content_type, body, ack=ack)
+
+    def send_typing_notification(self):
+        """Sends an user typing notification to the contacts on this switchboard"""
+        content_type = "text/x-msmsgscontrol"
+        body = "\r\n\r\n".encode('UTF-8')
+        headers = { "TypingUser" : self._client.profile.account.encode('UTF_8') }
+        ack = msnp.MessageAcknowledgement.NONE
+        self._send_message(content_type, body, headers, ack)
     
     def invite_user(self, contact):
         """Request a contact to join in the conversation.
@@ -111,9 +124,11 @@ class Conversation(SwitchboardClient):
             sender = senders.get_first()
 
         if message_type == 'text/plain':
-            # FIXME: expose formattings
             self._dispatch("on_conversation_message_received",
-                    sender, unicode(message.body, message.content_type[1]), None)
+                           sender, unicode(message.body, message.content_type[1]),
+                           TextFormat.parse(message.headers["X-MMS-IM-Format"]))
+        if message_type == 'text/x-msnmsgscontrol':
+            self._dispatch("on_conversation_user_typing", sender)
         if message_type == 'text/x-msnmsgr-datacast' and \
                 message.body.strip() == "ID: 1":
             self._dispatch("on_conversation_nudge_received",
@@ -121,3 +136,97 @@ class Conversation(SwitchboardClient):
 
     def _on_message_sent(self, message):
         pass
+
+
+class TextFormat(object):
+    
+    DEFAULT_FONT = 'MS Sans Serif'
+    
+    BOLD = 1
+    ITALIC = 2
+    UNDERLINE = 4
+    STRIKETHROUGH = 8
+
+    @staticmethod
+    def parse(format):
+        text_format = TextFormat()
+        text_format.__parse(format)
+        return text_format
+
+    @property
+    def font(self):
+        return self._font
+    
+    @property
+    def style(self):
+        return self._style
+
+    @property
+    def color(self):
+        return self._color
+
+    @property
+    def right_alignment(self):
+        return self._right_alignment
+
+    @property
+    def family(self):
+        return self._family
+
+    def __init__(self, font=quote(DEFAULT_FONT), style=0, color='0', 
+                 right_alignment=False, family=None):
+        self._font = font
+        self._style = style
+        self._color = color
+        self._right_alignment = right_alignment
+        self._family = family
+    
+    def __parse(self, format):
+        for property in format.split(';'):
+            key, value =  [str.upper(p.strip()) for p in property.split('=', 1)]
+            if key == 'FN':
+                # Font
+                self._font = unquote(value)
+            elif key == 'EF':
+                # Effects
+                if 'B' in value: self._style |= TextFormat.BOLD
+                if 'I' in value: self._style |= TextFormat.ITALIC
+                if 'U' in value: self._style |= TextFormat.UNDERLINE
+                if 'S' in value: self._style |= TextFormat.STRIKETHROUGH
+            elif key == 'CO':
+                # Color
+                value = str.zfill(value, 6)
+                self._color = ''.join((value[4:6], value[2:4], value[0:2]))
+            elif key == 'CS':
+                # Charset
+                pass
+            elif key == 'PF':
+                # Pitch and family
+                self._family = value
+            elif key == 'RL':
+                # Right alignment
+                if value == '1': self._right_alignement = True
+
+    def __str__(self):
+        style = ''
+        if self._style & TextFormat.BOLD == TextFormat.BOLD: 
+            style += 'B'
+        if self._style & TextFormat.ITALIC == TextFormat.ITALIC: 
+            style += 'I'
+        if self._style & TextFormat.UNDERLINE == TextFormat.UNDERLINE: 
+            style += 'U'
+        if self._style & TextFormat.STRIKETHROUGH == TextFormat.STRIKETHROUGH: 
+            style += 'S'
+        
+        color = '%s%s%s' % (self._color[4:6], self._color[2:4], self._color[0:2])
+
+        format = 'FN=%s; EF=%s; CO=%s'  % (quote(self._font), style, color)
+
+        if self._family is not None: format += '; PF=%s' % self._family
+        if self._right_alignment: format += '; RL=1'
+        
+        return format
+
+    def __repr__(self):
+        return __str__(self)
+        

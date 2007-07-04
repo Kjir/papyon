@@ -33,7 +33,7 @@ class ClientEvents(pymsn.event.ClientEventInterface):
             self._client.profile.display_name = "Kimbix"
             self._client.profile.presence = pymsn.Presence.ONLINE
             self._client.profile.personal_message = "Testing pymsn, and freeing the pandas!"
-            #gobject.timeout_add(5000, self._client.start_conversation)
+            gobject.timeout_add(5000, self._client.start_conversation)
 
     def on_client_error(self, error_type, error):
         print "ERROR :", error_type, " ->", error
@@ -43,9 +43,20 @@ class AnnoyingConversation(pymsn.event.ConversationEventInterface):
         gobject.timeout_add(5000, self.annoy_user)
 
     def annoy_user(self):
-        self._client.send_text_message("Let's free the pandas ! (testing pymsn)")
+        formatting = pymsn.TextFormat("Comic Sans MS", 
+                                      pymsn.TextFormat.UNDERLINE | pymsn.TextFormat.BOLD,
+                                      'FF0000')
+        self._client.send_text_message("Let's free the pandas ! (testing pymsn)",
+                                       formatting)
         self._client.send_nudge()
+        self._client.send_typing_notification()
+        self._client.send_typing_notification()
+        self._client.send_typing_notification()
+        self._client.send_typing_notification()
         return True
+
+    def on_conversation_message_received(self, sender, message, formatting):
+        print formatting
 
     def on_conversation_error(self, error_type, error):
         print "ERROR :", error_type, " ->", error
@@ -75,9 +86,9 @@ class Client(pymsn.Client):
             return True
         else:
             for contact in contacts:
-                if contact.account == "im_a_jabber_monkey@hotmail.com":
+                #if contact.account == "im_a_jabber_monkey@hotmail.com":
                 #if contact.account == "tp-butterfly@hotmail.com":
-                #if contact.account == "johann.prieur@gmail.com":
+                if contact.account == "johann.prieur@gmail.com":
                     print "Inviting %s for a conversation" % contact.display_name
                     self.conv = pymsn.Conversation(self, [contact])
                     AnnoyingConversation(self.conv)

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2007  Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007  Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -35,6 +36,9 @@ class ConversationEventInterface(BaseEventInterface):
         pass
 
     def on_conversation_user_left(self, contact):
+        pass
+
+    def on_conversation_user_typing(self, contact):
         pass
 
     def on_conversation_message_received(self, sender, message, formatting):

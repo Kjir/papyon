@@ -17,35 +17,30 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-from pymsn.service.SOAPService import SOAPService, SOAPUtils, SOAPFault
+from base import BaseOIM
+from pymsn.service.SOAPService import SOAPService, SOAPUtils
 
 OIM_SERVICE_URL = "https://ows.messenger.msn.com/OimWS/oim.asmx"
 NS_OIM = "http://messenger.msn.com/ws/2004/09/oim"
 
 NS_SHORTHANDS = { "oim" : NS_OIM }
 
-class OIMError(SOAPFault):
-    def __init__(self, xml_node):
-        SOAPFault.__init__(self, xml_node)
-
 class OIMService(BaseOIM, SOAPService):
 
-    def __init__(self, passport_security_token):
+    def __init__(self, passport_security_token, http_proxy=None):
         BaseOIM.__init__(self, passport_security_token)
-        SOAPService.__init__(self, OIM_SERVICE_URL)
+        SOAPService.__init__(self, OIM_SERVICE_URL, http_proxy)
 
-    def Store(self, source_passport, fname, dest_passport,
-              callback, *callback_args):
+    def Store(self, source_passport, fname, recipient_passport,
+              sequence_number, callback, *callback_args):
         self._source_passport = source_passport
         self._fname = fname
-        self._dest_passport = dest_passport
+        self._recipient_passport = recipient_passport
+        self._sequence_number = sequence_number
         if True: raise NotImplementedError
-        # ouch...
 
     def _extract_response(self, method, soap_response):
-        path = "./%sResponse".replace("/", "/{%s}" % NS_STORAGE) % method
-        if soap_response.body.find(path) is None: 
-            raise OIMError(soap_response.body)
+        #path = "./%sResponse".replace("/", "/{%s}" % NS_STORAGE) % method
 
         if method == "Store":
             return (soap_reponse,)

@@ -3,6 +3,7 @@
 # pymsn - a python client library for Msn
 #
 # Copyright (C) 2005-2007 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -53,15 +54,15 @@ class SwitchboardClient(object):
         return False
 
     def _send_message(self,
-            content_type, body, ack=msnp.MessageAcknowledgement.HALF):
+            content_type, body, headers={}, ack=msnp.MessageAcknowledgement.HALF):
         if self._switchboard is None or \
                 self._switchboard.state != msnp.ProtocolState.OPEN:
             self.__request_switchboard()
-            self._message_queue.append((content_type, body, ack))
+            self._message_queue.append((content_type, body, headers, ack))
         elif self._switchboard.inviting:
-            self._message_queue.append((content_type, body, ack))
+            self._message_queue.append((content_type, body, headers, ack))
         else:
-            self.__send_message(content_type, body, ack)
+            self.__send_message(content_type, body, headers, ack)
 
     def _invite_user(self, contact):
         if self._switchboard is None or \
@@ -132,11 +133,13 @@ class SwitchboardClient(object):
             self._invite_queue.remove(contact)
     
     # Helper functions
-    def __send_message(self, content_type, body, ack):
+    def __send_message(self, content_type, body, headers, ack):
         trd_id = self._switchboard._transport.transaction_id
         message = msnp.OutgoingMessage(trd_id, ack)
         message.content_type = content_type
         message.body = body
+        for key, value in headers.iteritems():
+            message.headers[key] = value
         self._switchboard.send_message(message)
 
     def __request_switchboard(self):
