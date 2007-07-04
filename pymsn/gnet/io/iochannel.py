@@ -107,13 +107,13 @@ class GIOChannelClient(AbstractClient):
         self._source_id = self._channel.add_watch(cond, handler)
     
     def _watch_add_cond(self, cond):
-        if self._source_condition & cond:
+        if self._source_condition & cond == cond:
             return
         self._source_condition |= cond
         self._watch_set_cond(self._source_condition)
 
     def _watch_remove_cond(self, cond):
-        if not self._source_condition & cond:
+        if self._source_condition & cond == 0:
             return
         self._source_condition ^= cond
         self._watch_set_cond(self._source_condition)
