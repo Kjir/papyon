@@ -42,7 +42,7 @@ def soap_action():
 
     return None
 
-def soap_header():
+def soap_header(account, password):
     """Returns the SOAP xml header"""
 
     return """
@@ -58,7 +58,8 @@ def soap_header():
             <wsse:Username>%(account)s</wsse:Username>
             <wsse:Password>%(password)s</wsse:Password>
         </wsse:UsernameToken>
-        </wsse:Security>"""
+        </wsse:Security>""" % {'account': xml.escape(account),
+                'password': xml.escape(password)}
 
 def soap_body(*tokens):
     """Returns the SOAP xml body"""

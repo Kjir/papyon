@@ -23,3 +23,5 @@ name = "SingleSignOn"
 description = "Microsoft Passport single sign on service."
 
 service_url = "https://login.live.com/RST.srf"
+
+import RequestMultipleSecurityTokens
