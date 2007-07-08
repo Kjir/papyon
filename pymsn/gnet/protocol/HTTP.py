@@ -96,7 +96,7 @@ class HTTP(gobject.GObject):
         self.emit("request-sent", self._outgoing_queue[0])
 
     def _on_response_received(self, parser, response):
-        if response.status == 100:
+        if response.status >= 100 and response.status < 200:
             return
         #if response.status in (301, 302): # UNTESTED: please test
         #    location = response.headers['Location']

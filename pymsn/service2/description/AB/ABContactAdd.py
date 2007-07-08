@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# pymsn - a python client library for Msn
-#
-# Copyright (C) 2005-2006 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,12 +14,24 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+#
 
+from common import *
 
-name = "SingleSignOn"
-description = "Microsoft Passport single sign on service."
+def transport_headers(*args, **kwargs):
+    """Returns a dictionary, containing transport (http) headers
+    to use for the request"""
 
-url = "https://login.live.com/RST.srf"
+    return {}
 
-import RequestMultipleSecurityTokens
+def soap_action(*args, **kwargs):
+    """Returns the SOAPAction value to pass to the transport
+    or None if no SOAPAction needs to be specified"""
+
+    return "http://www.msn.com/webservices/AddressBook/ABContactAdd"
+
+def soap_body(*args, **kwargs):
+    """Returns the SOAP xml body"""
+
+    return """ """

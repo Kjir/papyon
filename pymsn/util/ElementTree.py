@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2005  Ole André Vadla Ravnås <oleavr@gmail.com>
 # Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify

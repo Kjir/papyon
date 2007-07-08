@@ -25,7 +25,7 @@ Implements the protocol used to communicate with the Notification Server."""
 
 from base import BaseProtocol, ProtocolState
 from message import IncomingMessage
-import pymsn.gnet.util.ElementTree as et #FIXME: maybe this should be moved to pymsn
+import pymsn.util.ElementTree as et
 import pymsn.profile as profile
 import pymsn.service.SingleSignOn as SSO
 import pymsn.service.AddressBook as AddressBook

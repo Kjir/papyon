@@ -29,20 +29,19 @@ class LiveService(object):
     TB = ("http://Passport.NET/tb", None)
     VOICE = ("voice.messenger.msn.com", "?id=69264")
 
-
-def transport_headers():
+def transport_headers(*args, **kwargs):
     """Returns a dictionary, containing transport (http) headers
     to use for the request"""
 
     return {}
 
-def soap_action():
+def soap_action(*args, **kwargs):
     """Returns the SOAPAction value to pass to the transport
     or None if no SOAPAction needs to be specified"""
 
     return None
 
-def soap_header(account, password):
+def soap_header(account, password, *args, **kwargs):
     """Returns the SOAP xml header"""
 
     return """
@@ -61,7 +60,7 @@ def soap_header(account, password):
         </wsse:Security>""" % {'account': xml.escape(account),
                 'password': xml.escape(password)}
 
-def soap_body(*tokens):
+def soap_body(*tokens, *args, **kwargs):
     """Returns the SOAP xml body"""
 
     token_template = """

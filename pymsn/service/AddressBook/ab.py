@@ -100,7 +100,7 @@ class AB(BaseAddressBook, SOAPService):
         self._scenario = scenario
         self._simple_method("ABFindAll", callback, callback_args,
                 ("abId", "00000000-0000-0000-0000-000000000000"),
-                ("abView", "Full"), # add lastChanges to make deltasOnly usable
+                ("abView", "Full"), # FIXME : add lastChanges to make deltasOnly usable
                 ("deltasOnly", SOAPUtils.bool_to_string(deltas_only)),
                 ("dynamicItemView", "Gleam"))
 
