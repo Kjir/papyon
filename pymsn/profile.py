@@ -222,7 +222,7 @@ class User(gobject.GObject):
         return self._profile
 
     def __set_display_name(self, display_name):
-        if not display_name:
+        if not display_name or display_name == self._display_name:
             return
         self._ns_client.set_display_name(display_name)
     def __get_display_name(self):
@@ -230,6 +230,8 @@ class User(gobject.GObject):
     display_name = property(__get_display_name, __set_display_name)
 
     def __set_presence(self, presence):
+        if presence == self._presence:
+            return
         self._ns_client.set_presence(presence)
     def __get_presence(self):
         return self._presence
@@ -242,6 +244,8 @@ class User(gobject.GObject):
     privacy = property(__get_privacy, __set_privacy)
 
     def __set_personal_message(self, personal_message):
+        if personal_message == self._personal_message:
+            return
         self._ns_client.set_personal_message(personal_message)
     def __get_personal_message(self):
         return self._personal_message
