@@ -19,19 +19,19 @@
 
 from common import *
 
-def transport_headers(*args, **kwargs):
+def transport_headers():
     """Returns a dictionary, containing transport (http) headers
     to use for the request"""
 
     return {}
 
-def soap_action(*args, **kwargs):
+def soap_action():
     """Returns the SOAPAction value to pass to the transport
     or None if no SOAPAction needs to be specified"""
 
     return "http://www.msn.com/webservices/AddressBook/ABFindAll"
 
-def soap_body(deltas_only, last_change, *args, **kwargs):
+def soap_body(deltas_only, last_change):
     """Returns the SOAP xml body"""
 
     return """

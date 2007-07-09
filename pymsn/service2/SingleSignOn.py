@@ -57,3 +57,38 @@ class SingleSignOn(SOAPService):
     def _error_handler(self, transport, error):
         callback, errback = SOAPService._error_handler(self,
                 transport, error)
+
+if __name__ == '__main__':
+    import sys
+    import getpass
+    import signal
+    import gobject
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG)
+
+    if len(sys.argv) < 2:
+        account = raw_input('Account: ')
+    else:
+        account = sys.argv[1]
+
+    if len(sys.argv) < 3:
+        password = getpass.getpass('Password: ')
+    else:
+        password = sys.argv[2]
+
+    mainloop = gobject.MainLoop(is_running=True)
+    
+    signal.signal(signal.SIGTERM,
+            lambda *args: gobject.idle_add(mainloop.quit()))
+
+    sso = SingleSignOn(account, password)
+    sso.RequestMultipleSecurityTokens(None, None, 
+            LiveService.MESSENGER,
+            LiveService.CONTACTS)
+
+    while mainloop.is_running():
+        try:
+            mainloop.run()
+        except KeyboardInterrupt:
+            mainloop.quit()

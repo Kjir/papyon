@@ -30,18 +30,24 @@ __all__ = ['SOAPService', 'SOAPResponse']
 
 logger = logging.getLogger('Service')
 
-def url_split(self, url, default_scheme='http'):
+def url_split(url, default_scheme='http'):
     from urlparse import urlsplit, urlunsplit
     if "://" not in url: # fix a bug in urlsplit
         url = default_scheme + "://" + url
     protocol, host, path, query, fragment = urlsplit(url)
     if path == "": path = "/"
+    try:
+        host, port = host.rsplit(":", 1)
+        port = int(port)
+    except:
+        port = None
     resource = urlunsplit(('', '', path, query, fragment))
-    return protocol, host, resource
+    return protocol, host, port, resource
 
 space_regex = [(re.compile('>\s+<'), '><'),
         (re.compile('>\s+'), '>'),
-        (re.compile('<\s+'), '<')]
+        (re.compile('<\s+'), '<'),
+        (re.compile('\s+'), ' ')] # FIXME: remove this one
 
 def compress_xml(xml_string):
     global space_regex
@@ -157,8 +163,9 @@ class SOAPService(object):
         
         scheme, host, port, resource = url_split(url)
         http_headers = transport_headers.copy()
-        http_headers["SOAPAction"] = '"%s"' % soap_action
-        http_headers["Content-Type"] = 'text/xml; charset=utf-8'
+        if soap_action is not None:
+            http_headers["SOAPAction"] = str(soap_action)
+        http_headers["Content-Type"] = "text/xml; charset=utf-8"
         http_headers["Cache-Control"] ="no-cache"
         http_headers["Accept"] = "text/*"
         http_headers["Proxy-Connection"] = "Keep-Alive"
@@ -201,7 +208,7 @@ class SOAPService(object):
         return transport
 
     def _unref_transport(self, transport):
-        for key, trans in self._active_transports:
+        for key, trans in self._active_transports.iteritems():
             if trans[0] == transport:
                 callback, errback = trans[1].pop(0)
                 

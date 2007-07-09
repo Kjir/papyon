@@ -29,19 +29,19 @@ class LiveService(object):
     TB = ("http://Passport.NET/tb", None)
     VOICE = ("voice.messenger.msn.com", "?id=69264")
 
-def transport_headers(*args, **kwargs):
+def transport_headers():
     """Returns a dictionary, containing transport (http) headers
     to use for the request"""
 
     return {}
 
-def soap_action(*args, **kwargs):
+def soap_action():
     """Returns the SOAPAction value to pass to the transport
     or None if no SOAPAction needs to be specified"""
 
     return None
 
-def soap_header(account, password, *args, **kwargs):
+def soap_header(account, password):
     """Returns the SOAP xml header"""
 
     return """
@@ -60,7 +60,7 @@ def soap_header(account, password, *args, **kwargs):
         </wsse:Security>""" % {'account': xml.escape(account),
                 'password': xml.escape(password)}
 
-def soap_body(*tokens, *args, **kwargs):
+def soap_body(*tokens):
     """Returns the SOAP xml body"""
 
     token_template = """
@@ -102,5 +102,5 @@ def soap_body(*tokens, *args, **kwargs):
 
     return """<ps:RequestMultipleSecurityTokens
         xmlns:ps="http://schemas.microsoft.com/Passport/SoapServices/PPCRL"
-        Id="RSTS">%s<ps:/RequestMultipleSecurityTokens>""" % body
+        Id="RSTS">%s</ps:RequestMultipleSecurityTokens>""" % body
 
