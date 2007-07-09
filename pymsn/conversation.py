@@ -127,7 +127,7 @@ class Conversation(SwitchboardClient):
             self._dispatch("on_conversation_message_received",
                            sender, unicode(message.body, message.content_type[1]),
                            TextFormat.parse(message.headers["X-MMS-IM-Format"]))
-        if message_type == 'text/x-msnmsgscontrol':
+        if message_type == 'text/x-msmsgscontrol':
             self._dispatch("on_conversation_user_typing", sender)
         if message_type == 'text/x-msnmsgr-datacast' and \
                 message.body.strip() == "ID: 1":
