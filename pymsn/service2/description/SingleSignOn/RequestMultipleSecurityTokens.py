@@ -100,7 +100,7 @@ def soap_body(*tokens):
                     'policy_reference': policy_reference}
         body += t
 
-    return """<ps:RequestMultipleSecurityTokens
-        xmlns:ps="http://schemas.microsoft.com/Passport/SoapServices/PPCRL"
-        Id="RSTS">%s</ps:RequestMultipleSecurityTokens>""" % body
+    return '<ps:RequestMultipleSecurityTokens ' \
+        'xmlns:ps="http://schemas.microsoft.com/Passport/SoapServices/PPCRL" ' \
+        'Id="RSTS">%s</ps:RequestMultipleSecurityTokens>' % body
 

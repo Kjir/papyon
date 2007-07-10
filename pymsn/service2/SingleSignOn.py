@@ -58,6 +58,7 @@ class SingleSignOn(SOAPService):
         callback, errback = SOAPService._error_handler(self,
                 transport, error)
 
+
 if __name__ == '__main__':
     import sys
     import getpass

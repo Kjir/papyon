@@ -46,8 +46,7 @@ def url_split(url, default_scheme='http'):
 
 space_regex = [(re.compile('>\s+<'), '><'),
         (re.compile('>\s+'), '>'),
-        (re.compile('<\s+'), '<'),
-        (re.compile('\s+'), ' ')] # FIXME: remove this one
+        (re.compile('<\s+'), '<')]
 
 def compress_xml(xml_string):
     global space_regex
@@ -155,9 +154,6 @@ class SOAPService(object):
         self._active_transports = {}
         self._proxies = proxies or {}
 
-    def __getattr__(self, name):
-        pass
-
     def _send_request(self, url, soap_header, soap_body, soap_action,
             callback, errback=None, transport_headers={}):
         
@@ -175,7 +171,6 @@ class SOAPService(object):
 
         transport = self._get_transport(scheme, host, port, callback, errback)
         transport.request(resource, http_headers, request, 'POST')
-
 
     def _response_handler(self, transport, http_response):
         logger.debug("<<< " + str(http_response))
