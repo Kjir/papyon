@@ -29,19 +29,30 @@ def soap_action():
     """Returns the SOAPAction value to pass to the transport
     or None if no SOAPAction needs to be specified"""
 
-    return "http://www.msn.com/webservices/AddressBook/ABFindAll"
+    return "http://www.msn.com/webservices/AddressBook/ABGroupUpdate"
 
-default_timestamp = "0001-01-01T00:00:00.0000000-08:00"
-
-def soap_body(deltas_only, last_change):
+def soap_body(group_id, group_name):
     """Returns the SOAP xml body"""
 
     return """
-       <ABFindAll xmlns="http://www.msn.com/webservices/AddressBook">
-          <abId>00000000-0000-0000-0000-000000000000</abId>
-          <abView>Full</abView>
-          <deltasOnly>%(deltas_only)s</deltasOnly>
-          <lastChange>%(last_change)s</lastChange>
-          <dynamicItemView>Gleam</dynamicItemView>
-       </ABFindAll>""" % {'deltas_only' : deltas_only,
-                          'last_change' : last_change}
+        <ABGroupUpdate xmlns="http://www.msn.com/webservices/AddressBook">
+            <abId>
+                00000000-0000-0000-0000-000000000000
+            </abId>
+            <groups>
+                <Group>
+                    <groupId>
+                        %(group_id)s
+                    </groupId>
+                    <groupInfo>
+                        <name>
+                            %(group_name)s
+                        </name>
+                    </groupInfo>
+                    <propertiesChanged>
+                        GroupName
+                    </propertiesChanged>
+                </Group>
+            </groups>
+        </ABGroupUpdate>""" % { 'group_id' : group_id,
+                                'group_name' : group_name }

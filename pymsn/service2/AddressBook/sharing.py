@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #
+# pymsn - a python client library for Msn
+#
 # Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -14,22 +16,22 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-#
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-name = "AB"
-description = "Hotmail address book service"
+from pymsn.service2.SOAPService import SOAPService
 
-url = "http://contacts.msn.com/abservice/abservice.asmx"
+__all__ = ['Sharing']
 
-import ABFindAll
+class Sharing(SOAPService):
+    def __init__(self, security_token, proxies=None):
+        self.__security_token = security_token
+        SOAPService.__init__(self, "Sharing", proxies)
 
-import ABContactAdd
-import ABContactDelete
-import ABContactUpdate
+    def FindMembership(self):
+        pass
 
-import ABGroupAdd
-import ABGroupDelete
-import ABGroupUpdate
-import ABGroupContactAdd
-import ABGroupContactDelete
+    def AddMember(self):
+        pass
+
+    def DeleteMember(self):
+        pass

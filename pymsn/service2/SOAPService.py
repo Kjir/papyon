@@ -30,6 +30,21 @@ __all__ = ['SOAPService', 'SOAPResponse']
 
 logger = logging.getLogger('Service')
 
+def bool_type(s):
+    if s.lower() in ("false", "no", "f", "n", "0", ""):
+        return False
+    return True
+
+def bool_to_string(b):
+    if b: return "true"
+    return "false"
+
+def int_type(s):
+    try:
+        return int(s)
+    except:
+        return 0
+
 def url_split(url, default_scheme='http'):
     from urlparse import urlsplit, urlunsplit
     if "://" not in url: # fix a bug in urlsplit
@@ -162,7 +177,7 @@ class SOAPService(object):
         if soap_action is not None:
             http_headers["SOAPAction"] = str(soap_action)
         http_headers["Content-Type"] = "text/xml; charset=utf-8"
-        http_headers["Cache-Control"] ="no-cache"
+        http_headers["Cache-Control"] = "no-cache"
         http_headers["Accept"] = "text/*"
         http_headers["Proxy-Connection"] = "Keep-Alive"
         http_headers["Connection"] = "Keep-Alive"

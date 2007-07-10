@@ -17,19 +17,11 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-name = "AB"
-description = "Hotmail address book service"
+name = "Sharing"
+description = "Membership address book service"
 
-url = "http://contacts.msn.com/abservice/abservice.asmx"
+url = "http://contacts.msn.com/abservice/SharingService.asmx"
 
-import ABFindAll
-
-import ABContactAdd
-import ABContactDelete
-import ABContactUpdate
-
-import ABGroupAdd
-import ABGroupDelete
-import ABGroupUpdate
-import ABGroupContactAdd
-import ABGroupContactDelete
+import FindMembership
+import AddMember
+import DeleteMember

@@ -142,10 +142,46 @@ class TextFormat(object):
     
     DEFAULT_FONT = 'MS Sans Serif'
     
+    # effects
+    NO_EFFECT = 0
     BOLD = 1
     ITALIC = 2
     UNDERLINE = 4
     STRIKETHROUGH = 8
+
+    # charset
+    ANSI_CHARSET = '0'
+    DEFAULT_CHARSET = '1'
+    SYMBOL_CHARSET = '2'
+    MAC_CHARSETLT = '4d'
+    SHIFTJIS_CHARSET = '80'
+    HANGEUL_CHARSET = '81'
+    JOHAB_CHARSET = '82'
+    GB2312_CHARSET = '86'
+    CHINESEBIG5_CHARSET = '88'
+    GREEK_CHARSET = 'a1'
+    TURKISH_CHARSET = 'a2'
+    VIETNAMESE_CHARSET = 'a3'
+    HEBREW_CHARSET = 'b1'
+    ARABIC_CHARSET = 'b2'
+    BALTIC_CHARSET = 'ba'
+    RUSSIAN_CHARSET_DEFAULT = 'cc'
+    THAI_CHARSET = 'de'
+    EASTEUROPE_CHARSET = 'ee'
+    OEM_DEFAULT = 'ff'
+
+    # family
+    FF_DONTCARE = 0
+    FF_ROMAN = 1
+    FF_SWISS = 2
+    FF_MODERN = 3
+    FF_SCRIPT = 4
+    FF_DECORATIVE = 5
+
+    # pitch
+    DEFAULT_PITCH = 0
+    FIXED_PITCH = 1
+    VARIABLE_PITCH = 2
 
     @staticmethod
     def parse(format):
@@ -170,16 +206,27 @@ class TextFormat(object):
         return self._right_alignment
 
     @property
+    def charset(self):
+        return self._charset
+
+    @property
+    def pitch(self):
+        return self._pitch
+
+    @property
     def family(self):
         return self._family
 
-    def __init__(self, font=quote(DEFAULT_FONT), style=0, color='0', 
-                 right_alignment=False, family=None):
+    def __init__(self, font=quote(DEFAULT_FONT), style=NO_EFFECT, color='0', 
+                 charset=DEFAULT_CHARSET, family=FF_DONTCARE, 
+                 pitch=DEFAULT_PITCH, right_alignment=False):
         self._font = font
         self._style = style
         self._color = color
-        self._right_alignment = right_alignment
+        self._charset = charset
+        self._pitch = pitch
         self._family = family
+        self._right_alignment = right_alignment
     
     def __parse(self, format):
         for property in format.split(';'):
@@ -199,10 +246,11 @@ class TextFormat(object):
                 self._color = ''.join((value[4:6], value[2:4], value[0:2]))
             elif key == 'CS':
                 # Charset
-                pass
+                self._charset = value
             elif key == 'PF':
-                # Pitch and family
-                self._family = value
+                # Family and pitch
+                self._family = value[0]
+                self._pitch = value[1]
             elif key == 'RL':
                 # Right alignment
                 if value == '1': self._right_alignement = True
@@ -220,9 +268,11 @@ class TextFormat(object):
         
         color = '%s%s%s' % (self._color[4:6], self._color[2:4], self._color[0:2])
 
-        format = 'FN=%s; EF=%s; CO=%s'  % (quote(self._font), style, color)
-
-        if self._family is not None: format += '; PF=%s' % self._family
+        format = 'FN=%s; EF=%s; CO=%s; CS=%s; PF=%s%s'  % (quote(self._font), 
+                                                           style, color,
+                                                           self._charset,
+                                                           self._family,
+                                                           self._pitch)
         if self._right_alignment: format += '; RL=1'
         
         return format

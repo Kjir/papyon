@@ -29,34 +29,38 @@ def soap_action():
     """Returns the SOAPAction value to pass to the transport
     or None if no SOAPAction needs to be specified"""
 
-    return "http://www.msn.com/webservices/AddressBook/ABContactAdd"
+    return "http://www.msn.com/webservices/AddressBook/ABGroupAdd"
 
-def soap_body(passport_name, is_messenger_user, contact_type):
+def soap_body(group_name):
     """Returns the SOAP xml body"""
 
     return """
-        <ABContactAdd xmlns="http://www.msn.com/webservices/AddressBook">
+        <ABGroupAdd xmlns="http://www.msn.com/webservices/AddressBook">
             <abId>00000000-0000-0000-0000-000000000000</abId>
-            <contacts>
-                <Contact xmlns="http://www.msn.com/webservices/AddressBook">
-                    <contactInfo>
-                        <contactType>
-                            %(contact_type)s
-                        </contactType>
-                        <passportName>
-                            %(passport_name)s
-                        </passportName>
-                        <isMessengerUser>
-                            %(is_messenger_user)s
-                        </isMessengerUser>
-                    </contactInfo>
-                </Contact>
-            </contacts>
-            <options>
-                <EnableAllowListManagement>
-                    true
-                </EnableAllowListManagement>
-            </options>
-        </ABContactAdd>""" % { 'passport_name' : passport_name,
-                               'is_messenger_user' : is_messenger_user,
-                               'contact_type' : contact_type }
+            <groupAddOptions>
+                <fRenameOnMsgrConflict>false</fRenameOnMsgrConflict>
+            </groupAddOptions>
+            <groupInfo>
+                <GroupInfo>
+                    <name>
+                        %(group_name)s
+                    </name>
+                    <groupType>
+                        C8529CE2-6EAD-434d-881F-341E17DB3FF8
+                    </groupType>
+                    <fMessenger>
+                        false
+                    </fMessenger>
+                    <annotations>
+                        <Annotation>
+                            <Name>
+                                MSN.IM.Display
+                            </Name>
+                            <Value>
+                                1
+                            </Value>
+                        </Annotation>
+                    </annotations>
+                </GroupInfo>
+            </groupInfo>
+        </ABGroupAdd>""" % { 'group_name' : group_name }

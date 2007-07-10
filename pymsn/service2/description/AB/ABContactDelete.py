@@ -29,19 +29,21 @@ def soap_action():
     """Returns the SOAPAction value to pass to the transport
     or None if no SOAPAction needs to be specified"""
 
-    return "http://www.msn.com/webservices/AddressBook/ABFindAll"
+    return "http://www.msn.com/webservices/AddressBook/ABContactDelete"
 
-default_timestamp = "0001-01-01T00:00:00.0000000-08:00"
-
-def soap_body(deltas_only, last_change):
+def soap_body(contact_id):
     """Returns the SOAP xml body"""
 
-    return """
-       <ABFindAll xmlns="http://www.msn.com/webservices/AddressBook">
-          <abId>00000000-0000-0000-0000-000000000000</abId>
-          <abView>Full</abView>
-          <deltasOnly>%(deltas_only)s</deltasOnly>
-          <lastChange>%(last_change)s</lastChange>
-          <dynamicItemView>Gleam</dynamicItemView>
-       </ABFindAll>""" % {'deltas_only' : deltas_only,
-                          'last_change' : last_change}
+    return """        
+        <ABContactDelete xmlns="http://www.msn.com/webservices/AddressBook">
+            <abId>
+                00000000-0000-0000-0000-000000000000
+            </abId>
+            <contacts>
+                <Contact>
+                    <contactId>
+                        %(contact_id)s
+                    </contactId>
+                </Contact>
+            </contacts>
+        </ABContactDelete>""" % { 'contact_id' : contact_id }
