@@ -89,23 +89,46 @@ class SOAPResponse(object):
         def find(self, path):
             for sh, ns in self.ns_shorthands.iteritems():
                 path = path.replace("/%s:" % sh, "/{%s}" % ns)
-            return _SOAPElement(self.element.find(path), self.ns_shorthands)
+            node = self.element.find(path)
+            if node is None:
+                return None
+            return _SOAPElement(node, self.ns_shorthands)
 
         def findall(self, path):
-            result = []
             for sh, ns in self.ns_shorthands.iteritems():
                 path = path.replace("/%s:" % sh, "/{%s}" % ns)
-                node = self.element.find(path)
-                result.append(node, self.ns_shorthands)
+            
+            result = []
+            nodes = self.element.findall(path)
+            for node in nodes:
+                result.append(_SOAPElement(node, self.ns_shorthands))
             return result
 
     def __init__(self, soap_data):
-        self.tree = _SOAPElement(self._parse(data), NS_SHORTHANDS)
-        self.header = self.tree.find("soap:Header")
-        self.body = self.tree.find("soap:Body")
+        try:
+            tree = self._parse(soap_data)
+            self.tree = _SOAPElement(tree, NS_SHORTHANDS)
+            self.header = self.tree.find("soap:Header")
+            self.body = self.tree.find("soap:Body")
+            self.fault = self.tree.find("soap:Fault")
+        except:
+            self.tree = None
+            self.header = None
+            self.body = None
+            self.fault = None
+            logger.warning("SOAPResponse: Invalid xml+soap data")
 
     def find(self, path):
         return self.tree.find(path)
+
+    def findall(self, path):
+        return self.tree.findall(path)
+
+    def is_fault(self):
+        return self.fault is not None
+
+    def is_valid(self):
+        return self.tree is not None and self.header is not None
 
     def _parse(self, data):
         events = ("start", "end", "start-ns", "end-ns")
