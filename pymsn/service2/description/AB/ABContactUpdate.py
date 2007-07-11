@@ -18,42 +18,6 @@
 #
 
 from common import *
-
-class ContactAnnotations(object):
-    NICKNAME = "AB.NickName"
-    JOB_TITLE = "AB.JobTitle"
-    SPOUSE = "AB.Spouse"
-
-class ContactEmailType(object):
-    BUSINESS = "ContactEmailBusiness"
-    MESSENGER = "ContactEmailMessenger"
-    OTHER = "ContactEmailOther"
-    PERSONAL = "ContactEmailPersonal"
-
-class ContactPhoneType(object):
-    BUSINESS = "ContactPhoneBusiness"
-    FAX = "ContactPhoneFax"
-    MOBILE = "ContactPhoneMobile"
-    OTHER = "ContactPhoneOther"
-    PAGER = "ContactPhonePager"
-    PERSONAL = "ContactPhonePersonal"
-
-class ContactLocation(object):
-    class Type(object):
-        BUSINESS = "ContactLocationBusiness"
-        PERSONAL = "ContactLocationPersonal"
-
-    NAME = "name"
-    STREET = "street"
-    CITY = "city"
-    STATE = "state"
-    COUNTRY = "country"
-    POSTAL_CODE = "postalCode"
-    
-class ContactWebSiteType(object):
-    BUSINESS = "ContactWebSiteBusiness"
-    PERSONAL = "ContactWebSitePersonal"
-
 def transport_headers():
     """Returns a dictionary, containing transport (http) headers
     to use for the request"""
@@ -66,14 +30,16 @@ def soap_action():
 
     return "http://www.msn.com/webservices/AddressBook/ABContactUpdate"
 
-def soap_body(contact_id, display_name, is_messenger_user, first_name, 
-              last_name, birth_date, email, phone, location, web_site,  
-              annotation, comment, anniversary):
+def soap_body(contact_id, display_name, is_messenger_user, contact_type,
+              first_name, last_name, birth_date, email, phone, location, 
+              web_site, annotation, comment, anniversary):
     """Returns the SOAP xml body
 
         @param contact_id: a contact GUID string
         @param display_name: string
-        @param is_messenger_user: "true" | "false"
+        @param is_messenger_user: "true" if messenger user | 
+                                  "false" if live mail contact only
+        @param contact_type: 'Me' | 'Regular' | 'Messenger' | 'Messenger2'
         @param first_name: string
         @param last_name: string
         @param birth_date: an ISO 8601 timestamp
@@ -83,7 +49,7 @@ def soap_body(contact_id, display_name, is_messenger_user, first_name,
         @param web_site: { ContactWebSite : url string }
         @param annotation: { ContactAnnotations : string }
         @param comment: string
-        @param Anniversary: yyyy/mm/dd"""
+        @param anniversary: yyyy/mm/dd"""
 
     contact_info = ""    
     properties_changed = ""
@@ -95,7 +61,10 @@ def soap_body(contact_id, display_name, is_messenger_user, first_name,
     if is_messenger_user is not None:
         contact_info += "<isMessengerUser>%s</isMessengerUser>" % is_messenger_user
         properties_changed += " IsMessengerUser"
-    
+
+    if contact_type is not None:
+        contact_info += "<contactType>%s</contactType>" % contact_type
+            
     if first_name is not None:
         contact_info += "<firstName>%s</firstName>" % first_name
         properties_changed += " ContactFirstName"

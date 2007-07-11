@@ -45,11 +45,39 @@ class Sharing(SOAPService):
                 (services, deltas_only, last_change),
                 callback, errback)
 
-    def AddMember(self):
-        pass
+    def AddMember(self, scenario, member_role, passport_member, 
+                  callback, errback):
+        """Adds a member to a membership list.
 
-    def DeleteMember(self):
-        pass
+            @param scenario: 'Timer' | 'BlockUnblock' | ...
+            @param member_role: 'Allow' | ...
+            @param passport_member: tuple(type, state, passport) with
+                                    type in ['Passport', ...] and 
+                                    state in ['Accepted', ...]
+            @param callback: tuple(callable, *args)
+            @param errback: tuple(callable, *args)
+        """
+        type, state, passport = passport_member
+        self.__call_soap_method(self._service.AddMember, scenario,
+                                (member_role, type, state, passport),
+                                callback, errback)
+
+    def DeleteMember(self, scenario, member_role, passport_member,
+                     callback, errback):
+        """Deletes a member from a membership list.
+
+            @param scenario: 'Timer' | 'BlockUnblock' | ...
+            @param member_role: 'Block' | ...
+            @param passport_member: tuple(type, state, membership_id)
+                                    type in ['Passport', ...] and 
+                                    state in ['Accepted', ...]
+            @param callback: tuple(callable, *args)
+            @param errback: tuple(callable, *args)
+        """
+        type, state, membership = passport_member
+        self.__call_soap_method(self._service.DeleteMember, scenario,
+                                (member_role, type, state, membership),
+                                callback, errback)
 
     def __call_soap_method(self, method, scenario, args, callback, errback):
         http_headers = method.transport_headers()

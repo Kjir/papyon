@@ -29,9 +29,44 @@ def soap_action():
     """Returns the SOAPAction value to pass to the transport
     or None if no SOAPAction needs to be specified"""
 
-    return "http://www.msn.com/webservices/AddressBook/FindMembership"
+    return "http://www.msn.com/webservices/AddressBook/DeleteMember"
 
-def soap_body():
+def soap_body(member_role, type, state, membership_id):
     """Returns the SOAP xml body"""
 
-    return """ """
+    return """
+        <DeleteMember xmlns="http://www.msn.com/webservices/AddressBook">
+            <serviceHandle>
+                <Id>
+                    0
+                </Id>
+                <Type>
+                    Messenger
+                </Type>
+                <ForeignId>
+                </ForeignId>
+            </serviceHandle>
+            <memberships>
+                <Membership>
+                    <MemberRole>
+                        %(member_role)s
+                    </MemberRole>
+                    <Members>
+                        <Member xsi:type="PassportMember" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                            <Type>
+                                %(type)s
+                            </Type>
+                            <MembershipId>
+                                %(membership_id)s
+                            </MembershipId>
+                            <State>
+                                %(state)s
+                            </State>
+                        </Member>
+                    </Members>
+                </Membership>
+            </memberships>
+        </DeleteMember>""" % { 'member_role' : member_role,
+                               'type' : type,
+                               'membership_id' : membership_id,
+                               'state' : state }

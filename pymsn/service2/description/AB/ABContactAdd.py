@@ -31,24 +31,135 @@ def soap_action():
 
     return "http://www.msn.com/webservices/AddressBook/ABContactAdd"
 
-def soap_body(passport_name, is_messenger_user, contact_type):
-    """Returns the SOAP xml body"""
+def soap_body(passport_name, is_messenger_user, contact_type, first_name, 
+              last_name, birth_date, email, phone, location, web_site,  
+              annotation, comment, anniversary, display_name, invite_message):
+    """Returns the SOAP xml body
+
+            @param passport_name: the passport adress if the contact to add
+            @param is_messenger_user: True if this is a messenger contact,
+                otherwise False (only a Live mail contact)
+            @param contact_type:: 'Me' | 'Regular' | 'Messenger' | 'Messenger2' 
+            @param first_name: string
+            @param last_name: string
+            @param birth_date: an ISO 8601 timestamp
+            @param email: { ContactEmailType : well-formed email string }
+            @param phone: { ContactPhoneType : well-formed phone string }
+            @param location: { ContactLocation.Type : { ContactLocation : string } }
+            @param web_site: { ContactWebSite : url string }
+            @param annotation: { ContactAnnotations : string }
+            @param comment: string
+            @param anniversary: yyyy/mm/dd
+            @param display_name: display name used in the invitation
+            @param invite_message: message sent for the invitation"""
+
+    contact_info = "<passportName>%s</passportName>" % passport_name
+    contact_info += "<isMessengerUser>%s</isMessengerUser>" % is_messenger_user
+    contact_info += "<contactType>%s</contactType>" % contact_type
+            
+    if first_name is not None:
+        contact_info += "<firstName>%s</firstName>" % first_name
+
+    if last_name is not None:
+        contact_info += "<lastName>%s</lastName>" % last_name
+
+    if birth_date is not None:
+        contact_info += "<birthdate>%s</birthdate>" % birth_date
+    
+    if email is not None:
+        emails = ""
+        for type, email in email.iteritems():
+            yahoo_tags = changed = ""
+            if type == ContactEmailType.YAHOO:
+                yahoo_tags = """<isMessengerEnabled>
+                                   true
+                                </isMessengerEnabled>
+                                <Capability>
+                                   32
+                                </Capability>"""
+                changed = " IsMessengerEnabled Capability"
+            emails += """<ContactEmail>
+                            <contactEmailType>%s</contactEmailType>
+                            <email>%s</email>
+                            %s
+                            <propertiesChanged>Email%s</propertiesChanged>
+                         </ContactEmail>""" % (type, email, yahoo_tags, changed)
+        contact_info += "<emails>%s</emails>" % emails
+
+    if phone is not None:
+        phones = ""
+        for type, number in phone.iteritems():
+            phones += """<ContactPhone>
+                            <contactPhoneType>%s</contactPhoneType>
+                            <number>%s</number>
+                            <propertiesChanged>Number</propertiesChanged>
+                         </ContactPhone>""" % (type, number)
+        contact_info += "<phones>%s</phones>" % phones
+
+    if location is not None:
+        locations = ""
+        for type, parts in location.iteritems():
+            items = changes = ""
+            for item, value in parts.iteritems():
+                items += "<%s>%s</%s>" % (item, value, item)
+                changes += " %s%s" % (item[0].upper(), item[1:len(item)]) 
+            locations += """<ContactLocation>
+                               <contactLocationType>%s</contactLocationType>
+                               %s
+                               <Changes>%s</Changes>
+                            </ContactLocation>""" % (type, items, changes)
+        contact_info += "<location>%s</locations>" % locations
+
+    if web_site is not None:
+        web_sites = ""
+        for type, url in web_site.iteritems():
+            websites += """<ContactWebSite>
+                              <contactWebSiteType>%s</contactWebSiteType>
+                              <webURL>%s</webURL>
+                           </ContactWebSite>""" % (type, url)
+        contact_info += "<webSites>%s</webSites>" % web_sites
+
+    if annotation is not None:
+        annotations = ""
+        for name, value in annotation.iteritems():
+            annotations += """<Annotation>
+                                 <Name>%s</Name>
+                                 <Value>%s</Value>
+                              </Annotation>""" % (name, value)
+        contact_info += "<annotations>%s</annotations>" % annotations
+
+    if comment is not None:
+        contact_info += "<comment>%s</comment>" % comment
+
+    if anniversary is not None:
+        contact_info += "<Anniversary>%s</Anniversary>" % anniversary
+
+    invite_info = ''
+    invite_info += """<MessengerMemberInfo>
+                           <PendingAnnotations>
+                               <Annotation>
+                                   <Name>
+                                       MSN.IM.InviteMessage
+                                   </Name>
+                                   <Value>
+                                       %(invite_message)s
+                                   </Value>
+                               </Annotation>
+                           </PendingAnnotations>
+                           <DisplayName>
+                               %(display_name)s
+                           </DisplayName>
+                       </MessengerMemberInfo>""" % { 'invite_message' : invite_message,
+                                                     'display_name' : display_name }
 
     return """
-        <ABContactAdd xmlns="http://www.msn.com/webservices/AddressBook">
+       <ABContactAdd xmlns="http://www.msn.com/webservices/AddressBook">
             <abId>00000000-0000-0000-0000-000000000000</abId>
             <contacts>
                 <Contact xmlns="http://www.msn.com/webservices/AddressBook">
                     <contactInfo>
-                        <contactType>
-                            %(contact_type)s
-                        </contactType>
-                        <passportName>
-                            %(passport_name)s
-                        </passportName>
-                        <isMessengerUser>
-                            %(is_messenger_user)s
-                        </isMessengerUser>
+                        %(contact_info)s
+                        %(invite_info)s
                     </contactInfo>
                 </Contact>
             </contacts>
@@ -57,6 +168,5 @@ def soap_body(passport_name, is_messenger_user, contact_type):
                     true
                 </EnableAllowListManagement>
             </options>
-        </ABContactAdd>""" % { 'passport_name' : passport_name,
-                               'is_messenger_user' : is_messenger_user,
-                               'contact_type' : contact_type }
+        </ABContactAdd>""" % { 'contact_info' : contact_info ,
+                               'invite_info' : invote_info }

@@ -22,6 +22,42 @@ from pymsn.service2.SOAPUtils import XMLTYPE
 
 __all__ = ['AB']
 
+class ContactAnnotations(object):
+    NICKNAME = "AB.NickName"
+    JOB_TITLE = "AB.JobTitle"
+    SPOUSE = "AB.Spouse"
+
+class ContactEmailType(object):
+    BUSINESS = "ContactEmailBusiness"
+    MESSENGER = "ContactEmailMessenger"
+    OTHER = "ContactEmailOther"
+    PERSONAL = "ContactEmailPersonal"
+    YAHOO = "Messenger2"
+
+class ContactPhoneType(object):
+    BUSINESS = "ContactPhoneBusiness"
+    FAX = "ContactPhoneFax"
+    MOBILE = "ContactPhoneMobile"
+    OTHER = "ContactPhoneOther"
+    PAGER = "ContactPhonePager"
+    PERSONAL = "ContactPhonePersonal"
+
+class ContactLocation(object):
+    class Type(object):
+        BUSINESS = "ContactLocationBusiness"
+        PERSONAL = "ContactLocationPersonal"
+
+    NAME = "name"
+    STREET = "street"
+    CITY = "city"
+    STATE = "state"
+    COUNTRY = "country"
+    POSTAL_CODE = "postalCode"
+    
+class ContactWebSiteType(object):
+    BUSINESS = "ContactWebSiteBusiness"
+    PERSONAL = "ContactWebSitePersonal"
+
 class AB(SOAPService):
     def __init__(self, security_token, proxies=None):
         self.__security_token = security_token
@@ -30,7 +66,7 @@ class AB(SOAPService):
     def FindAll(self, scenario, deltas_only, last_change,
             callback, errback):
         """Requests the contact list.
-            @param scenario: "Initial" | ...
+            @param scenario: "Initial" | "ContactSave" ...
             @param deltas_only: True if the method should only check changes
                 since last_change, otherwise False
             @param last_change: an ISO 8601 timestamp
@@ -46,20 +82,40 @@ class AB(SOAPService):
                 (XMLTYPE.bool.encode(deltas_only), last_change),
                 callback, errback)
 
-    def ContactAdd(self, scenario, passport, is_messenger, type,
+    def ContactAdd(self, scenario, passport_name, contact_type, 
+            is_messenger_user=True, contact_info={}, invite_info={}, 
             callback, errback):
         """Adds a contact to the contact list.
 
             @param scenario: "ContactSave" | ...
-            @param passport: the passport adress if the contact to add
-            @param is_messenger: True if this is a messenger contact,
-                otherwise False (only a Live mail contact)
-            @param type: "Regular" | "LivePending" | "LiveAccepted" | "Messenger2"
+            @param passport: passport to add to the contact list
+            @param is_messenger_user: "True if messenger user | 
+                    "False if live mail contact only
+            @param contact_type: "Regular" | "LivePending" | "LiveAccepted" | 
+                    "Messenger2"
+            @param contact_info: info dict concerning the new contact
+            @param invite_info: info dict concerning the sent invite
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
         self.__call_soap_method(self._service.ABContactAdd, scenario,
-                (passport, XMLTYPE.bool.encode(is_messenger), type),
+                (passport_name, 
+                 XMLTYPE.bool.encode(is_messenger_user),
+                 contact_type,
+                 contact_info.get('is_messenger_user', None),
+                 contact_info.get('contact_type', None),
+                 contact_info.get('first_name', None),
+                 contact_info.get('last_name', None),
+                 contact_info.get('birth_date', None),
+                 contact_info.get('email', None),
+                 contact_info.get('phone', None),
+                 contact_info.get('location', None),
+                 contact_info.get('web_site', None),
+                 contact_info.get('annotation', None),
+                 contact_info.get('comment', None),
+                 contact_info.get('anniversary', None),
+                 invite_info.get('display_name', None),
+                 invite_info.get('invite_message', None)),
                 callback, errback)
 
     def ContactDelete(self, scenario, contact_id, callback, errback):
@@ -77,7 +133,7 @@ class AB(SOAPService):
             callback, errback):
         """Updates a contact informations.
         
-            @param scenario: "ContactSave" | ...
+            @param scenario: "ContactSave" | "Timer" | ...
             @param contact_id: the contact id (a GUID)
             @param contact_info: info dict
             @param callback: tuple(callable, *args)
@@ -88,20 +144,21 @@ class AB(SOAPService):
                     XMLTYPE.bool.encode(contact_info['is_messenger_user'])
 
         self.__call_soap_method(self._service.ABContactUpdate, scenario,
-                                (contact_id,
-                                 contact_info.get('display_name', None),
-                                 contact_info.get('is_messenger_user', None),
-                                 contact_info.get('first_name', None),
-                                 contact_info.get('last_name', None),
-                                 contact_info.get('birth_date', None),
-                                 contact_info.get('email', None),
-                                 contact_info.get('phone', None),
-                                 contact_info.get('location', None),
-                                 contact_info.get('web_site', None),
-                                 contact_info.get('annotation', None),
-                                 contact_info.get('comment', None),
-                                 contact_info.get('anniversary', None)),
-                                callback, errback)
+            (contact_id,
+                contact_info.get('display_name', None),
+                contact_info.get('is_messenger_user', None),
+                contact_info.get('contact_type', None),
+                contact_info.get('first_name', None),
+                contact_info.get('last_name', None),
+                contact_info.get('birth_date', None),
+                contact_info.get('email', None),
+                contact_info.get('phone', None),
+                contact_info.get('location', None),
+                contact_info.get('web_site', None),
+                contact_info.get('annotation', None),
+                contact_info.get('comment', None),
+                contact_info.get('anniversary', None)),
+            callback, errback)
         
     def GroupAdd(self, scenario, group_name, callback, errback):
         """Adds a group to the address book.
@@ -112,7 +169,7 @@ class AB(SOAPService):
             @param errback: tuple(callable, *args)
         """
         self.__call_soap_method(self._service.ABGroupAdd, scenario,
-                                (group_name), callback, errback)
+                (group_name), callback, errback)
 
     def GroupDelete(self, scenario, group_id, callback, errback):
         """Deletes a group from the address book.
@@ -123,7 +180,7 @@ class AB(SOAPService):
             @param errback: tuple(callable, *args)
         """
         self.__call_soap_method(self._service.ABGroupDelete, scenario,
-                                (group_id), callback, errback)
+                (group_id), callback, errback)
 
     def GroupUpdate(self, scenario, group_id, group_name, callback, errback):
         """Updates a group name.
@@ -137,24 +194,28 @@ class AB(SOAPService):
         self.__call_soap_method(self._service.ABGroupUpdate, scenario,
                 (group_id, group_name), callback, errback)
 
-    def GroupContactAdd(self, scenario, group_id, contact_id, callback, errback):
+    def GroupContactAdd(self, scenario, group_id, contact_id, 
+                        callback, errback):
         """Adds a contact to a group.
 
             @param scenario: "GroupSave" | ...
             @param group_id: the id of the group (a GUID)
-            @param contact_id: the id of the contact to add to the group (a GUID)
+            @param contact_id: the id of the contact to add to the
+                               group (a GUID)
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
         self.__call_soap_method(self._service.ABGroupContactAdd, scenario,
                 (group_id, contact_id), callback, errback)
 
-    def GroupContactDelete(self, scenario, group_id, contact_id, callback, errback):
+    def GroupContactDelete(self, scenario, group_id, contact_id, 
+                           callback, errback):
         """Deletes a contact from a group.
 
             @param scenario: "GroupSave" | ...
             @param group_id: the id of the group (a GUID)
-            @param contact_id: the id of the contact to delete from the group (a GUID)
+            @param contact_id: the id of the contact to delete from the 
+                               group (a GUID)
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
