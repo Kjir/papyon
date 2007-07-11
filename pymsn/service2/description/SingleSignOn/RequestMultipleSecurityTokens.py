@@ -103,3 +103,9 @@ def soap_body(*tokens):
     return '<ps:RequestMultipleSecurityTokens ' \
         'xmlns:ps="http://schemas.microsoft.com/Passport/SoapServices/PPCRL" ' \
         'Id="RSTS">%s</ps:RequestMultipleSecurityTokens>' % body
+
+def process_response(soap_response):
+    body = soap_response.body
+    return body.findall("./wst:RequestSecurityTokenResponseCollection/" \
+            "wst:RequestSecurityTokenResponse")
+

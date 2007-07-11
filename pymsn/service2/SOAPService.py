@@ -2,7 +2,7 @@
 #
 # pymsn - a python client library for Msn
 #
-# Copyright (C) 2005-2006 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2005-2007 Ali Sabil <ali.sabil@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import description
+from SOAPUtils import *
 
 import pymsn.gnet.protocol
 import pymsn.util.ElementTree as ElementTree
@@ -29,21 +30,6 @@ import logging
 __all__ = ['SOAPService', 'SOAPResponse']
 
 logger = logging.getLogger('Service')
-
-def bool_type(s):
-    if s.lower() in ("false", "no", "f", "n", "0", ""):
-        return False
-    return True
-
-def bool_to_string(b):
-    if b: return "true"
-    return "false"
-
-def int_type(s):
-    try:
-        return int(s)
-    except:
-        return 0
 
 def url_split(url, default_scheme='http'):
     from urlparse import urlsplit, urlunsplit
@@ -80,37 +66,6 @@ soap_template = """<?xml version='1.0' encoding='utf-8'?>
 </soap:Envelope>"""
 
 
-class XMLNS(object):
-
-    class SOAP(object):
-        ENVELOPE = "http://schemas.xmlsoap.org/soap/envelope/"
-        ENCODING = "http://schemas.xmlsoap.org/soap/encoding/"
-        ACTOR_NEXT = "http://schemas.xmlsoap.org/soap/actor/next"
-    
-    class SCHEMA(object):
-        XSD1 = "http://www.w3.org/1999/XMLSchema"
-        XSD2 = "http://www.w3.org/2000/10/XMLSchema"
-        XSD3 = "http://www.w3.org/2001/XMLSchema"
-        
-        XSI1 = "http://www.w3.org/1999/XMLSchema-instance"
-        XSI2 = "http://www.w3.org/2000/10/XMLSchema-instance"
-        XSI3 = "http://www.w3.org/2001/XMLSchema-instance"
-
-    class ENCRYPTION(object):
-        BASE = "http://www.w3.org/2001/04/xmlenc#"
-    
-    class WS:
-        SECEXT = "http://schemas.xmlsoap.org/ws/2003/06/secext"
-        TRUST = "http://schemas.xmlsoap.org/ws/2004/04/trust"
-        ADDRESSING = "http://schemas.xmlsoap.org/ws/2004/03/addressing"
-        POLICY = "http://schemas.xmlsoap.org/ws/2002/12/policy"
-        ISSUE = "http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue"
-        UTILITY = "http://docs.oasis-open.org/wss/2004/01/" + \
-                "oasis-200401-wss-wssecurity-utility-1.0.xsd"
-    
-    class MICROSOFT:
-        PASSPORT = "http://schemas.microsoft.com/Passport/SoapServices/PPCRL"
-
 
 class SOAPResponse(object):
     NS_SHORTHANDS = {'soap' : XMLNS.SOAP.ENVELOPE,
@@ -136,6 +91,13 @@ class SOAPResponse(object):
                 path = path.replace("/%s:" % sh, "/{%s}" % ns)
             return _SOAPElement(self.element.find(path), self.ns_shorthands)
 
+        def findall(self, path):
+            result = []
+            for sh, ns in self.ns_shorthands.iteritems():
+                path = path.replace("/%s:" % sh, "/{%s}" % ns)
+                node = self.element.find(path)
+                result.append(node, self.ns_shorthands)
+            return result
 
     def __init__(self, soap_data):
         self.tree = _SOAPElement(self._parse(data), NS_SHORTHANDS)

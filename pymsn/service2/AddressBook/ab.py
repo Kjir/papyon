@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from pymsn.service2.SOAPService import SOAPService
+from pymsn.service2.SOAPUtils import XMLTYPE
 
 __all__ = ['AB']
 
@@ -43,7 +43,7 @@ class AB(SOAPService):
             last_change = self._service.ABFindAll.default_timestamp
             
         self.__call_soap_method(self._service.ABFindAll, scenario,
-                (bool_to_string(deltas_only), last_change),
+                (XMLTYPE.bool.encode(deltas_only), last_change),
                 callback, errback)
 
     def ContactAdd(self, scenario, passport, is_messenger, type,
@@ -59,7 +59,7 @@ class AB(SOAPService):
             @param errback: tuple(callable, *args)
         """
         self.__call_soap_method(self._service.ABContactAdd, scenario,
-                (passport, bool_to_string(is_messenger), type),
+                (passport, XMLTYPE.bool.encode(is_messenger), type),
                 callback, errback)
 
     def ContactDelete(self, scenario, contact_id, callback, errback):
@@ -85,7 +85,7 @@ class AB(SOAPService):
         """
         if 'is_messenger_user' in contact_info:
             contact_info['is_messenger_user'] = \
-                    bool_to_string(contact_info['is_messenger_user'])
+                    XMLTYPE.bool.encode(contact_info['is_messenger_user'])
 
         self.__call_soap_method(self._service.ABContactUpdate, scenario,
                                 (contact_id,
