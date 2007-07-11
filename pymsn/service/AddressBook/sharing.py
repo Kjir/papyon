@@ -72,9 +72,9 @@ class Sharing(BaseAddressBook, SOAPService):
             append("Types", NS_ADDRESSBOOK)
         ServiceType.append("ServiceType", NS_ADDRESSBOOK, value="Messenger")
         ServiceType.append("ServiceType", NS_ADDRESSBOOK, value="Invitation")
-        #ServiceType.append("ServiceType", NS_ADDRESSBOOK, value="SocialNetwork")
-        #ServiceType.append("ServiceType", NS_ADDRESSBOOK, value="Space")
-        #ServiceType.append("ServiceType", NS_ADDRESSBOOK, value="Profile")
+        ServiceType.append("ServiceType", NS_ADDRESSBOOK, value="SocialNetwork")
+        ServiceType.append("ServiceType", NS_ADDRESSBOOK, value="Space")
+        ServiceType.append("ServiceType", NS_ADDRESSBOOK, value="Profile")
         #if last_change is not None:
         #    self.request.add_argument("View", NS_ADDRESSBOOK, value="Full")
         #    self.request.add_argument("deltasOnly", NS_ADDRESSBOOK, value="true")

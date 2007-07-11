@@ -31,7 +31,35 @@ def soap_action():
 
     return "http://www.msn.com/webservices/AddressBook/FindMembership"
 
-def soap_body():
+def soap_body(services_types, deltas_only, last_change):
     """Returns the SOAP xml body"""
 
-    return """ """
+    services = ''
+    for service in services_types:
+        services += """
+                <ServiceType xmlns="http://www.msn.com/webservices/AddressBook">
+                     %s
+                </ServiceType>""" % service
+
+    deltas = ''
+    if deltas_only:
+        deltas = """<View xmlns="http://www.msn.com/webservices/AddressBook">
+                        Full
+                    </View>
+                    <deltasOnly xmlns="http://www.msn.com/webservices/AddressBook">
+                        true
+                    </deltasOnly>
+                    <lastChange xmlns="http://www.msn.com/webservices/AddressBook">
+                        %s
+                    </lastChange>""" % last_change
+
+    return """
+       <FindMembership xmlns="http://www.msn.com/webservices/AddressBook">
+           <serviceFilter xmlns="http://www.msn.com/webservices/AddressBook">
+               <Types xmlns="http://www.msn.com/webservices/AddressBook">
+                  %(services)s
+               </Types>
+           </serviceFilter>
+           %(deltas)s
+       </FindMembership>""" % { 'services' : services,
+                                'deltas' : deltas }

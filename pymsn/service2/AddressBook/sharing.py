@@ -27,11 +27,36 @@ class Sharing(SOAPService):
         self.__security_token = security_token
         SOAPService.__init__(self, "Sharing", proxies)
 
-    def FindMembership(self):
-        pass
+    def FindMembership(self, scenario, services, deltas_only, last_change,
+            callback, errback):
+        """Requests the membership list.
+
+            @param scenario: 'Initial' | ...
+            @param services: a list containing the services to check in
+                             ['Messenger', 'Invitation', 'SocialNetwork',
+                              'Space', 'Profile' ]
+            @param deltas_only: True if the method should only check changes 
+                                since last_change, False else
+            @param last_change: an ISO 8601 timestamp
+            @param callback: tuple(callable, *args)
+            @param errback: tuple(callable, *args)
+        """
+        self.__call_soap_method(self._service.FindMembership, scenario,
+                (services, deltas_only, last_change),
+                callback, errback)
 
     def AddMember(self):
         pass
 
     def DeleteMember(self):
         pass
+
+    def __call_soap_method(self, method, scenario, args, callback, errback):
+        http_headers = method.transport_headers()
+        soap_action = method.soap_action()
+        
+        soap_header = method.soap_header(scenario, self.__security_token)
+        soap_body = method.soap_body(*args)
+
+        self._send_request(self._service.url, soap_header, soap_body, 
+                soap_action, callback, errback, http_headers)

@@ -28,7 +28,7 @@ class AB(SOAPService):
         SOAPService.__init__(self, "AB", proxies)
     
     def FindAll(self, scenario, deltas_only, last_change,
-                  callback, errback):
+            callback, errback):
         """Requests the contact list.
             @param scenario: "Initial" | ...
             @param deltas_only: True if the method should only check changes
@@ -43,11 +43,11 @@ class AB(SOAPService):
             last_change = self._service.ABFindAll.default_timestamp
             
         self.__call_soap_method(self._service.ABFindAll, scenario,
-                                (bool_to_string(deltas_only), last_change),
-                                callback, errback)
+                (bool_to_string(deltas_only), last_change),
+                callback, errback)
 
     def ContactAdd(self, scenario, passport, is_messenger, type,
-                     callback, errback):
+            callback, errback):
         """Adds a contact to the contact list.
 
             @param scenario: "ContactSave" | ...
@@ -59,8 +59,8 @@ class AB(SOAPService):
             @param errback: tuple(callable, *args)
         """
         self.__call_soap_method(self._service.ABContactAdd, scenario,
-                                (passport, bool_to_string(is_messenger), type),
-                                callback, errback)
+                (passport, bool_to_string(is_messenger), type),
+                callback, errback)
 
     def ContactDelete(self, scenario, contact_id, callback, errback):
         """Deletes a contact from the contact list.
@@ -71,10 +71,10 @@ class AB(SOAPService):
             @param errback: tuple(callable, *args)
         """
         self.__call_soap_method(self._service.ABContactDelete, scenario,
-                                (contact_id), callback, errback)
+                (contact_id), callback, errback)
         
     def ContactUpdate(self, scenario, contact_id, contact_info, 
-                        callback, errback):
+            callback, errback):
         """Updates a contact informations.
         
             @param scenario: "ContactSave" | ...
@@ -135,7 +135,7 @@ class AB(SOAPService):
             @param errback: tuple(callable, *args)
         """
         self.__call_soap_method(self._service.ABGroupUpdate, scenario,
-                                (group_id, group_name), callback, errback)
+                (group_id, group_name), callback, errback)
 
     def GroupContactAdd(self, scenario, group_id, contact_id, callback, errback):
         """Adds a contact to a group.
@@ -147,7 +147,7 @@ class AB(SOAPService):
             @param errback: tuple(callable, *args)
         """
         self.__call_soap_method(self._service.ABGroupContactAdd, scenario,
-                                (group_id, contact_id), callback, errback)
+                (group_id, contact_id), callback, errback)
 
     def GroupContactDelete(self, scenario, group_id, contact_id, callback, errback):
         """Deletes a contact from a group.
@@ -159,7 +159,7 @@ class AB(SOAPService):
             @param errback: tuple(callable, *args)
         """
         self.__call_soap_method(self._service.ABGroupContactDelete, scenario,
-                                (group_id, contact_id), callback, errback)
+                (group_id, contact_id), callback, errback)
 
     def __call_soap_method(self, method, scenario, args, callback, errback):
         http_headers = method.transport_headers()
