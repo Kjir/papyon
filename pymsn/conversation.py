@@ -230,7 +230,8 @@ class TextFormat(object):
     
     def __parse(self, format):
         for property in format.split(';'):
-            key, value =  [str.upper(p.strip()) for p in property.split('=', 1)]
+            key, value =  [p.strip(' \t|').upper() \
+                    for p in property.split('=', 1)]
             if key == 'FN':
                 # Font
                 self._font = unquote(value)
@@ -242,7 +243,7 @@ class TextFormat(object):
                 if 'S' in value: self._style |= TextFormat.STRIKETHROUGH
             elif key == 'CO':
                 # Color
-                value = str.zfill(value, 6)
+                value = value.zfill(6)
                 self._color = ''.join((value[4:6], value[2:4], value[0:2]))
             elif key == 'CS':
                 # Charset
