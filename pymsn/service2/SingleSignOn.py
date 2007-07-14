@@ -47,15 +47,16 @@ class SingleSignOn(SOAPService):
         soap_header = method.soap_header(*self.__credentials)
         soap_body = method.soap_body(*services)
 
-        self._send_request(url, soap_header, soap_body, soap_action,
-            callback, errback, http_headers)
+        self._send_request("RequestMultipleSecurityTokens", url,
+                soap_header, soap_body, soap_action,
+                callback, errback, http_headers)
 
     def _response_handler(self, transport, http_response):
-        callback, errback = SOAPService._response_handler(self,
+        request_id, callback, errback = SOAPService._response_handler(self,
                 transport, http_response)
 
     def _error_handler(self, transport, error):
-        callback, errback = SOAPService._error_handler(self,
+        request_id, callback, errback = SOAPService._error_handler(self,
                 transport, error)
 
 

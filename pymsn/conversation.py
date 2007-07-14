@@ -43,7 +43,7 @@ class Conversation(SwitchboardClient):
         self._events_handlers = set()
     
     @staticmethod
-    def can_handle_message(message, switchboard_client=None):
+    def _can_handle_message(message, switchboard_client=None):
         content_type = message.content_type[0]
         if switchboard_client is None:
             return content_type in ('text/plain', 'text/x-msnmsgr-datacast')

@@ -154,7 +154,7 @@ class SOAPService(object):
         self._active_transports = {}
         self._proxies = proxies or {}
 
-    def _send_request(self, url, soap_header, soap_body, soap_action,
+    def _send_request(self, name, url, soap_header, soap_body, soap_action,
             callback, errback=None, transport_headers={}):
         
         scheme, host, port, resource = url_split(url)
@@ -169,26 +169,48 @@ class SOAPService(object):
 
         request = compress_xml(soap_template % (soap_header, soap_body))
 
-        transport = self._get_transport(scheme, host, port, callback, errback)
+        transport = self._get_transport(name, scheme, host, port,
+                callback, errback)
         transport.request(resource, http_headers, request, 'POST')
 
     def _response_handler(self, transport, http_response):
         logger.debug("<<< " + str(http_response))
-        return self._unref_transport(transport)
+        soap_response = SOAPResponse(http_response.body)
+        if not soap_response.is_valid():
+            logger.warning("Invalid SOAP Response")
+            return #FIXME: propagate the error up
+
+        request_id, callback, errback = self._unref_transport(transport)
+        if not soap_response.is_fault():
+            handler = getattr(self,
+                    "_Handle" + request_id + "Response",
+                    self._HandleUnhandledResponse)
+            handler(request_id, callback, errback, soap_response)
+        else:
+            self._HandleSOAPFault(request_id, callback, errback, soap_response)
 
     def _request_handler(self, transport, http_request):
         logger.debug(">>> " + str(http_request))
 
     def _error_handler(self, transport, error):
         logger.warning("Transport Error :" + str(error))
-        return self._unref_transport(transport)
+        request_id, callback, errback = self._unref_transport(transport)
+        return request_id, callback, errback #FIXME: do something sensible here
 
-    def _get_transport(self, scheme, host, port, callback, errback):
+    # Handlers
+    def _HandleSOAPFault(self, request_id, callback, errback, soap_response):
+        pass
+
+    def _HandleUnhandledResponse(self, request_id, callback, errback, soap_response):
+        pass
+
+    # Transport management
+    def _get_transport(self, request_id, scheme, host, port, callback, errback):
         key = (scheme, host, port)
         if key in self._active_transports:
             trans = self._active_transports[key]
             transport = trans[0]
-            trans[1].append((callback, errback)) # increment the usage
+            trans[1].append((request_id, callback, errback)) # increment the usage
         else:
             proxy = self._proxies.get(scheme, None)
             transport = pymsn.gnet.protocol.ProtocolFactory(scheme,
@@ -198,21 +220,21 @@ class SOAPService(object):
                 transport.connect("request-sent", self._request_handler),
                 transport.connect("error", self._error_handler)]
 
-            trans = [transport, [(callback, errback)], handler_id]
+            trans = [transport, [(request_id, callback, errback)], handler_id]
             self._active_transports[key] = trans
         return transport
 
     def _unref_transport(self, transport):
         for key, trans in self._active_transports.iteritems():
             if trans[0] == transport:
-                callback, errback = trans[1].pop(0)
+                response = trans[1].pop(0)
                 
                 if len(trans[1]) != 0:
-                    return callback, errback
+                    return response
 
                 for handle in trans[2]:
                     transport.disconnect(handle)
                 del self._active_transports[key]
-                return callback, errback
+                return response
         return None
 
