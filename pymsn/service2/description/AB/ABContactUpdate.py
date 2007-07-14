@@ -18,6 +18,8 @@
 #
 
 from common import *
+from constants import *
+
 def transport_headers():
     """Returns a dictionary, containing transport (http) headers
     to use for the request"""
@@ -32,7 +34,7 @@ def soap_action():
 
 def soap_body(contact_id, display_name, is_messenger_user, contact_type,
               first_name, last_name, birth_date, email, phone, location, 
-              web_site, annotation, comment, anniversary):
+              web_site, annotation, comment, anniversary, has_space):
     """Returns the SOAP xml body
 
         @param contact_id: a contact GUID string
@@ -49,14 +51,19 @@ def soap_body(contact_id, display_name, is_messenger_user, contact_type,
         @param web_site: { ContactWebSite : url string }
         @param annotation: { ContactAnnotations : string }
         @param comment: string
-        @param anniversary: yyyy/mm/dd"""
+        @param anniversary: yyyy/mm/dd
+        @param has_space: "true" | "false" """
 
     contact_info = ""    
     properties_changed = ""
 
     if display_name is not None:
-        contact_info += "<displayName>%s</displayName>" % displayName
+        contact_info += "<displayName>%s</displayName>" % display_name
         properties_changed += " DisplayName"
+
+    if has_space is not None:
+        contact_info += "<hasSpace>%s</hasSpace>" % has_space
+        properties_changed += " HasSpace"
         
     if is_messenger_user is not None:
         contact_info += "<isMessengerUser>%s</isMessengerUser>" % is_messenger_user

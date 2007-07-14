@@ -23,8 +23,8 @@ from pymsn.service2.SOAPService import SOAPService
 __all__ = ['Sharing']
 
 class Sharing(SOAPService):
-    def __init__(self, security_token, proxies=None):
-        self.__security_token = security_token
+    def __init__(self, contacts_security_token, proxies=None):
+        self.__security_token = contacts_security_token
         SOAPService.__init__(self, "Sharing", proxies)
 
     def FindMembership(self, scenario, services, deltas_only, last_change,

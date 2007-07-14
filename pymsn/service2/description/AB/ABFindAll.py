@@ -45,3 +45,7 @@ def soap_body(deltas_only, last_change):
           <dynamicItemView>Gleam</dynamicItemView>
        </ABFindAll>""" % {'deltas_only' : deltas_only,
                           'last_change' : last_change}
+
+def process_response(soap_response):
+    body = soap_response.body
+    return body.findall("./ABFindAllResponse/ABFindAllResult")

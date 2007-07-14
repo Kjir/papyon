@@ -18,6 +18,7 @@
 #
 
 from common import *
+from constants import *
 
 def transport_headers():
     """Returns a dictionary, containing transport (http) headers
@@ -30,6 +31,9 @@ def soap_action():
     or None if no SOAPAction needs to be specified"""
 
     return "http://www.msn.com/webservices/AddressBook/ABGroupContactAdd"
+
+# TODO : complete the method to be able to add a contact (like ABContactAdd)
+# directly when adding him to his original group
 
 def soap_body(group_id, contact_id):
     """Returns the SOAP xml body"""

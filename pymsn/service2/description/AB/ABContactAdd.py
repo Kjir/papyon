@@ -18,6 +18,7 @@
 #
 
 from common import *
+from constants import *
 
 def transport_headers():
     """Returns a dictionary, containing transport (http) headers
@@ -168,5 +169,5 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
                     true
                 </EnableAllowListManagement>
             </options>
-        </ABContactAdd>""" % { 'contact_info' : contact_info ,
+        </ABContactAdd>""" % { 'contact_info' : contact_info,
                                'invite_info' : invote_info }

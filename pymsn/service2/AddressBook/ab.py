@@ -22,45 +22,9 @@ from pymsn.service2.SOAPUtils import XMLTYPE
 
 __all__ = ['AB']
 
-class ContactAnnotations(object):
-    NICKNAME = "AB.NickName"
-    JOB_TITLE = "AB.JobTitle"
-    SPOUSE = "AB.Spouse"
-
-class ContactEmailType(object):
-    BUSINESS = "ContactEmailBusiness"
-    MESSENGER = "ContactEmailMessenger"
-    OTHER = "ContactEmailOther"
-    PERSONAL = "ContactEmailPersonal"
-    YAHOO = "Messenger2"
-
-class ContactPhoneType(object):
-    BUSINESS = "ContactPhoneBusiness"
-    FAX = "ContactPhoneFax"
-    MOBILE = "ContactPhoneMobile"
-    OTHER = "ContactPhoneOther"
-    PAGER = "ContactPhonePager"
-    PERSONAL = "ContactPhonePersonal"
-
-class ContactLocation(object):
-    class Type(object):
-        BUSINESS = "ContactLocationBusiness"
-        PERSONAL = "ContactLocationPersonal"
-
-    NAME = "name"
-    STREET = "street"
-    CITY = "city"
-    STATE = "state"
-    COUNTRY = "country"
-    POSTAL_CODE = "postalCode"
-    
-class ContactWebSiteType(object):
-    BUSINESS = "ContactWebSiteBusiness"
-    PERSONAL = "ContactWebSitePersonal"
-
 class AB(SOAPService):
-    def __init__(self, security_token, proxies=None):
-        self.__security_token = security_token
+    def __init__(self, contacts_security_token, proxies=None):
+        self.__security_token = contacts_security_token
         SOAPService.__init__(self, "AB", proxies)
     
     def FindAll(self, scenario, deltas_only, last_change,
@@ -82,27 +46,20 @@ class AB(SOAPService):
                 (XMLTYPE.bool.encode(deltas_only), last_change),
                 callback, errback)
 
-    def ContactAdd(self, scenario, passport_name, contact_type, 
-            is_messenger_user=True, contact_info={}, invite_info={}, 
-            callback, errback):
+    def ContactAdd(self, scenario, contact_info, invite_info,
+                   callback, errback):
         """Adds a contact to the contact list.
 
             @param scenario: "ContactSave" | ...
-            @param passport: passport to add to the contact list
-            @param is_messenger_user: "True if messenger user | 
-                    "False if live mail contact only
-            @param contact_type: "Regular" | "LivePending" | "LiveAccepted" | 
-                    "Messenger2"
             @param contact_info: info dict concerning the new contact
             @param invite_info: info dict concerning the sent invite
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
+        is_messenger_user = contact_info.get('is_messenger_user', None)
         self.__call_soap_method(self._service.ABContactAdd, scenario,
-                (passport_name, 
+                (contact_info.get('passport_name', None), 
                  XMLTYPE.bool.encode(is_messenger_user),
-                 contact_type,
-                 contact_info.get('is_messenger_user', None),
                  contact_info.get('contact_type', None),
                  contact_info.get('first_name', None),
                  contact_info.get('last_name', None),
@@ -131,6 +88,7 @@ class AB(SOAPService):
         
     def ContactUpdate(self, scenario, contact_id, contact_info, 
             callback, errback):
+        # TODO : maybe put contact_id in contact_info
         """Updates a contact informations.
         
             @param scenario: "ContactSave" | "Timer" | ...
@@ -144,20 +102,21 @@ class AB(SOAPService):
                     XMLTYPE.bool.encode(contact_info['is_messenger_user'])
 
         self.__call_soap_method(self._service.ABContactUpdate, scenario,
-            (contact_id,
-                contact_info.get('display_name', None),
-                contact_info.get('is_messenger_user', None),
-                contact_info.get('contact_type', None),
-                contact_info.get('first_name', None),
-                contact_info.get('last_name', None),
-                contact_info.get('birth_date', None),
-                contact_info.get('email', None),
-                contact_info.get('phone', None),
-                contact_info.get('location', None),
-                contact_info.get('web_site', None),
-                contact_info.get('annotation', None),
-                contact_info.get('comment', None),
-                contact_info.get('anniversary', None)),
+                                (contact_id,
+                                 contact_info.get('display_name', None),
+                                 contact_info.get('is_messenger_user', None),
+                                 contact_info.get('contact_type', None),
+                                 contact_info.get('first_name', None),
+                                 contact_info.get('last_name', None),
+                                 contact_info.get('birth_date', None),
+                                 contact_info.get('email', None),
+                                 contact_info.get('phone', None),
+                                 contact_info.get('location', None),
+                                 contact_info.get('web_site', None),
+                                 contact_info.get('annotation', None),
+                                 contact_info.get('comment', None),
+                                 contact_info.get('anniversary', None),
+                                 contact_info.get('has_space', None)),
             callback, errback)
         
     def GroupAdd(self, scenario, group_name, callback, errback):

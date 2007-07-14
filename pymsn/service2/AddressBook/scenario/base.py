@@ -17,21 +17,11 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-name = "AB"
-description = "Hotmail address book service"
+class BaseScenario(object):
+    def __init__(self, partner_scenario, callback, errback):
+        self.__partner_scenario = partner_scenario
+        self.__callback = callback
+        self.__errback = errback
 
-url = "http://contacts.msn.com/abservice/abservice.asmx"
-
-from constants import *
-
-import ABFindAll
-
-import ABContactAdd
-import ABContactDelete
-import ABContactUpdate
-
-import ABGroupAdd
-import ABGroupDelete
-import ABGroupUpdate
-import ABGroupContactAdd
-import ABGroupContactDelete
+    def execute(self):
+        pass
