@@ -185,7 +185,10 @@ class SOAPService(object):
             handler = getattr(self,
                     "_Handle" + request_id + "Response",
                     self._HandleUnhandledResponse)
-            handler(request_id, callback, errback, soap_response)
+            method = getattr(self._service, request_id)
+            response = method.process_response(soap_response)
+
+            handler(request_id, callback, errback, response)
         else:
             self._HandleSOAPFault(request_id, callback, errback, soap_response)
 
@@ -201,7 +204,7 @@ class SOAPService(object):
     def _HandleSOAPFault(self, request_id, callback, errback, soap_response):
         pass
 
-    def _HandleUnhandledResponse(self, request_id, callback, errback, soap_response):
+    def _HandleUnhandledResponse(self, request_id, callback, errback, response):
         pass
 
     # Transport management
