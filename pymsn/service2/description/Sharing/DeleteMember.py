@@ -70,3 +70,6 @@ def soap_body(member_role, type, state, membership_id):
                                'type' : type,
                                'membership_id' : membership_id,
                                'state' : state }
+
+def process_response(soap_response):
+    return None

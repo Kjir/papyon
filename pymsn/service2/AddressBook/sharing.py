@@ -41,9 +41,12 @@ class Sharing(SOAPService):
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        self.__call_soap_method(self._service.FindMembership, scenario,
-                (services, deltas_only, last_change),
-                callback, errback)
+        self.__process_request((self._service.FindMembership,
+                                (scenario, (services, deltas_only, last_change),
+                                 callback, errback)), errback)
+        
+    def _HandleFindMembershipResponse(self, request_id, callback, errback, response):
+        pass
 
     def AddMember(self, scenario, member_role, passport_member, 
                   callback, errback):
@@ -58,9 +61,12 @@ class Sharing(SOAPService):
             @param errback: tuple(callable, *args)
         """
         type, state, passport = passport_member
-        self.__call_soap_method(self._service.AddMember, scenario,
-                                (member_role, type, state, passport),
-                                callback, errback)
+        self.__process_request((self._service.AddMember,
+                                (scenario, (member_role, type, state, passport),
+                                 callback, errback)), errback)
+
+    def _HandleAddMemberResponse(self, request_id, callback, errback, response):
+        pass
 
     def DeleteMember(self, scenario, member_role, passport_member,
                      callback, errback):
@@ -75,16 +81,26 @@ class Sharing(SOAPService):
             @param errback: tuple(callable, *args)
         """
         type, state, membership = passport_member
-        self.__call_soap_method(self._service.DeleteMember, scenario,
-                                (member_role, type, state, membership),
-                                callback, errback)
+        self.__process_request((self._service.DeleteMember,
+                                (scenario, (member_role, type, state, membership),
+                                 callback, errback)), errback)
 
-    def __call_soap_method(self, method, scenario, args, callback, errback):
+    def _HandleDeleteMemberResponse(self, request_id, callback, errback, response):
+        pass
+
+    def __process_request(self, callback, errback):
+        self.__sso.RequestMultipleSecurityToken((self.__call_soap_method,
+                                                callback), errback,
+                                                (LiveService.CONTACTS,))
+
+    def __call_soap_method(self, token, method, scenario, args, 
+                           callback, errback):
         http_headers = method.transport_headers()
         soap_action = method.soap_action()
-        
-        soap_header = method.soap_header(scenario, self.__security_token)
+
+        soap_header = method.soap_header(scenario, token)
         soap_body = method.soap_body(*args)
 
-        self._send_request(self._service.url, soap_header, soap_body, 
-                soap_action, callback, errback, http_headers)
+        self._send_request(method.__name__, self._service.url, 
+                           soap_header, soap_body, soap_action, 
+                           callback, errback, http_headers)

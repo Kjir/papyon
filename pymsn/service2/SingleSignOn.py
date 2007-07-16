@@ -126,7 +126,7 @@ class SingleSignOn(SOAPService):
         for node in response:
             token = SecurityToken()
             token.type = node.find("./wst:TokenType").text
-            token.service_address = node.find("./wst::AppliesTo"
+            token.service_address = node.find("./wsp:AppliesTo"
                     "/wsa:EndpointReference/wsa:Address").text
             token.lifetime[0] = iso8601.parse(node.find("./wst:LifeTime/wsu:Created").text)
             token.lifetime[1] = iso8601.parse(node.find("./wst:LifeTime/wsu:Expires").text)
@@ -148,21 +148,17 @@ class SingleSignOn(SOAPService):
         if callback is not None:
             callback[0](result, *callback[1:])
 
-    def _response_handler(self, transport, http_response):
-        request_id, callback, errback = SOAPService._response_handler(self,
-                transport, http_response)
-
-    def _error_handler(self, transport, error):
-        request_id, callback, errback = SOAPService._error_handler(self,
-                transport, error)
-
-
 if __name__ == '__main__':
     import sys
     import getpass
     import signal
     import gobject
     import logging
+
+    def sso_cb(tokens):
+        print "Received tokens : "
+        for token in tokens:
+            print token
 
     logging.basicConfig(level=logging.DEBUG)
 
@@ -182,12 +178,11 @@ if __name__ == '__main__':
             lambda *args: gobject.idle_add(mainloop.quit()))
 
     sso = SingleSignOn(account, password)
-    sso.RequestMultipleSecurityTokens(None, None, 
-            LiveService.MESSENGER,
-            LiveService.CONTACTS)
+    sso.RequestMultipleSecurityTokens((sso_cb,), None, LiveService.CONTACTS)
 
     while mainloop.is_running():
         try:
             mainloop.run()
         except KeyboardInterrupt:
             mainloop.quit()
+

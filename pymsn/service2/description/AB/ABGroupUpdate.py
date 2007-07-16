@@ -56,3 +56,6 @@ def soap_body(group_id, group_name):
             </groups>
         </ABGroupUpdate>""" % { 'group_id' : group_id,
                                 'group_name' : group_name }
+
+def process_response(soap_response):
+    return None

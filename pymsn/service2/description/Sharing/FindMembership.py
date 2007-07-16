@@ -63,3 +63,8 @@ def soap_body(services_types, deltas_only, last_change):
            %(deltas)s
        </FindMembership>""" % { 'services' : services,
                                 'deltas' : deltas }
+
+def process_response(soap_response):
+    body = soap_response.body
+    # TODO : return a usable structure containing the information
+    return None

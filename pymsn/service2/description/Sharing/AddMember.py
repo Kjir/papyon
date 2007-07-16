@@ -71,3 +71,6 @@ def soap_body(member_role, type, state, passport_name):
                             'type' : type,
                             'state' : state,
                             'passport_name' : passport_name }
+
+def process_response(soap_response):
+    return None

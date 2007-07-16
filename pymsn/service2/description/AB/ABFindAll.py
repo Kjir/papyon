@@ -48,4 +48,6 @@ def soap_body(deltas_only, last_change):
 
 def process_response(soap_response):
     body = soap_response.body
-    return body.findall("./ABFindAllResponse/ABFindAllResult")
+    # return body.findall("./ABFindAllResponse/ABFindAllResult")
+    # TODO : return a usable structure containing the information
+    return None

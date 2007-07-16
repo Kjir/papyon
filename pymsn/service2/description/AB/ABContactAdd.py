@@ -171,3 +171,10 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
             </options>
         </ABContactAdd>""" % { 'contact_info' : contact_info,
                                'invite_info' : invote_info }
+
+def process_response(soap_response):
+    body = soap_response.body
+    try:
+        return body.find("./ABContactAddResponse/ABContactAddResult/guid").text
+    except AttributeError:
+        return None

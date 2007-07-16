@@ -47,3 +47,6 @@ def soap_body(contact_id):
                 </Contact>
             </contacts>
         </ABContactDelete>""" % { 'contact_id' : contact_id }
+
+def process_response(soap_response):
+    return None

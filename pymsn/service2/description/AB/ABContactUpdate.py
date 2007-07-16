@@ -168,3 +168,6 @@ def soap_body(contact_id, display_name, is_messenger_user, contact_type,
         </ABContactUpdate>""" % { 'contact_id' : contact_id,
                                   'contact_info' : contact_info,
                                   'properties_changed' : properties_changed }
+
+def process_response(soap_response):
+    return None

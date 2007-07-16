@@ -19,12 +19,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from pymsn.service2.SOAPUtils import XMLTYPE
+from SingleSignOn import *
 
 __all__ = ['AB']
 
 class AB(SOAPService):
-    def __init__(self, contacts_security_token, proxies=None):
-        self.__security_token = contacts_security_token
+    def __init__(self, sso, proxies=None):
+        self.__sso = sso
         SOAPService.__init__(self, "AB", proxies)
     
     def FindAll(self, scenario, deltas_only, last_change,
@@ -42,9 +43,9 @@ class AB(SOAPService):
         if not deltas_only: 
             last_change = self._service.ABFindAll.default_timestamp
             
-        self.__call_soap_method(self._service.ABFindAll, scenario,
-                (XMLTYPE.bool.encode(deltas_only), last_change),
-                callback, errback)
+        self.__process_request((self._service.ABFindAll, scenario,
+                                (XMLTYPE.bool.encode(deltas_only), last_change),
+                                callback, errback), errback)
 
     def ContactAdd(self, scenario, contact_info, invite_info,
                    callback, errback):
@@ -57,23 +58,27 @@ class AB(SOAPService):
             @param errback: tuple(callable, *args)
         """
         is_messenger_user = contact_info.get('is_messenger_user', None)
-        self.__call_soap_method(self._service.ABContactAdd, scenario,
-                (contact_info.get('passport_name', None), 
-                 XMLTYPE.bool.encode(is_messenger_user),
-                 contact_info.get('contact_type', None),
-                 contact_info.get('first_name', None),
-                 contact_info.get('last_name', None),
-                 contact_info.get('birth_date', None),
-                 contact_info.get('email', None),
-                 contact_info.get('phone', None),
-                 contact_info.get('location', None),
-                 contact_info.get('web_site', None),
-                 contact_info.get('annotation', None),
-                 contact_info.get('comment', None),
-                 contact_info.get('anniversary', None),
-                 invite_info.get('display_name', None),
-                 invite_info.get('invite_message', None)),
-                callback, errback)
+        self.__process_request((self._service.ABContactAdd, 
+                                (scenario,
+                                 (contact_info.get('passport_name', None), 
+                                  XMLTYPE.bool.encode(is_messenger_user),
+                                  contact_info.get('contact_type', None),
+                                  contact_info.get('first_name', None),
+                                  contact_info.get('last_name', None),
+                                  contact_info.get('birth_date', None),
+                                  contact_info.get('email', None),
+                                  contact_info.get('phone', None),
+                                  contact_info.get('location', None),
+                                  contact_info.get('web_site', None),
+                                  contact_info.get('annotation', None),
+                                  contact_info.get('comment', None),
+                                  contact_info.get('anniversary', None),
+                                  invite_info.get('display_name', None),
+                                  invite_info.get('invite_message', None)),
+                                 callback, errback)), errback)
+
+    def _HandleContactAddResponse(self, request_id, callback, errback, response):
+        pass
 
     def ContactDelete(self, scenario, contact_id, callback, errback):
         """Deletes a contact from the contact list.
@@ -83,9 +88,13 @@ class AB(SOAPService):
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        self.__call_soap_method(self._service.ABContactDelete, scenario,
-                (contact_id), callback, errback)
+        self.__process_request((self._service.ABContactDelete, 
+                                (scenario, (contact_id,), callback, errback)),
+                               errback)
         
+    def _HandleContactDeleteResponse(self, request_id, callback, errback, response):
+        pass
+
     def ContactUpdate(self, scenario, contact_id, contact_info, 
             callback, errback):
         # TODO : maybe put contact_id in contact_info
@@ -101,23 +110,27 @@ class AB(SOAPService):
             contact_info['is_messenger_user'] = \
                     XMLTYPE.bool.encode(contact_info['is_messenger_user'])
 
-        self.__call_soap_method(self._service.ABContactUpdate, scenario,
-                                (contact_id,
-                                 contact_info.get('display_name', None),
-                                 contact_info.get('is_messenger_user', None),
-                                 contact_info.get('contact_type', None),
-                                 contact_info.get('first_name', None),
-                                 contact_info.get('last_name', None),
-                                 contact_info.get('birth_date', None),
-                                 contact_info.get('email', None),
-                                 contact_info.get('phone', None),
-                                 contact_info.get('location', None),
-                                 contact_info.get('web_site', None),
-                                 contact_info.get('annotation', None),
-                                 contact_info.get('comment', None),
-                                 contact_info.get('anniversary', None),
-                                 contact_info.get('has_space', None)),
-            callback, errback)
+        self.__process_request((self._service.ABContactUpdate, 
+                                (scenario,
+                                 (contact_id,
+                                  contact_info.get('display_name', None),
+                                  contact_info.get('is_messenger_user', None),
+                                  contact_info.get('contact_type', None),
+                                  contact_info.get('first_name', None),
+                                  contact_info.get('last_name', None),
+                                  contact_info.get('birth_date', None),
+                                  contact_info.get('email', None),
+                                  contact_info.get('phone', None),
+                                  contact_info.get('location', None),
+                                  contact_info.get('web_site', None),
+                                  contact_info.get('annotation', None),
+                                  contact_info.get('comment', None),
+                                  contact_info.get('anniversary', None),
+                                  contact_info.get('has_space', None)),
+                                 callback, errback)), errback)
+
+    def _HandleContactUpdateResponse(self, request_id, callback, errback, response):
+        pass
         
     def GroupAdd(self, scenario, group_name, callback, errback):
         """Adds a group to the address book.
@@ -127,8 +140,12 @@ class AB(SOAPService):
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        self.__call_soap_method(self._service.ABGroupAdd, scenario,
-                (group_name), callback, errback)
+        self.__process_request((self._service.ABGroupAdd,
+                                (scenario, (group_name,), callback, errback)),
+                                errback)
+
+    def _HandleGroupAddResponse(self, request_id, callback, errback, response):
+        pass
 
     def GroupDelete(self, scenario, group_id, callback, errback):
         """Deletes a group from the address book.
@@ -138,8 +155,12 @@ class AB(SOAPService):
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        self.__call_soap_method(self._service.ABGroupDelete, scenario,
-                (group_id), callback, errback)
+        self.__process_request((self._service.ABGroupDelete,
+                                (scenario, (group_id,), callback, errback)),
+                               errback)
+
+    def _HandleGroupDeleteResponse(self, request_id, callback, errback, response):
+        pass
 
     def GroupUpdate(self, scenario, group_id, group_name, callback, errback):
         """Updates a group name.
@@ -150,8 +171,12 @@ class AB(SOAPService):
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        self.__call_soap_method(self._service.ABGroupUpdate, scenario,
-                (group_id, group_name), callback, errback)
+        self.__process_request((self._service.ABGroupUpdate,
+                                (scenario, (group_id, group_name), callback, errback)),
+                                errback)
+
+    def _HandleGroupUpdateResponse(self, request_id, callback, errback, response):
+        pass
 
     def GroupContactAdd(self, scenario, group_id, contact_id, 
                         callback, errback):
@@ -164,8 +189,12 @@ class AB(SOAPService):
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        self.__call_soap_method(self._service.ABGroupContactAdd, scenario,
-                (group_id, contact_id), callback, errback)
+        self.__process_request((self._service.ABGroupContactAdd,
+                                (scenario, (group_id, contact_id), callback, errback)),
+                               errback)
+
+    def _HandleContactAddResponse(self, request_id, callback, errback, response):
+        pass
 
     def GroupContactDelete(self, scenario, group_id, contact_id, 
                            callback, errback):
@@ -178,16 +207,26 @@ class AB(SOAPService):
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        self.__call_soap_method(self._service.ABGroupContactDelete, scenario,
-                (group_id, contact_id), callback, errback)
+        self.__process_request((self._service.ABGroupContactDelete, 
+                                (scenario, (group_id, contact_id), callback, errback)),
+                               errback)
 
-    def __call_soap_method(self, method, scenario, args, callback, errback):
+    def _HandleContactDeleteResponse(self, request_id, callback, errback, response):
+        pass
+
+    def __process_request(self, callback, errback):
+        self.__sso.RequestMultipleSecurityToken((self.__call_soap_method,
+                                                callback), errback,
+                                                (LiveService.CONTACTS,))
+        
+    def __call_soap_method(self, token, method, scenario, args, 
+                           callback, errback):
         http_headers = method.transport_headers()
         soap_action = method.soap_action()
-        
-        soap_header = method.soap_header(scenario, self.__security_token)
+
+        soap_header = method.soap_header(scenario, token)
         soap_body = method.soap_body(*args)
 
-        self._send_request(self._service.url, soap_header, soap_body,
-                soap_action, callback, errback, http_headers)
-        
+        self._send_request(method.__name__, self._service.url, 
+                           soap_header, soap_body, soap_action, 
+                           callback, errback, http_headers)

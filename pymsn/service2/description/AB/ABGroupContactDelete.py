@@ -55,3 +55,6 @@ def soap_body():
             </groupFilter>
         </ABGroupContactDelete>""" % { 'group_id' : group_id,
                                        'contact_id' : contact_id }
+
+def process_response(soap_response):
+    return None
