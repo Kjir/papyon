@@ -29,6 +29,16 @@ class LiveService(object):
     TB = ("http://Passport.NET/tb", None)
     VOICE = ("voice.messenger.msn.com", "?id=69264")
 
+    @classmethod
+    def url_to_service(cls, url):
+        for attr_name in dir(cls):
+            if attr_name.startswith('_'):
+                continue
+            attr = getattr(cls, attr_name)
+            if isinstance(attr, tuple) and attr[0] == url:
+                return attr
+        return None
+
 def transport_headers():
     """Returns a dictionary, containing transport (http) headers
     to use for the request"""

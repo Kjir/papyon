@@ -22,6 +22,15 @@ description = "Membership address book service"
 
 url = "http://contacts.msn.com/abservice/SharingService.asmx"
 
+import pymsn.profile
+
+membership_mapping = { "unknown" : Membership.UNKNOWN,
+                       "forward" : Membership.FORWARD,
+                       "allow" : Membership.ALLOW,
+                       "block" : Membership.BLOCK,
+                       "reverse" : Membership.REVERSE,
+                       "pending" : Membership.PENDING }
+
 import FindMembership
 import AddMember
 import DeleteMember

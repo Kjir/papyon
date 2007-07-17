@@ -47,7 +47,16 @@ def soap_body(deltas_only, last_change):
                           'last_change' : last_change}
 
 def process_response(soap_response):
-    body = soap_response.body
-    # return body.findall("./ABFindAllResponse/ABFindAllResult")
-    # TODO : return a usable structure containing the information
-    return None
+    find_all_result = soap_response.body.\
+            find("./ab:ABFindAllResponse/ab:ABFindAllResult")
+
+    path = "./ab:groups/ab:Group"
+    groups = find_all_result.findall(path)
+
+    path = "./ab:contacts/ab:Contact"
+    contacts = find_all_result.findall(path)
+
+    path = "./ab:ab"
+    ab = find_all_result.find(path)
+    
+    return (ab, groups, contacts)

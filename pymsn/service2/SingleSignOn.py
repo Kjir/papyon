@@ -30,8 +30,9 @@ from Crypto.Hash import HMAC, SHA
 from Crypto.Cipher import DES3
 from xml.utils import iso8601
 import time
+import sys
 
-__all__ = ['SingleSignOn', 'LiveService']
+__all__ = ['SingleSignOn', 'LiveService', 'RequireSecurityTokens']
 
 class SecurityToken(object):
     
@@ -93,6 +94,24 @@ class SecurityToken(object):
                 (self.type, self.service_address, str(self.lifetime))
 
 
+class RequireSecurityTokens(object):
+    def __init__(self, *tokens):
+        assert(len(tokens) > 0)
+        self._tokens = tokens
+
+    def __call__(self, func):
+        def sso_callback(tokens, object, user_callback, user_errback,
+                user_args, user_kwargs):
+            object._tokens.update(tokens)
+            func(object, user_callback, user_errback, *user_args, **user_kwargs)
+
+        def method(object, callback, errback, *args, **kwargs):
+            callback = (sso_callback, object, callback, errback, args, kwargs)
+            object._sso.RequestMultipleSecurityToken(callback,
+                    None, *self._tokens)
+        method.__name__ = func.__name__
+        method.__doc__ = func.__doc__
+        return method
 
 
 class SingleSignOn(SOAPService):
@@ -122,7 +141,7 @@ class SingleSignOn(SOAPService):
                 callback, errback, http_headers)
     
     def _HandleRequestMultipleSecurityTokensResponse(self, callback, errback, response):
-        result = []
+        result = {}
         for node in response:
             token = SecurityToken()
             token.type = node.find("./wst:TokenType").text
@@ -143,7 +162,10 @@ class SingleSignOn(SOAPService):
                 token.proof_token = node.find("./wst:RequestedProofToken/wst:BinarySecret").text
             except AttributeError:
                 pass
-            result.append(token)
+            service = LiveService.url_to_service(token.service_address)
+            assert(service != None), "Unknown service URL : " + \
+                    token.service_address
+            result[service] = token
 
         if callback is not None:
             callback[0](result, *callback[1:])

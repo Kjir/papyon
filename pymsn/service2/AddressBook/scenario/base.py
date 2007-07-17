@@ -17,11 +17,17 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
+from pymsn.service2.SingleSignOn import SingleSignOn
+
+
 class BaseScenario(object):
-    def __init__(self, partner_scenario, callback, errback):
-        self.__partner_scenario = partner_scenario
-        self.__callback = callback
-        self.__errback = errback
+    def __init__(self, sso, partner_scenario, callback, errback):
+        self._sso = sso
+        self._partner_scenario = partner_scenario
+        self._callback = callback
+        self._errback = errback
 
     def execute(self):
         pass
+
+    def 

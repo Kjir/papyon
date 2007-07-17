@@ -21,6 +21,8 @@
 
 __all__ = ['XMLTYPE', 'XMLNS']
 
+from xml.utils import iso8601
+
 class XMLTYPE(object):
 
     class bool(object):
@@ -49,6 +51,14 @@ class XMLTYPE(object):
             except:
                 return 0
 
+    class datetime(object):
+        @staticmethod
+        def encode(date_int):
+            return iso8601.tostring(date_int)
+
+        @staticmethod
+        def decode(date_str):
+            return iso8601.parse(date_str.strip())
 
 class XMLNS(object):
 
@@ -80,4 +90,7 @@ class XMLNS(object):
     
     class MICROSOFT:
         PASSPORT = "http://schemas.microsoft.com/Passport/SoapServices/PPCRL"
+
+        class LIVE:
+            ADDRESSBOOK = "http://www.msn.com/webservices/AddressBook"
 

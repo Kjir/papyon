@@ -193,7 +193,7 @@ class SOAPService(object):
         if not soap_response.is_fault():
             handler = getattr(self,
                     "_Handle" + request_id + "Response",
-                    self._HandleUnhandledResponse)
+                    None)
             method = getattr(self._service, request_id)
             response = method.process_response(soap_response)
             

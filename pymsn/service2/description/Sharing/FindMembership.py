@@ -18,6 +18,7 @@
 #
 
 from common import *
+from pymsn.profile import Membership
 
 def transport_headers():
     """Returns a dictionary, containing transport (http) headers
@@ -65,6 +66,17 @@ def soap_body(services_types, deltas_only, last_change):
                                 'deltas' : deltas }
 
 def process_response(soap_response):
-    body = soap_response.body
-    # TODO : return a usable structure containing the information
-    return None
+    result = {}
+    memberships = soap_reponse.body.find("./FindMembershipResponse/" \ 
+                                         "FindMembershipResult/Services/" \ 
+                                         "Service/Memberships")
+    for membership in memberships:
+        role = membership.find("./MemberRole")
+        members = membership.find("./Members")
+        if role is None or members is None:
+            continue
+        result[membership_mapping.get(role.text.lower(),
+                                      Membership.UNKNOWN)] = members
+    return result
+
+    

@@ -148,7 +148,6 @@ class Membership(object):
     REVERSE = 8
     PENDING = 16
 
-
 class User(gobject.GObject):
     """Profile of the User connecting to the service
 
