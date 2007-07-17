@@ -118,7 +118,6 @@ class SingleSignOn(SOAPService):
     def __init__(self, username, password, proxies=None):
         self.__credentials = (username, password)
         self.__storage = pymsn.storage.get_storage(username, "security-tokens")
-        self.__response_tokens = []
         SOAPService.__init__(self, "SingleSignOn", proxies)
 
     def RequestMultipleSecurityTokens(self, callback, errback, *services):
@@ -127,6 +126,22 @@ class SingleSignOn(SOAPService):
             @param errback: tuple(callable, *args)
             @param services: one or more L{LiveService}"""
         method = self._service.RequestMultipleSecurityTokens
+
+        response_tokens = {}
+
+        services = list(services)
+        for service in services: # filter already available tokens
+            service_url = service[0]
+            if service_url in self.__storage:
+                token = self.__storage[service_url]
+                if not token.is_expired():
+                    services.remove(service)
+                    response_tokens[service] = token
+
+        if len(services) == 0:
+            self._HandleRequestMultipleSecurityTokensResponse(callback,
+                    errback, [], response_tokens)
+            return
 
         url = self._service.url
 
@@ -138,9 +153,10 @@ class SingleSignOn(SOAPService):
 
         self._send_request("RequestMultipleSecurityTokens", url,
                 soap_header, soap_body, soap_action,
-                callback, errback, http_headers)
+                callback, errback, http_headers, response_tokens)
     
-    def _HandleRequestMultipleSecurityTokensResponse(self, callback, errback, response):
+    def _HandleRequestMultipleSecurityTokensResponse(self, callback, errback,
+            response, response_tokens):
         result = {}
         for node in response:
             token = SecurityToken()
@@ -162,10 +178,13 @@ class SingleSignOn(SOAPService):
                 token.proof_token = node.find("./wst:RequestedProofToken/wst:BinarySecret").text
             except AttributeError:
                 pass
+
             service = LiveService.url_to_service(token.service_address)
             assert(service != None), "Unknown service URL : " + \
                     token.service_address
+            self.__storage[token.service_address] = token
             result[service] = token
+        result.update(response_tokens)
 
         if callback is not None:
             callback[0](result, *callback[1:])
