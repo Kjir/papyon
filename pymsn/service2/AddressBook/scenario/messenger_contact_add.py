@@ -24,7 +24,7 @@ class MessengerContactAddScenario(BaseScenario):
                  contact_info={}, invite_info={}):
         """Adds a messenger contact and updates the address book.
 
-            @param ab: the adress book service
+            @param ab: the address book service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)"""
         BaseScenario.__init__(self, 'ContactSave', callback, errback)

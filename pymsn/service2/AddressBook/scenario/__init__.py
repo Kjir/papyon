@@ -19,3 +19,17 @@
 
 name = "scenario"
 description = ""
+
+import AddressBookInitialScenario
+import MembershipInitialScenario
+
+import MessengerContactAddScenario
+import MailContactAddScenario
+import MobileContactAddScenario
+import ContactDeleteScenario
+
+import GroupAddScenario
+import GroupDeleteScenario
+import GroupRenameScenario
+import GroupContactAddScenario
+import GroupContactDeleteScenario
