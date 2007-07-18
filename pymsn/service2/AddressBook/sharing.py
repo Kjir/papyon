@@ -24,9 +24,12 @@ from pymsn.service2.SingleSignOn import *
 
 __all__ = ['Sharing']
 
+
+
 class Member(object):
-    def __init__(self, role, member):
-        self.Role = role
+    def __init__(self, member):
+        self.Roles = []
+        self.Account = ""
         self.MembershipId = XMLTYPE.int.decode(member.find("./ab:MembershipId").text)
         self.Type = member.find("./ab:Type").text
         try:
@@ -36,32 +39,46 @@ class Member(object):
         self.State = member.find("./ab:State").text
 
         self.Deleted = XMLTYPE.bool.decode(member.find("./ab:Deleted").text)
-        self.LastChanged = XMLTYPE.datetime.decode(memeber.find("./ab:LastChanged").text)
+        self.LastChanged = XMLTYPE.datetime.decode(member.find("./ab:LastChanged").text)
         self.Changes = [] # FIXME: extract the changes
 
+    def __hash__(self):
+        return hash(self.Type) ^ hash(self.Account)
+
+    def __eq__(self, other):
+        return (self.Type == other.Type) and (self.Account == other.Account)
+
+    def __repr__(self):
+        return "<%sMember id=%d account=%s>" % (self.Type, self.MembershipId, self.Account)
+
     @staticmethod
-    def new(role, member):
+    def new(member):
         type = member.find("./ab:Type").text
         if type == "Passport":
-            return PassportMember(role, member)
+            return PassportMember(member)
         elif type == "Email":
-            return EmailMember(role, member)
+            return EmailMember(member)
         else:
             raise NotImplementedError("Member type not implemented : " + type)
 
+
 class PassportMember(Member):
-    def __init__(self, role, member):
-        Member.__init__(self, role, member)
+    def __init__(self, member):
+        Member.__init__(self, member)
         self.PassportId = XMLTYPE.int.decode(member.find("./ab:PassportId").text)
         self.PassportName = member.find("./ab:PassportName").text
-        self.IsPassportNameHidden = XMLTYPE.bool.decode(member.find("./ab:find").text)
+        self.IsPassportNameHidden = XMLTYPE.bool.decode(member.find("./ab:IsPassportNameHidden").text)
         self.CID = XMLTYPE.int.decode(member.find("./ab:CID").text)
         self.PassportChanges = [] # FIXME: extract the changes
 
-def EmailMember(MemberA):
-    def __init__(self, role, member):
-        Member.__init__(self, role, member)
-        self.Email = member.find("./ab:Email")
+        self.Account = self.PassportName
+
+class EmailMember(Member):
+    def __init__(self, member):
+        Member.__init__(self, member)
+        self.Email = member.find("./ab:Email").text
+        
+        self.Account = self.Email
 
 
 class Sharing(SOAPService):
@@ -87,13 +104,19 @@ class Sharing(SOAPService):
         """
         self.__soap_request(self._service.FindMembership, scenario,
                 (services, deltas_only, last_change), callback, errback)
-        
-    def _HandleFindMembershipResponse(self, request_id, callback, errback, response):
-        memberships = []
+    
+    def _HandleFindMembershipResponse(self, callback, errback, response, user_data):
+        memberships = {}
         for role, members in response.iteritems():
             for member in members:
-                memberships.append(Member.new(role, member))
-        callback[0](memberships, *callback[1:])
+                member_obj = Member.new(member)
+                member_id = hash(member_obj)
+                if member_id in memberships:
+                    memberships[member_id].Roles.append(role)
+                else:
+                    member_obj.Roles.append(role)
+                    memberships[member_id] = member_obj
+        callback[0](memberships.values(), *callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def AddMember(self, callback, errback, scenario,
@@ -112,7 +135,7 @@ class Sharing(SOAPService):
         self.__soap_request(self._service.AddMember, scenario,
                 (member_role, type, state, passport), callback, errback)
 
-    def _HandleAddMemberResponse(self, request_id, callback, errback, response):
+    def _HandleAddMemberResponse(self, callback, errback, response, user_data):
         pass
 
     @RequireSecurityTokens(LiveService.CONTACTS)
@@ -132,7 +155,7 @@ class Sharing(SOAPService):
         self.__soap_request(self._service.DeleteMember, scenario,
                 (member_role, type, state, membership), callback, errback)
 
-    def _HandleDeleteMemberResponse(self, request_id, callback, errback, response):
+    def _HandleDeleteMemberResponse(self, callback, errback, response, user_data):
         pass
 
     def __soap_request(self, method, scenario, args, callback, errback):
@@ -176,9 +199,14 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM,
             lambda *args: gobject.idle_add(mainloop.quit()))
 
+    def sharing_callback(memberships):
+        print "Memberships :"
+        for member in memberships:
+            print member
+
     sso = SingleSignOn(account, password)
     sharing = Sharing(sso)
-    sharing.FindMembership(None, None, 'Initial',
+    sharing.FindMembership((sharing_callback,), None, 'Initial',
             ['Messenger', 'Invitation'], False)
 
     while mainloop.is_running():

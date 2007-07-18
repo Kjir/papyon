@@ -41,14 +41,14 @@ class XMLTYPE(object):
 
     class int(object):
         @staticmethod
-        def encode(int):
-            return str(int)
+        def encode(integer):
+            return str(integer)
 
         @staticmethod
-        def decode(boolean_str):
+        def decode(integer_str):
             try:
-                return int(s)
-            except:
+                return int(integer_str)
+            except ValueError:
                 return 0
 
     class datetime(object):
