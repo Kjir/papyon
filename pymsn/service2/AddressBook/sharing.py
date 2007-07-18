@@ -24,29 +24,44 @@ from pymsn.service2.SingleSignOn import *
 
 __all__ = ['Sharing']
 
+class Member(object):
+    def __init__(self, role, member):
+        self.Role = role
+        self.MembershipId = XMLTYPE.int.decode(member.find("./ab:MembershipId").text)
+        self.Type = member.find("./ab:Type").text
+        try:
+            self.DisplayName = member.find("./ab:DisplayName").text
+        except AttributeError:
+            self.DisplayName = ""
+        self.State = member.find("./ab:State").text
 
-#class Member(object):
-#
-#    def __init__(self, member):
-#        self.membership_id = member.find('./MembershipId').text
-#        self.type = member.find('./Type').text
-#        self.state = member.find('./State').text
-#        self.deleted = XMLTYPE.bool.decode(member.find('./Deleted').text)
-#        self.last_changed = XMLTYPE.datetime.decode(member.find('./LastChanged').text)
-#        
-#        passport = member.find('./PassportName')
-#        if passport is not None:
-#            self.account = passport.text
-#            self.network_id = NetworkID.MSN
-#        else:
-#            self.account = member('./Email').text
-#            self.network_id = NetworkID.EXTERNAL
-#
-#        display_name = member.find('./DisplayName')
-#        if display_name is not None:
-#            self.display_name = display_name.text
-#        else:
-#            self.display_name = self.account.split("@", 1)[0]
+        self.Deleted = XMLTYPE.bool.decode(member.find("./ab:Deleted").text)
+        self.LastChanged = XMLTYPE.datetime.decode(memeber.find("./ab:LastChanged").text)
+        self.Changes = [] # FIXME: extract the changes
+
+    @staticmethod
+    def new(role, member):
+        type = member.find("./ab:Type").text
+        if type == "Passport":
+            return PassportMember(role, member)
+        elif type == "Email":
+            return EmailMember(role, member)
+        else:
+            raise NotImplementedError("Member type not implemented : " + type)
+
+class PassportMember(Member):
+    def __init__(self, role, member):
+        Member.__init__(self, role, member)
+        self.PassportId = XMLTYPE.int.decode(member.find("./ab:PassportId").text)
+        self.PassportName = member.find("./ab:PassportName").text
+        self.IsPassportNameHidden = XMLTYPE.bool.decode(member.find("./ab:find").text)
+        self.CID = XMLTYPE.int.decode(member.find("./ab:CID").text)
+        self.PassportChanges = [] # FIXME: extract the changes
+
+def EmailMember(MemberA):
+    def __init__(self, role, member):
+        Member.__init__(self, role, member)
+        self.Email = member.find("./ab:Email")
 
 
 class Sharing(SOAPService):
@@ -74,7 +89,11 @@ class Sharing(SOAPService):
                 (services, deltas_only, last_change), callback, errback)
         
     def _HandleFindMembershipResponse(self, request_id, callback, errback, response):
-        pass
+        memberships = []
+        for role, members in response.iteritems():
+            for member in members:
+                memberships.append(Member.new(role, member))
+        callback[0](memberships, *callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def AddMember(self, callback, errback, scenario,

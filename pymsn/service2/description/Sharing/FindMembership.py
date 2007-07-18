@@ -63,10 +63,10 @@ def soap_body(services_types, deltas_only, last_change):
                </Types>
            </serviceFilter>
            %(deltas)s
-       </FindMembership>""" % { 'services' : services,
-                                'deltas' : deltas }
+       </FindMembership>""" % {'services' : services, 'deltas' : deltas}
 
 def process_response(soap_response):
+    # FIXME: don't pick the 1st service only, we need to extract them all
     result = {}
     memberships = soap_response.body.find("./ab:FindMembershipResponse/"
             "ab:FindMembershipResult/ab:Services/"
@@ -74,8 +74,8 @@ def process_response(soap_response):
 
     for membership in memberships:
         role = membership.find("./ab:MemberRole")
-        members = membership.find("./ab:Members")
-        if role is None or members is None:
+        members = membership.findall("./ab:Members/ab:Member")
+        if role is None or len(members) == 0:
             continue
         result[role.text] = members
     return result
