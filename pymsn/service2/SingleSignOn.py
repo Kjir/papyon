@@ -86,8 +86,7 @@ class SecurityToken(object):
         return hash2 + hash4[0:4]
 
     def __str__(self):
-        return "<SecurityToken type=\"%s\" address=\"%s\" lifetime=\"%s\">" % \
-                (self.type, self.service_address, str(self.lifetime))
+        return self.security_token
 
     def __repr__(self):
         return "<SecurityToken type=\"%s\" address=\"%s\" lifetime=\"%s\">" % \
@@ -107,7 +106,7 @@ class RequireSecurityTokens(object):
 
         def method(object, callback, errback, *args, **kwargs):
             callback = (sso_callback, object, callback, errback, args, kwargs)
-            object._sso.RequestMultipleSecurityToken(callback,
+            object._sso.RequestMultipleSecurityTokens(callback,
                     None, *self._tokens)
         method.__name__ = func.__name__
         method.__doc__ = func.__doc__

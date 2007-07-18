@@ -18,6 +18,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import xml.sax.saxutils as xml
+
 def soap_header(scenario, security_token):
     """Returns the SOAP xml header"""
 
@@ -30,4 +32,4 @@ def soap_header(scenario, security_token):
        <ABAuthHeader xmlns="http://www.msn.com/webservices/AddressBook">
            <ManagedGroupRequest xmlns="http://www.msn.com/webservices/AddressBook">false</ManagedGroupRequest>
            <TicketToken xmlns="http://www.msn.com/webservices/AddressBook">%s</TicketToken>
-       </ABAuthHeader>""" % (scenario, security_token)
+       </ABAuthHeader>""" % (xml.escape(scenario), xml.escape(security_token))

@@ -57,7 +57,7 @@ class Sharing(SOAPService):
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def FindMembership(self, callback, errback, scenario,
-            services, deltas_only, last_change):
+            services, deltas_only, last_change=''):
         """Requests the membership list.
 
             @param scenario: 'Initial' | ...
@@ -117,17 +117,53 @@ class Sharing(SOAPService):
         pass
 
     def __soap_request(self, method, scenario, args, callback, errback):
-        token = self._tokens[LiveService.CONTACTS]
+        token = str(self._tokens[LiveService.CONTACTS])
 
         http_headers = method.transport_headers()
         soap_action = method.soap_action()
 
         soap_header = method.soap_header(scenario, token)
         soap_body = method.soap_body(*args)
-
-        self._send_request(method.__name__,
+        
+        method_name = method.__name__.rsplit(".", 1)[1]
+        self._send_request(method_name,
                 self._service.url, 
                 soap_header, soap_body, soap_action, 
                 callback, errback,
                 http_headers)
 
+if __name__ == '__main__':
+    import sys
+    import getpass
+    import signal
+    import gobject
+    import logging
+    from pymsn.service2.SingleSignOn import *
+
+    logging.basicConfig(level=logging.DEBUG)
+
+    if len(sys.argv) < 2:
+        account = raw_input('Account: ')
+    else:
+        account = sys.argv[1]
+
+    if len(sys.argv) < 3:
+        password = getpass.getpass('Password: ')
+    else:
+        password = sys.argv[2]
+
+    mainloop = gobject.MainLoop(is_running=True)
+    
+    signal.signal(signal.SIGTERM,
+            lambda *args: gobject.idle_add(mainloop.quit()))
+
+    sso = SingleSignOn(account, password)
+    sharing = Sharing(sso)
+    sharing.FindMembership(None, None, 'Initial',
+            ['Messenger', 'Invitation'], False)
+
+    while mainloop.is_running():
+        try:
+            mainloop.run()
+        except KeyboardInterrupt:
+            mainloop.quit()

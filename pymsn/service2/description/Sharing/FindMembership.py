@@ -20,6 +20,8 @@
 from common import *
 from pymsn.profile import Membership
 
+import xml.sax.saxutils as xml
+
 def transport_headers():
     """Returns a dictionary, containing transport (http) headers
     to use for the request"""
@@ -37,10 +39,9 @@ def soap_body(services_types, deltas_only, last_change):
 
     services = ''
     for service in services_types:
-        services += """
-                <ServiceType xmlns="http://www.msn.com/webservices/AddressBook">
+        services += """<ServiceType xmlns="http://www.msn.com/webservices/AddressBook">
                      %s
-                </ServiceType>""" % service
+                </ServiceType>""" % xml.escape(service)
 
     deltas = ''
     if deltas_only:
@@ -67,16 +68,16 @@ def soap_body(services_types, deltas_only, last_change):
 
 def process_response(soap_response):
     result = {}
-    memberships = soap_reponse.body.find("./FindMembershipResponse/" \ 
-                                         "FindMembershipResult/Services/" \ 
-                                         "Service/Memberships")
+    memberships = soap_response.body.find("./ab:FindMembershipResponse/"
+            "ab:FindMembershipResult/ab:Services/"
+            "ab:Service/ab:Memberships")
+
     for membership in memberships:
-        role = membership.find("./MemberRole")
-        members = membership.find("./Members")
+        role = membership.find("./ab:MemberRole")
+        members = membership.find("./ab:Members")
         if role is None or members is None:
             continue
-        result[membership_mapping.get(role.text.lower(),
-                                      Membership.UNKNOWN)] = members
+        result[role.text] = members
     return result
 
     

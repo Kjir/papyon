@@ -19,6 +19,8 @@
 
 from common import *
 
+import xml.sax.saxutils as xml
+
 def transport_headers():
     """Returns a dictionary, containing transport (http) headers
     to use for the request"""

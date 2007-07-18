@@ -45,12 +45,11 @@ def url_split(url, default_scheme='http'):
     resource = urlunsplit(('', '', path, query, fragment))
     return protocol, host, port, resource
 
-space_regex = [(re.compile('>\s+<'), '><'),
-        (re.compile('>\s+'), '>'),
-        (re.compile('<\s+'), '<')]
-
 def compress_xml(xml_string):
-    global space_regex
+    space_regex = [(re.compile('>\s+<'), '><'),
+        (re.compile('>\s+'), '>'),
+        (re.compile('\s+<'), '<')]
+
     for regex, replacement in space_regex:
         xml_string = regex.sub(replacement, xml_string)
     return xml_string
@@ -77,6 +76,13 @@ class _SOAPElement(object):
         for sh, ns in self.ns_shorthands.iteritems():
             name = name.replace("%s:" % sh, "{%s}" % ns)
         return self.element[name]
+
+    def __iter__(self):
+        for node in self.element:
+            yield _SOAPElement(node, self.ns_shorthands)
+
+    def __contains__(self, node):
+        return node in self.element
 
     def __repr__(self):
         return "<SOAPElement name=\"%s\">" % (self.element.tag,)
@@ -108,7 +114,8 @@ class SOAPResponse(object):
             "wsp" : XMLNS.WS.POLICY,
             "wsi" : XMLNS.WS.ISSUE,
             "wsu" : XMLNS.WS.UTILITY,
-            "ps" : XMLNS.MICROSOFT.PASSPORT}
+            "ps" : XMLNS.MICROSOFT.PASSPORT,
+            "ab" : XMLNS.MICROSOFT.LIVE.ADDRESSBOOK}
 
     def __init__(self, soap_data):
         try:
