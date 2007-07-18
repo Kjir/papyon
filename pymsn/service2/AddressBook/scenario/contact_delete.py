@@ -31,9 +31,9 @@ class ContactDeleteScenario(BaseScenario):
         self.contact_guid = contact_guid
 
     def execute(self):
-        self.__ab.ContactDelete(self._scenario, self.contact_guid,
-                                  (self.___contact_delete_callback,),
-                                  (self.___contact_delete_errback,))
+        self.__ab.ContactDelete((self.___contact_delete_callback,),
+                                (self.___contact_delete_errback,),
+                                self._scenario, self.contact_guid)
 
     def ___contact_delete_callback(self):
         callback, args = self._callback

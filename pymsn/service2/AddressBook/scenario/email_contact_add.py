@@ -18,8 +18,8 @@
 #
 from pymsn.service2.description.AB import ContactType
 
-class MailContactAddScenario(BaseScenario):
-    def __init__(self, ab, callback, errback, mail_address="", contact_info={}):
+class EmailContactAddScenario(BaseScenario):
+    def __init__(self, ab, callback, errback, email_address="", contact_info={}):
         """Adds a mail contact and updates the address book.
 
             @param ab: the adress book service
@@ -28,14 +28,14 @@ class MailContactAddScenario(BaseScenario):
         BaseScenario.__init__(self, 'ContactSave', callback, errback)
         self.__ab = ab
 
-        self.__mail_address = mail_address
+        self.__email_address = email_address
         self.__contact_info = contact_info
 
-    def __set_mail_address(self, mail_address):
-        self.__mail_address = mail_address
+    def __set_email_address(self, email_address):
+        self.__email_address = email_address
     def __get_mail_address(self):
-        return self.__mail_address
-    mail_address = property(__get_mail_address, __set_mail_address,
+        return self.__email_address
+    email_address = property(__get_email_address, __set_email_address,
                             doc="The mail address of the contact")
     
     def __set_contact_info(self, contact_info):
@@ -49,9 +49,9 @@ class MailContactAddScenario(BaseScenario):
     def execute(self):
         contact_info['passport_name'] = self.__mail_address
         contact_info['is_messenger_user'] = False
-        self.__ab.ContactAdd(self.__scenario, self.__contact_info, {},
-                             self.__contact_add_callback, 
-                             self.__contact_add_errback)
+        self.__ab.ContactAdd((self.__contact_add_callback,), 
+                             (self.__contact_add_errback,),
+                             self.__scenario, self.__contact_info, {})
 
     def __contact_add_callback(self, stuff):
         self.__callback(stuff)

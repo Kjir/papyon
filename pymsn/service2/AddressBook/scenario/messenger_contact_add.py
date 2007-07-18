@@ -56,11 +56,11 @@ class MessengerContactAddScenario(BaseScenario):
         contact_info['account'] = self._account
         contact_info['contact_type'] = self.__contact_type
         contact_info['is_messenger_user'] = True
-        self._ab.ContactAdd(self._scenario, 
-                             self.contact_info,
-                             self.invite_info,
-                             (self.__contact_add_callback,),
-                             (self.__contact_add_errback,))
+        self._ab.ContactAdd((self.__contact_add_callback,),
+                            (self.__contact_add_errback,),
+                            self._scenario, 
+                            self.contact_info,
+                            self.invite_info)
         if self._external_network:
             # TODO : prepare parameters and make a ContactAdd
             pass

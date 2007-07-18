@@ -33,9 +33,10 @@ class GroupContactAddScenario(BaseScenario):
         self.contact_guid = contact_guid
 
     def execute(self):
-        self.__ab.GroupContactAdd(self._scenario, group_id, contact_id,
-                                  (self.__group_contact_add_callback,),
-                                  (self.__group_contact_add_errback,))
+        self.__ab.GroupContactAdd((self.__group_contact_add_callback,),
+                                  (self.__group_contact_add_errback,),
+                                  self._scenario, self._group_id, 
+                                  self._contact_id)
 
     def __group_contact_add_callback(self):
         callback, args = self._callback

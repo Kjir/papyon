@@ -12,7 +12,8 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
+# You should have received a copy of the GNU General Public 
+License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
@@ -48,11 +49,11 @@ class MobileContactAddScenario(BaseScenario):
         phones = self.__contact_info.get('phone', {})
         phones[ContactPhoneType.MOBILE] = self.__phone_number
         # self.__contact_info['phone'] = phones 
-        self.__ab.ContactAdd(self.__scenario, 
+        self.__ab.ContactAdd((self.__contact_add_callback,),
+                             (self.__contact_add_errback,),
+                             self.__scenario,
                              self.__contact_info,
-                             {},
-                             self.__contact_add_callback,
-                             self.__contact_add_errback)
+                             {})
 
     def __contact_add_callback(self, stuff):
         self.__callback(stuff)

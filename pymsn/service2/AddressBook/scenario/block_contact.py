@@ -17,28 +17,22 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-class GroupDeleteScenario(BaseScenario):
-    def __init__(self, ab, callback, errback, group_guid=''):
-        """Deletes a group from the address book.
+class BlockContactScenario(BaseScenario):
+    def __init__(self, membership, callback, errback):
+        """Blocks a contact.
 
-            @param ab: the address book service
+            @param membership: the membership service
             @param callback: tuple(callable, *args)
-            @param errback: tuple(callable, *args)
-            @param group_guid: the guid of the group to delete"""
-        BaseScenario.__init__(self, 'GroupSave', callback, errback)
-        self.__ab = ab
-
-        self.group_guid = group_guid
+            @param errback: tuple(callable, *args)"""
+        BaseScenario.__init__(self, 'BlockUnblock', callback, errback)
+        self.__membership = membership
+        
 
     def execute(self):
-        self.__ab.GroupDelete((self.__group_delete_callback,),
-                              (self.__group_delete_errback,),
-                              self._scenario, self.group_guid)
+        pass
 
-    def __group_delete_callback(self):
-        callback, args = self._callback
-        callback(*args)
+    def __block_contact_callback(self):
+        pass
 
-    def __group_delete_errback(self, reason):
-        errback, args = self._errback
-        errback(reason, *args)
+    def __block_contact_errback(self):
+        pass
