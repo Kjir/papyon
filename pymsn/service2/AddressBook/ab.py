@@ -34,11 +34,11 @@ class AB(object):
 
 class Group(object):
     def __init__(self, group):
-        self.GroupId = group.findtext("./ab:groupId")
+        self.Id = group.findtext("./ab:groupId")
 
         group_info = group.find("./ab:groupInfo")
 
-        self.GroupType = group_info.findtext("./ab:groupType")
+        self.Type = group_info.findtext("./ab:groupType")
         self.Name = group_info.findtext("./ab:name")
         self.IsNotMobileVisible = group_info.findtext("./ab:IsNotMobileVisible", "bool")
         self.IsPrivate = group_info.findtext("./ab:IsPrivate", "bool")
@@ -50,13 +50,13 @@ class Group(object):
         self.LastChanged = group.findtext("./ab:lastChange", "bool")
 
     def __hash__(self):
-        return hash(self.GroupId)
+        return hash(self.Id)
 
     def __eq__(self, other):
-        return self.GroupId == other.GroupId
+        return self.Id == other.Id
 
     def __repr__(self):
-        return "<Group id=%s>" % self.GroupId
+        return "<Group id=%s>" % self.Id
 
 
 class ContactEmail(object):
@@ -93,10 +93,10 @@ class ContactLocation(object):
 
 class Contact(object):
     def __init__(self, contact):
-        self.ContactId = contact.findtext("./ab:contactId")
+        self.Id = contact.findtext("./ab:contactId")
 
         contact_info = contact.find("./ab:contactInfo")
-        self.ContactType = contact_info.findtext("./ab:contactType")
+        self.Type = contact_info.findtext("./ab:contactType")
         self.QuickName = contact_info.findtext("./ab:quickName")
         self.IsPassportNameHidden = contact_info.findtext("./ab:IsPassportNameHidden", "bool")
 
@@ -124,6 +124,11 @@ class Contact(object):
 
         self.Annotations = annotations_to_dict(contact_info.find("./ab:contactInfo/ab:Annotations"))
         
+        self.Emails = []
+        emails = contact_info.find("./ab:emails") or []
+        for contact_email in emails:
+            self.Emails.append(ContactEmail(contact_email))
+
         self.PropertiesChanged = [] #FIXME: implement this
         self.Deleted = contact.findtext("./ab:fDeleted", "bool")
         self.LastChanged = contact.findtext("./ab:lastChanged", "datetime")
@@ -161,10 +166,7 @@ class RegularContact(Contact):
         self.FirstName = contact_info.findtext("./ab:firstName")
         self.LastName = contact_info.findtext("./ab:lastName")
 
-        self.emails = []
-        emails = contact_info.find("./ab:emails") or []
-        for contact_email in emails:
-            self.emails.append(ContactEmail(contact_email))
+
             
 
 

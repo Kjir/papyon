@@ -64,11 +64,11 @@ class Member(object):
 class PassportMember(Member):
     def __init__(self, member):
         Member.__init__(self, member)
-        self.PassportId = XMLTYPE.int.decode(member.find("./ab:PassportId").text)
-        self.PassportName = member.find("./ab:PassportName").text
+        self.Id = XMLTYPE.int.decode(member.find("./ab:PassportId").text)
+        self.Name = member.find("./ab:PassportName").text
         self.IsPassportNameHidden = XMLTYPE.bool.decode(member.find("./ab:IsPassportNameHidden").text)
         self.CID = XMLTYPE.int.decode(member.find("./ab:CID").text)
-        self.PassportChanges = [] # FIXME: extract the changes
+        self.Changes = [] # FIXME: extract the changes
 
         self.Account = self.PassportName
 

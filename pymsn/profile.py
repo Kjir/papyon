@@ -98,6 +98,8 @@ class NetworkID(object):
     """Refers to the contact Network ID"""
     MSN = 1
     """Microsoft Network"""
+    LCS = 2
+    """Microsoft Live COmmunication Server"""
     MOBILE = 4
     """Mobile phones"""
     EXTERNAL = 32

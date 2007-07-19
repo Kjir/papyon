@@ -36,10 +36,10 @@ class AddressBookStorage(set):
     def __repr__(self):
         return "AddressBook : %d contact(s)" % len(self)
 
-    def add_contact(self, contact):
+    def add(self, contact):
         self.add(contact)
 
-    def remove_contact(self, contact):
+    def remove(self, contact):
         self.remove(contact)
 
     def __getitem__(self, key):
@@ -90,7 +90,7 @@ class AddressBookStorage(set):
             value = getattr(contact, field)
             if value not in result:
                 result[value] = AddressBookStorage()
-            result[value].add_contact(contact)
+            result[value].add(contact)
         return result
 
 
@@ -285,6 +285,55 @@ class AddressBook(gobject.GObject):
         contacts = address_book.contacts
         groups = address_book.groups
 
+        for group in groups:
+            g = profile.Group(group.Id, group.Name)
+            self.groups[group.Id] = g
+
+        for contact in contacts:
+            if not contact.IsMessengerUser:
+                #FIXME: maybe we want to avoid filtering
+                continue
+            try:
+                display_name = contact.DisplayName
+            except AttributeError:
+                display_name = contact.QuickName
+
+            c = profile.Contact(contact.Id,
+                    profile.NetworkID.MSN,
+                    contact.Account,
+                    display_name,
+                    profile.Membership.FORWARD)
+            c._server_contact_attribute_changed("im_contact",
+                    contact.IsMessengerUser)
+            
+            if contact.Type == "Me":
+                self._profile = c
+            else:
+                self.contacts.add(c)
+
+        for membership, members in memberships.iteritems():
+            if membership == "Allow":
+                membership = profile.Membership.ALLOW
+            elif membership == "Block":
+                membership = profile.Membership.BLOCK
+            elif membership == "Reverse":
+                membership = profile.Membership.REVERSE
+            elif membership == "Pending":
+                membership = profile.Membership.PENDING
+            else:
+                raise NotImplementedError("Unknown Membership Type : " + membership)
+
+            for member in memebers:
+                if member.Type != "Passport":
+                    #FIXME: maybe we want to avoid filtering
+                    continue
+                
+                contact = self.contacts\
+                        .search_by_account(self.member.Account)[0]
+                if contact is not None:
+                    contact._add_membership(membership)
+        self._state = AddressBookState.SYNCHRONIZED
+
     def __add_messenger_contact_cb(self):
         # TODO : build the contact object
         self.emit('messenger-contact-added')
@@ -302,7 +351,7 @@ class AddressBook(gobject.GObject):
         self.emit('group-added')
 
     def __common_callback(self, signal, *args):
-        self.emit(signal, args)
+        self.emit(signal, *args)
 
     def __common_errback(self, *args):
         pass
