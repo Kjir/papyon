@@ -27,7 +27,7 @@ __all__ = ['AB']
 
 class Group(object):
     def __init__(self, group):
-        self.GroupId = self.find("./ab:groupId").text
+        self.GroupId = group.find("./ab:groupId").text
 
         group_info = group.find("./ab:groupInfo")
         self.GroupType = group_info.find("./ab:groupType")
@@ -48,6 +48,65 @@ class Group(object):
 
     def __repr__(self):
         return "<Group id=%s>" % self.GroupId
+
+class Contact(object):
+    def __init__(self, contact):
+        self.ContactId = contact.find("./ab:contactId").text
+
+        contact_info = contact.find("./ab:contactInfo")
+        self.ContactType = contact_info.find("./ab:contactType").text
+        self.QuickName = contact_info.find("./ab:quickName").text
+        self.IsPassportNameHidden = XMLTYPE.bool.decode(contact_info.find("./ab:IsPassportNameHidden").text)
+
+        self.PUID = XMLTYPE.int.decode(contact_info.find("./ab:puid").text)
+        self.CID = XMLTYPE.int.decode(contact_info.find("./ab:CID").text)
+
+        self.IsNotMobileVisible = XMLTYPE.bool.decode(contact_info.find("./ab:IsNotMobileVisible").text)
+        self.IsMobileIMEnabled = XMLTYPE.bool.decode(contact_info.find("./ab:isMobileIMEnabled").text)
+        self.IsMessengerUser = XMLTYPE.bool.decode(contact_info.find("./ab:isMessengerUser").text)
+        self.IsFavorite = XMLTYPE.bool.decode(contact_info.find("./ab:isFavorite").text)
+        self.IsSmtp = XMLTYPE.bool.decode(contact_info.find("./ab:isSmtp").text)
+        self.HasSpace = XMLTYPE.bool.decode(contact_info.find("./ab:hasSpace").text)
+
+        self.SpotWatchState = contact_info.find("./ab:spotWatchState").text
+        self.Birthdate = XMLTYPE.datetime.decode(contact_info.find("./ab:birthdate").text)
+
+        self.PrimaryEmailType = contact_info.find("./ab:primaryEmailType").text
+        self.primaryLocation = contact_info.find("./ab:PrimaryLocation").text
+        self.primaryPhone = contact_info.find("./ab:primaryPhone").text
+
+        self.IsPrivate = XMLTYPE.bool.decode(contact_info.find("./ab:IsPrivate").text)
+        self.Gender = contact_info.find("./ab:Gender").text
+        self.TimeZone = contact_info.find("./ab:TimeZone").text
+
+        self.Annotations = annotations_to_dict(contact_info.find("./ab:contactInfo/ab:Annotations"))
+        
+        self.PropertiesChanged = [] #FIXME: implement this
+        self.Deleted = XMLTYPE.bool.decode(group.find("./ab:fDeleted"))
+        self.LastChanged = XMLTYPE.datetime.decode(member.find("./ab:lastChanged").text)
+
+class LiveContact(Contact):
+    def __init__(self, contact):
+        Contact.__init__(self, contact)
+        contact_info = contact.find("./ab:contactInfo")
+        self.PassportName = contact_info.find("./ab:passportName").text
+        self.DisplayName = contact_info.find("./ab:displayName").text
+
+class MeContact(LiveContact):
+    def __init__(self, contact):
+        LiveContact.__init__(self, contact)
+
+class RegularContact(Contact):
+    def __init__(self, contact):
+        Contact.__init__(self, contact)
+        contact_info = contact.find("./ab:contactInfo")
+        self.FirstName = contact_info.find("./ab:firstName").text
+        self.LastName = contact_info.find("./ab:lastName").text
+
+        emails = contact_info.find("./ab:emails")
+        for contact_email in emails:
+            pass
+
 
 
 class AB(SOAPService):
