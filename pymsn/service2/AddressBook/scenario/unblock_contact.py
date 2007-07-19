@@ -18,20 +18,42 @@
 #
 
 class UnblockContactScenario(BaseScenario):
-    def __init__(self, membership, callback, errback):
+    def __init__(self, sharing, callback, errback, type='', account='', 
+                 state='Accepted'):
         """Unblocks a contact.
 
-            @param membership: the membership service
+            @param sharing: the membership service
             @param callback: tuple(callable, *args)
-            @param errback: tuple(callable, *args)"""
+            @param errback: tuple(callable, *args)
+            @param type: 'Passport' | 'Email'
+        """
         BaseScenario.__init__(self, 'BlockUnblock', callback, errback)
-        self.__membership = membership
+        self.__sharing = sharing
+        
+        self.type = type
+        self.account = account
+        self.state = state
 
     def execute(self):
-        pass
+        self.__sharing.DeleteMember((self.__delete_member_callback,),
+                                    (self.__delete_member_errback,),
+                                    self._scenario, 'Block', self.typen
+                                    self.state, None, self.account)
 
-    def __unblock_contact_callback(self):
-        pass
+    def __delete_member_callback(self):
+        self.__sharing.AddMember((self.__add_member_callback,),
+                                 (self.__add_member_errback,),
+                                 self._scenario, 'Allow', self.type, 
+                                 self.state, self.account)
 
-    def __unblock_contact_errback(self):
-        pass
+    def __delete_member_errback(self):
+        errback, args = self.__errback
+        errback(*args)
+    
+    def __add_member_callback(self):
+        callback, args = self._callback
+        callback(*args)
+
+    def __add_member_errback(self):
+        errback, args = self.__errback
+        errback(*args)

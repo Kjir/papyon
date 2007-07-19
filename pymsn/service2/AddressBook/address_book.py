@@ -62,7 +62,7 @@ class AddressBookStorage(set):
             return group_by_func
         else:
             raise AttributeError, name
-
+        
     def search_by_memberships(self, memberships):
         result = []
         for contact in self:
@@ -218,10 +218,25 @@ class AddressBook(gobject.GObject):
         dc.execute()
 
     def block_contact(self, contact):
-        pass
+        bc = BlockContactScenario(self._sharing,
+                                  (self.__common_callback, 'contact-blocked',
+                                   contact),
+                                  (self.__common_errback,))
+        # bc.type = contact.type
+        # bc.account = contact.account
+        # bc.state = contact.state
+        bc.execute()
 
     def unblock_contact_cb(self, contact):
-        pass
+        uc = UnblockContactScenario(self._sharing,
+                                    (self.__common_callback, 'contact-unblocked',
+                                     contact),
+                                    (self.__common_errback,))
+        # uc.type = contact.type
+        # uc.membership_id = contact.membership_id
+        # uc.account = contact.account
+        # uc.state = contact.state
+        uc.execute()
 
     def add_group(self, group_name):
         ag = GroupAddScenario(self._ab,
@@ -240,7 +255,8 @@ class AddressBook(gobject.GObject):
 
     def rename_group(self, group, new_name):
         rg = GroupRenameScenario(self._ab,
-                                 (self.__common_callback, 'group-renamed'),
+                                 (self.__common_callback, 'group-renamed',
+                                  group),
                                  (self.__common_errback,))
         # rg.group_guid = group.guid
         rg.group_name = new_name
@@ -248,7 +264,8 @@ class AddressBook(gobject.GObject):
 
     def add_contact_to_group(self, group, contact):
         ac = GroupContactAddScenario(self._ab,
-                                     (self.__common_callback, 'group-contact-added'),
+                                     (self.__common_callback, 'group-contact-added',
+                                      group, contact),
                                      (self.__common_errback,))
         # ac.group_guid = group.guid
         # ac.contact_guid = contact.guid
@@ -256,7 +273,8 @@ class AddressBook(gobject.GObject):
 
     def delete_contact_from_group(self, group, contact):
         dc = GroupContactDeleteScenario(self._ab,
-                                        (self.__common_callback, 'group-contact-deleted'),
+                                        (self.__common_callback, 'group-contact-deleted',
+                                         group),
                                         (self.__common_errback,))
         # dc.group_id = group.guid
         # dc.contact_id = contact.guid

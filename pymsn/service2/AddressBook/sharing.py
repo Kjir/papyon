@@ -119,41 +119,35 @@ class Sharing(SOAPService):
         callback[0](memberships.values(), *callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
-    def AddMember(self, callback, errback, scenario,
-            member_role, passport_member):
+    def AddMember(self, callback, errback, scenario, member_role, type,
+                  state, account):
         """Adds a member to a membership list.
 
             @param scenario: 'Timer' | 'BlockUnblock' | ...
             @param member_role: 'Allow' | ...
-            @param passport_member: tuple(type, state, passport) with
-                                    type in ['Passport', ...] and 
-                                    state in ['Accepted', ...]
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
         type, state, passport = passport_member
         self.__soap_request(self._service.AddMember, scenario,
-                (member_role, type, state, passport), callback, errback)
+                (member_role, type, state, account), callback, errback)
 
     def _HandleAddMemberResponse(self, callback, errback, response, user_data):
         pass
 
     @RequireSecurityTokens(LiveService.CONTACTS)
-    def DeleteMember(self, callback, errback, scenario,
-            member_role, passport_member):
+    def DeleteMember(self, callback, errback, scenario, member_role, type, 
+                     state, membership_id=None, account=None):
         """Deletes a member from a membership list.
 
             @param scenario: 'Timer' | 'BlockUnblock' | ...
             @param member_role: 'Block' | ...
-            @param passport_member: tuple(type, state, membership_id)
-                                    type in ['Passport', ...] and 
-                                    state in ['Accepted', ...]
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        type, state, membership = passport_member
         self.__soap_request(self._service.DeleteMember, scenario,
-                (member_role, type, state, membership), callback, errback)
+                            (member_role, type, state, membership_id, account), 
+                            callback, errback)
 
     def _HandleDeleteMemberResponse(self, callback, errback, response, user_data):
         pass

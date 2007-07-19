@@ -31,8 +31,25 @@ def soap_action():
 
     return "http://www.msn.com/webservices/AddressBook/DeleteMember"
 
-def soap_body(member_role, type, state, membership_id):
+def soap_body(member_role, type, state, membership_id, account):
     """Returns the SOAP xml body"""
+    membership = address = ""
+
+    if membership_id is not None:
+        membership = "<MembershipId>%s</MembershipId>" % membership_id
+    
+    if account is not None:
+        if type == 'Passport':
+            address = "<PassportName>%s</PassportName>" % account
+        elif type == 'Email':
+            address = "<Email>%s</Email>" % account
+    
+    member =  """<Member xsi:type="%sMember" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                     <Type>%s</Type>
+                     %s
+                     <State>%s</State>
+                     %s
+                 </Member>""" % (type, type, membership, state, address)
 
     return """
         <DeleteMember xmlns="http://www.msn.com/webservices/AddressBook">
@@ -52,24 +69,12 @@ def soap_body(member_role, type, state, membership_id):
                         %(member_role)s
                     </MemberRole>
                     <Members>
-                        <Member xsi:type="PassportMember" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-                            <Type>
-                                %(type)s
-                            </Type>
-                            <MembershipId>
-                                %(membership_id)s
-                            </MembershipId>
-                            <State>
-                                %(state)s
-                            </State>
-                        </Member>
+                        %(member)s
                     </Members>
                 </Membership>
             </memberships>
         </DeleteMember>""" % { 'member_role' : member_role,
-                               'type' : type,
-                               'membership_id' : membership_id,
-                               'state' : state }
+                               'member' : member }
 
 def process_response(soap_response):
     return None

@@ -31,9 +31,18 @@ def soap_action():
 
     return "http://www.msn.com/webservices/AddressBook/AddMember"
 
-def soap_body(member_role, type, state, passport_name):
+def soap_body(member_role, type, state, account):
     """Returns the SOAP xml body"""
-    
+    stuff = ""
+
+    if type = 'Passport':
+        stuff = "<PassportName>%s</PassportName>" % account
+    elif type = 'Email':
+        stuff = """<Email>%s</Email>
+        <Annotations><Annotation>
+            <Name>MSN.IM.BuddyType</Name>
+            <Value>32:</Value>
+        </Annotation></Annotations>""" % account
 
     return """
         <AddMember xmlns="http://www.msn.com/webservices/AddressBook">
@@ -53,24 +62,19 @@ def soap_body(member_role, type, state, passport_name):
                         %(member_role)s
                     </MemberRole>
                     <Members>
-                        <Member xsi:type="PassportMember" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                        <Member xsi:type="%sMember" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                             <Type>
-                                %(type)s
+                                %s
                             </Type>
                             <State>
-                                %(state)s
+                                %s
                             </State>
-                            <PassportName>
-                                %(passport_name)s
-                            </PassportName>
+                                %s
                         </Member>
                     </Members>
                 </Membership>
             </memberships>
-        </AddMember>""" % { 'member_role' : member_role,
-                            'type' : type,
-                            'state' : state,
-                            'passport_name' : passport_name }
+        </AddMember>""" % (member_role, type, type, state, stuff)
 
 def process_response(soap_response):
     return None
