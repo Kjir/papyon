@@ -16,27 +16,30 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
+from pymsn.service2.AddressBook.base import BaseScenario
 
-class AddressBookInitialScenario(BaseScenario):
-    def __init__(self, ab, callback, errback):
-        """Synchronizes the address book content when logging in.
+class GroupDeleteScenario(BaseScenario):
+    def __init__(self, ab, callback, errback, group_guid=''):
+        """Deletes a group from the address book.
 
             @param ab: the address book service
             @param callback: tuple(callable, *args)
-            @param errback: tuple(callable, *args)            
-        """
-        BaseScenario.__init__(self, 'Initial', callback, errback)
+            @param errback: tuple(callable, *args)
+            @param group_guid: the guid of the group to delete"""
+        BaseScenario.__init__(self, 'GroupSave', callback, errback)
         self.__ab = ab
 
+        self.group_guid = group_guid
+
     def execute(self):
-        self.__ab.FindAll((self.__addressbook_findall_callback,),
-                          (self.__addressbook_findall_errback,),
-                          self._scenario, False, '')
+        self.__ab.GroupDelete((self.__group_delete_callback,),
+                              (self.__group_delete_errback,),
+                              self._scenario, self.group_guid)
 
-    def __addressbook_findall_callback(self, result):
-        callback, args = self.__callback
-        callback(result, *args)
+    def __group_delete_callback(self):
+        callback, args = self._callback
+        callback(*args)
 
-    def __addressbook_findall_errback(self, reason):
-        errback, args = self.__errback
-        errback(reason, *args)    
+    def __group_delete_errback(self, reason):
+        errback, args = self._errback
+        errback(reason, *args)

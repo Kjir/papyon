@@ -16,25 +16,30 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
+from pymsn.service2.AddressBook.base import BaseScenario
 
-class AcceptInviteScenario(BaseScenario):
-    def __init__(self, sharing, callback, errback):
-        """Accepts an invitation.
+class GroupAddScenario(BaseScenario):
+    def __init__(self, ab, callback, errback, group_name=''):
+        """Adds a group to the address book.
 
-            @param sharing: the membership service
+            @param ab: the address book service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
-        """
-        BaseScenario.__init__(self, 'ContactMsgrAPI', callback, errback)
-        self.__sharing = sharing
+            @param group_name: the name of the new group"""
+        BaseScenario.__init__(self, 'GroupSave', callback, errback)
+        self.__ab = ab
+
+        self.group_name = group_name
 
     def execute(self):
-        # Add member & contact list
-        # add using ContactAdd
-        # remove from Pending using DeleteMember
-        # add to using Allow using AddMember
+        self.__ab.GroupAdd((self.__group_add_callback,),
+                           (self.__group_add_errback,),
+                           self._scenario, group_name)
 
-        # Add member only
-        # remove from Pending using DeleteMember
-        # add to using Allow using AddMember        
-        pass
+    def __group_add_callback(self, group_guid):
+        callback, args = self._callback
+        callback(group_name, group_guid, *args)
+
+    def __group_add_errback(self, reason):
+        errback, args = self._errback
+        errback(reason, *args)

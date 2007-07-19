@@ -16,29 +16,19 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
+from pymsn.service2.AddressBook.base import BaseScenario
 
-class GroupAddScenario(BaseScenario):
-    def __init__(self, ab, callback, errback, group_name=''):
-        """Adds a group to the address book.
+class CheckPendingInviteScenario(BaseScenario):
+    def __init__(self, sharing, callback, errback):
+        """Checks the pending invitations.
 
-            @param ab: the address book service
+            @param sharing: the membership service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
-            @param group_name: the name of the new group"""
-        BaseScenario.__init__(self, 'GroupSave', callback, errback)
-        self.__ab = ab
-
-        self.group_name = group_name
+        """
+        BaseScenario.__init__(self, 'MessengerPendingList', callback, errback)
+        self.__sharing = sharing
 
     def execute(self):
-        self.__ab.GroupAdd((self.__group_add_callback,),
-                           (self.__group_add_errback,),
-                           self._scenario, group_name)
-
-    def __group_add_callback(self, group_guid):
-        callback, args = self._callback
-        callback(group_name, group_guid, *args)
-
-    def __group_add_errback(self, reason):
-        errback, args = self._errback
-        errback(reason, *args)
+        # check using FindMembership
+        pass

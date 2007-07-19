@@ -16,6 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
+from pymsn.service2.AddressBook.base import BaseScenario
 from pymsn.service2.description.AB import ContactType
 
 class MessengerContactAddScenario(BaseScenario):
@@ -44,11 +45,11 @@ class MessengerContactAddScenario(BaseScenario):
     def __get_account(self):
         return self._account
     account = property(__get_account, __set_account,
-                             doc="The passport address of the contact to " \
-                                 "add. If the given address is a yahoo " \
-                                 "address, this scenario will automatically " \
-                                 "try to add both the MSN and Yahoo Messenger" \
-                                 " accounts")
+                       doc="The passport address of the contact to " \
+                           "add. If the given address is a yahoo " \
+                           "address, this scenario will automatically " \
+                           "try to add both the MSN and Yahoo Messenger" \
+                           " accounts")
 
     def execute(self):
         # TODO : if self._external_network, always try to add as a passport address

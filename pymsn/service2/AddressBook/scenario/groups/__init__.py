@@ -16,18 +16,3 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-
-class DeclineInviteScenario(BaseScenario):
-    def __init__(self, sharing, callback, errback):
-        """Declines an invitation.
-
-            @param sharing: the membership service
-            @param callback: tuple(callable, *args)
-            @param errback: tuple(callable, *args)
-        """
-        BaseScenario.__init__(self, 'ContactMsgrAPI', callback, errback)
-        self.__sharing = sharing
-
-    def execute(self):
-        # remove from Pending using DeleteMember
-        pass

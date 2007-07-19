@@ -203,7 +203,7 @@ class AB(SOAPService):
             contact_info, invite_info):
         """Adds a contact to the contact list.
 
-            @param scenario: "ContactSave" | ...
+            @param scenario: "ContactSave" | "ContactMsgrAPI"
             @param contact_info: info dict concerning the new contact
             @param invite_info: info dict concerning the sent invite
             @param callback: tuple(callable, *args)

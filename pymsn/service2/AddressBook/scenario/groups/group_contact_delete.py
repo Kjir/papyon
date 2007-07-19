@@ -16,29 +16,33 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
+from pymsn.service2.AddressBook.base import BaseScenario
 
-class ContactDeleteScenario(BaseScenario):
-    def __init__(self, ab, callback, errback, contact_guid=''):
-        """Deletes a contact from the address book.
+class GroupContactDeleteScenario(BaseScenario):
+    def __init__(self, ab, callback, errback, group_guid='', contact_id=''):
+        """Deletes a contact to a group.
 
             @param ab: the address book service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
-            @param contact_guid: the guid of the contact to delete"""
-        BaseScenario.__init__(self, 'Timer', callback, errback)
+            @param group_guid: the guid of the group
+            @param contact_guid: the guid of the contact to delete from the group"""
+        BaseScenario.__init__(self, 'GroupSave', callback, errback)
         self.__ab = ab
 
+        self.group_guid = group_guid
         self.contact_guid = contact_guid
 
     def execute(self):
-        self.__ab.ContactDelete((self.___contact_delete_callback,),
-                                (self.___contact_delete_errback,),
-                                self._scenario, self.contact_guid)
+        self.__ab.GroupContactDelete((self.__group_contact_delete_callback,),
+                                     (self.__group_contact_delete_errback,),
+                                     self._scenario, self.group_id, 
+                                     self.contact_id)
 
-    def ___contact_delete_callback(self):
+    def __group_contact_delete_callback(self):
         callback, args = self._callback
         callback(*args)
 
-    def __contact_delete_errback(self, reason):
+    def __group_contact_delete_errback(self, reason):
         errback, args = self._errback
         errback(reason, *args)

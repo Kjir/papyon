@@ -23,11 +23,15 @@ from pymsn.service2.SingleSignOn import SingleSignOn
 class BaseScenario(object):
     def __init__(self, sso, partner_scenario, callback, errback):
         self._sso = sso
-        self._partner_scenario = partner_scenario
+        self._scenario = partner_scenario
         self._callback = callback
         self._errback = errback
 
+    def __set_scenario(self, scenario):
+        self._scenario = scenario
+    def __get_scenario(self):
+        return self._scenario
+    scenario = property(__get_scenario, __set_scenario)
+
     def execute(self):
         pass
-
-    def 

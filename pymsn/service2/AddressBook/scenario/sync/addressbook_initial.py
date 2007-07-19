@@ -16,28 +16,28 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
+from pymsn.service2.AddressBook.base import BaseScenario
 
-class MembershipInitialScenario(BaseScenario):
-    def __init__(self, membership, callback, errback):
-        """Synchronizes the membership content when logging in.
+class AddressBookInitialScenario(BaseScenario):
+    def __init__(self, ab, callback, errback):
+        """Synchronizes the address book content when logging in.
 
-            @param membership: the address book service
+            @param ab: the address book service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)            
         """
         BaseScenario.__init__(self, 'Initial', callback, errback)
-        self.__membership = membership
+        self.__ab = ab
 
     def execute(self):
-        self.__membership.FindMembership((self.__membership_findall_callback,),
-                                         (self.__membership_findall_errback,),
-                                         self._scenario, ['Messenger', 'Invitation']
-                                         False, '')
+        self.__ab.FindAll((self.__addressbook_findall_callback,),
+                          (self.__addressbook_findall_errback,),
+                          self._scenario, False, '')
 
-    def __membership_findall_callback(self, result):
+    def __addressbook_findall_callback(self, result):
         callback, args = self.__callback
         callback(result, *args)
 
-    def __membership_findall_errback(self, reason):
+    def __addressbook_findall_errback(self, reason):
         errback, args = self.__errback
         errback(reason, *args)    
