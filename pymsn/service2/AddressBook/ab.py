@@ -21,24 +21,27 @@
 from pymsn.service2.SOAPService import SOAPService
 from pymsn.service2.SOAPUtils import XMLTYPE
 from pymsn.service2.SingleSignOn import *
+from pymsn.service2.AddressBook.common import *
 
 __all__ = ['AB']
 
 
 class Group(object):
     def __init__(self, group):
-        self.GroupId = group.find("./ab:groupId").text
+        self.GroupId = group.findtext("./ab:groupId")
 
         group_info = group.find("./ab:groupInfo")
-        self.GroupType = group_info.find("./ab:groupType")
-        self.Name = group_info.find("./ab:name")
-        self.IsNotMobileVisible = group_info.find("./ab:IsNotMobileVisible")
-        self.IsPrivate = group_info.find("./ab:IsPrivate")
+
+        self.GroupType = group_info.findtext("./ab:groupType")
+        self.Name = group_info.findtext("./ab:name")
+        self.IsNotMobileVisible = group_info.findtext("./ab:IsNotMobileVisible", "bool")
+        self.IsPrivate = group_info.findtext("./ab:IsPrivate", "bool")
+
         self.Annotations = annotations_to_dict(group_info.find("./ab:Annotations"))
         
         self.PropertiesChanged = [] #FIXME: implement this
-        self.Deleted = XMLTYPE.bool.decode(group.find("./ab:fDeleted"))
-        self.LastChanged = XMLTYPE.datetime.decode(member.find("./ab:lastChanged").text)
+        self.Deleted = group.findtext("./ab:fDeleted", "bool")
+        self.LastChanged = group.findtext("./ab:lastChange", "bool")
 
     def __hash__(self):
         return hash(self.GroupId)
@@ -52,18 +55,18 @@ class Group(object):
 
 class ContactEmail(object):
     def __init__(self, email):
-        self.Type = email.find("./ab:contactEmailType").text
-        self.Email = email.find("./ab:email").text
-        self.IsMessengerEnabled = XMLTYPE.bool.decode(email.find("./ab:isMessengerEnabled").text)
-        self.Capability = XMLTYPE.int.decode(email.find("./ab:Capability"))
-        self.MessengerEnabledExternally = XMLTYPE.bool.decode(email.find("./ab:MessengerEnabledExternally").text)
+        self.Type = email.findtext("./ab:contactEmailType")
+        self.Email = email.findtext("./ab:email")
+        self.IsMessengerEnabled = email.findtext("./ab:isMessengerEnabled", "bool")
+        self.Capability = email.findtext("./ab:Capability", "int")
+        self.MessengerEnabledExternally = email.findtext("./ab:MessengerEnabledExternally", "bool")
         self.PropertiesChanged = [] #FIXME: implement this
 
 class ContactPhone(object):
     def __init__(self, phone):
-        self.Type = phone.find("./ab:contactPhoneType").text
-        self.Number = phone.find("./ab:number").text
-        self.IsMessengerEnabled = XMLTYPE.bool.decode(phone.find("./ab:isMessengerEnabled").text)
+        self.Type = phone.findtext("./ab:contactPhoneType")
+        self.Number = phone.findtext("./ab:number")
+        self.IsMessengerEnabled = phone.findtext("./ab:isMessengerEnabled", "bool")
         self.PropertiesChanged = [] #FIXME: implement this
 
 def _optional_tag(tag, path):
@@ -74,53 +77,54 @@ def _optional_tag(tag, path):
 
 class ContactLocation(object):
     def __init__(self, location):
-        self.Type = location.find("./ab:contactLocationType").text
-        self.Name = _optional_tag(location, "./ab:name")
-        self.City = _optional_tag(location, "./ab:city")
-        self.Country = _optional_tag(location, "./ab:country")
-        self.PostalCode = _optional_tag(location, "./ab:postalcode")
+        self.Type = location.findtext("./ab:contactLocationType")
+        self.Name = location.findtext("./ab:name")
+        self.City = location.findtext("./ab:city")
+        self.Country = location.findtext("./ab:country")
+        self.PostalCode = location.findtext("./ab:postalcode")
         self.Changes = [] #FIXME: implement this
 
 
 class Contact(object):
     def __init__(self, contact):
-        self.ContactId = contact.find("./ab:contactId").text
+        self.ContactId = contact.findtext("./ab:contactId")
 
         contact_info = contact.find("./ab:contactInfo")
-        self.ContactType = contact_info.find("./ab:contactType").text
-        self.QuickName = contact_info.find("./ab:quickName").text
-        self.IsPassportNameHidden = XMLTYPE.bool.decode(contact_info.find("./ab:IsPassportNameHidden").text)
+        self.ContactType = contact_info.findtext("./ab:contactType")
+        self.QuickName = contact_info.findtext("./ab:quickName")
+        self.IsPassportNameHidden = contact_info.findtext("./ab:IsPassportNameHidden", "bool")
 
-        self.PUID = XMLTYPE.int.decode(contact_info.find("./ab:puid").text)
-        self.CID = XMLTYPE.int.decode(contact_info.find("./ab:CID").text)
+        self.PUID = contact_info.findtext("./ab:puid", "int")
+        self.CID = contact_info.findtext("./ab:CID", "int")
 
-        self.IsNotMobileVisible = XMLTYPE.bool.decode(contact_info.find("./ab:IsNotMobileVisible").text)
-        self.IsMobileIMEnabled = XMLTYPE.bool.decode(contact_info.find("./ab:isMobileIMEnabled").text)
-        self.IsMessengerUser = XMLTYPE.bool.decode(contact_info.find("./ab:isMessengerUser").text)
-        self.IsFavorite = XMLTYPE.bool.decode(contact_info.find("./ab:isFavorite").text)
-        self.IsSmtp = XMLTYPE.bool.decode(contact_info.find("./ab:isSmtp").text)
-        self.HasSpace = XMLTYPE.bool.decode(contact_info.find("./ab:hasSpace").text)
+        self.IsNotMobileVisible = contact_info.findtext("./ab:IsNotMobileVisible", "bool")
+        self.IsMobileIMEnabled = contact_info.findtext("./ab:isMobileIMEnabled", "bool")
+        self.IsMessengerUser = contact_info.findtext("./ab:isMessengerUser", "bool")
+        self.IsFavorite = contact_info.findtext("./ab:isFavorite", "bool")
+        self.IsSmtp = contact_info.findtext("./ab:isSmtp", "bool")
+        self.HasSpace = contact_info.findtext("./ab:hasSpace", "bool")
 
-        self.SpotWatchState = contact_info.find("./ab:spotWatchState").text
-        self.Birthdate = XMLTYPE.datetime.decode(contact_info.find("./ab:birthdate").text)
+        self.SpotWatchState = contact_info.findtext("./ab:spotWatchState")
+        # HACK: handle pyxml iso8601 incompleteness
+        self.Birthdate = XMLTYPE.datetime.decode(contact_info.findtext("./ab:birthdate") + ".00+00:00")
 
-        self.PrimaryEmailType = contact_info.find("./ab:primaryEmailType").text
-        self.primaryLocation = contact_info.find("./ab:PrimaryLocation").text
-        self.primaryPhone = contact_info.find("./ab:primaryPhone").text
+        self.PrimaryEmailType = contact_info.findtext("./ab:primaryEmailType")
+        self.PrimaryLocation = contact_info.findtext("./ab:PrimaryLocation")
+        self.PrimaryPhone = contact_info.findtext("./ab:primaryPhone")
 
-        self.IsPrivate = XMLTYPE.bool.decode(contact_info.find("./ab:IsPrivate").text)
-        self.Gender = contact_info.find("./ab:Gender").text
-        self.TimeZone = contact_info.find("./ab:TimeZone").text
+        self.IsPrivate = contact_info.findtext("./ab:IsPrivate", "bool")
+        self.Gender = contact_info.findtext("./ab:Gender")
+        self.TimeZone = contact_info.findtext("./ab:TimeZone")
 
         self.Annotations = annotations_to_dict(contact_info.find("./ab:contactInfo/ab:Annotations"))
         
         self.PropertiesChanged = [] #FIXME: implement this
-        self.Deleted = XMLTYPE.bool.decode(group.find("./ab:fDeleted"))
-        self.LastChanged = XMLTYPE.datetime.decode(member.find("./ab:lastChanged").text)
+        self.Deleted = contact.findtext("./ab:fDeleted", "bool")
+        self.LastChanged = contact.findtext("./ab:lastChanged", "datetime")
 
     @staticmethod
     def new(contact):
-        contact_type = contact_info.find("./ab:contactType").text
+        contact_type = contact.findtext("./ab:contactInfo/ab:contactType")
 
         if contact_type == "Live":
             return LiveContact(contact)
@@ -136,8 +140,8 @@ class LiveContact(Contact):
     def __init__(self, contact):
         Contact.__init__(self, contact)
         contact_info = contact.find("./ab:contactInfo")
-        self.PassportName = contact_info.find("./ab:passportName").text
-        self.DisplayName = contact_info.find("./ab:displayName").text
+        self.PassportName = contact_info.findtext("./ab:passportName")
+        self.DisplayName = contact_info.findtext("./ab:displayName")
 
 class MeContact(LiveContact):
     def __init__(self, contact):
@@ -148,12 +152,14 @@ class RegularContact(Contact):
     def __init__(self, contact):
         Contact.__init__(self, contact)
         contact_info = contact.find("./ab:contactInfo")
-        self.FirstName = contact_info.find("./ab:firstName").text
-        self.LastName = contact_info.find("./ab:lastName").text
+        self.FirstName = contact_info.findtext("./ab:firstName")
+        self.LastName = contact_info.findtext("./ab:lastName")
 
-        emails = contact_info.find("./ab:emails")
+        self.emails = []
+        emails = contact_info.find("./ab:emails") or []
         for contact_email in emails:
-            pass
+            self.emails.append(ContactEmail(contact_email))
+            
 
 
 class AB(SOAPService):
@@ -181,7 +187,7 @@ class AB(SOAPService):
                 (XMLTYPE.bool.encode(deltas_only), last_change),
                 callback, errback)
 
-    def _HandleFindAllResponse(self, request_id, callback, errback, response):
+    def _HandleABFindAllResponse(self, callback, errback, response, user_data):
         groups = []
         contacts = []
         for group in response[1]:
@@ -222,7 +228,7 @@ class AB(SOAPService):
                     invite_info.get('invite_message', None)),
                 callback, errback)
 
-    def _HandleContactAddResponse(self, request_id, callback, errback, response):
+    def _HandleABContactAddResponse(self, callback, errback, response, user_data):
         pass
 
     @RequireSecurityTokens(LiveService.CONTACTS)
@@ -238,7 +244,7 @@ class AB(SOAPService):
         self.__soap_request(self._service.ABContactUpdate, scenario,
                 (contact_id,), callback, errback)
         
-    def _HandleContactDeleteResponse(self, request_id, callback, errback, response):
+    def _HandleABContactDeleteResponse(self, callback, errback, response, user_data):
         pass
 
     @RequireSecurityTokens(LiveService.CONTACTS)
@@ -275,7 +281,7 @@ class AB(SOAPService):
                     contact_info.get('has_space', None)),
                 callback, errback)
 
-    def _HandleContactUpdateResponse(self, request_id, callback, errback, response):
+    def _HandleABContactUpdateResponse(self, callback, errback, response, user_data):
         pass
         
     @RequireSecurityTokens(LiveService.CONTACTS)
@@ -292,7 +298,7 @@ class AB(SOAPService):
                 (group_name,),
                 callback, errback)
 
-    def _HandleGroupAddResponse(self, request_id, callback, errback, response):
+    def _HandleABGroupAddResponse(self, callback, errback, response, user_data):
         pass
 
     @RequireSecurityTokens(LiveService.CONTACTS)
@@ -308,7 +314,7 @@ class AB(SOAPService):
         self.__soap_request(self._service.ABGroupDelete, scenario,
                 (group_id,), callback, errback)
 
-    def _HandleGroupDeleteResponse(self, request_id, callback, errback, response):
+    def _HandleABGroupDeleteResponse(self, callback, errback, response, user_data):
         pass
 
     @RequireSecurityTokens(LiveService.CONTACTS)
@@ -325,7 +331,7 @@ class AB(SOAPService):
         self.__soap_request(self._service.ABGroupUpdate, scenario,
                 (group_id, group_name), callback, errback)
 
-    def _HandleGroupUpdateResponse(self, request_id, callback, errback, response):
+    def _HandleABGroupUpdateResponse(self, callback, errback, response, user_data):
         pass
 
     @RequireSecurityTokens(LiveService.CONTACTS)
@@ -343,7 +349,7 @@ class AB(SOAPService):
         self.__soap_request(self._service.ABGroupContactAdd, scenario,
                 (group_id, contact_id), callback, errback)
 
-    def _HandleContactAddResponse(self, request_id, callback, errback, response):
+    def _HandleABContactAddResponse(self, callback, errback, response, user_data):
         pass
 
     @RequireSecurityTokens(LiveService.CONTACTS)
@@ -361,7 +367,7 @@ class AB(SOAPService):
         self.__soap_request(self._service.ABGroupContactDelete, scenario,
                 (group_id, contact_id), callback, errback)
 
-    def _HandleContactDeleteResponse(self, request_id, callback, errback, response):
+    def _HandleABContactDeleteResponse(self, callback, errback, response, user_data):
         pass
 
     def __soap_request(self, method, scenario, args, callback, errback):

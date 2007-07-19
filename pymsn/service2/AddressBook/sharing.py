@@ -21,7 +21,7 @@
 from pymsn.service2.SOAPService import SOAPService
 from pymsn.service2.SOAPUtils import XMLTYPE
 from pymsn.service2.SingleSignOn import *
-from pymsn.service2.common import *
+from pymsn.service2.AddressBook.common import *
 
 __all__ = ['Sharing']
 

@@ -35,9 +35,9 @@ def soap_body(member_role, type, state, account):
     """Returns the SOAP xml body"""
     stuff = ""
 
-    if type = 'Passport':
+    if type == 'Passport':
         stuff = "<PassportName>%s</PassportName>" % account
-    elif type = 'Email':
+    elif type == 'Email':
         stuff = """<Email>%s</Email>
         <Annotations><Annotation>
             <Name>MSN.IM.BuddyType</Name>

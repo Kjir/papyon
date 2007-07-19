@@ -105,6 +105,17 @@ class _SOAPElement(object):
             result.append(_SOAPElement(node, self.ns_shorthands))
         return result
 
+    def findtext(self, path, type=None):
+        result = self.find(path)
+        if result is None:
+            return ""
+        result = result.text
+        
+        if type is None:
+            return result
+        return getattr(XMLTYPE, type).decode(result)
+
+
 class SOAPResponse(object):
     NS_SHORTHANDS = {'soap' : XMLNS.SOAP.ENVELOPE,
             "xmlenc" : XMLNS.ENCRYPTION.BASE,
@@ -139,6 +150,9 @@ class SOAPResponse(object):
 
     def findall(self, path):
         return self.tree.findall(path)
+    
+    def findtext(self, path, type=None):
+        return self.tree.findtext(path, type)
 
     def is_fault(self):
         return self.fault is not None
@@ -224,11 +238,11 @@ class SOAPService(object):
     # Handlers
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):
-        pass
+        logger.warning("Unhandled SOAPFault to %s" % request_id)
 
     def _HandleUnhandledResponse(self, request_id, callback, errback,
             response, user_data):
-        pass
+        logger.warning("Unhandled Response to %s" % request_id)
 
     # Transport management
     def _get_transport(self, request_id, scheme, host, port,
