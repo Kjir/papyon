@@ -21,16 +21,14 @@
 from pymsn.service2.SOAPService import SOAPService
 from pymsn.service2.SOAPUtils import XMLTYPE
 from pymsn.service2.SingleSignOn import *
+from pymsn.service2.common import *
 
 __all__ = ['Sharing']
 
-
-
 class Member(object):
     def __init__(self, member):
-        self.Roles = []
+        self.Roles = {}
         self.Account = ""
-        self.MembershipId = XMLTYPE.int.decode(member.find("./ab:MembershipId").text)
         self.Type = member.find("./ab:Type").text
         try:
             self.DisplayName = member.find("./ab:DisplayName").text
@@ -41,6 +39,7 @@ class Member(object):
         self.Deleted = XMLTYPE.bool.decode(member.find("./ab:Deleted").text)
         self.LastChanged = XMLTYPE.datetime.decode(member.find("./ab:LastChanged").text)
         self.Changes = [] # FIXME: extract the changes
+        self.Annotations = annotations_to_dict(member.find("./ab:Annotations"))
 
     def __hash__(self):
         return hash(self.Type) ^ hash(self.Account)
@@ -49,7 +48,7 @@ class Member(object):
         return (self.Type == other.Type) and (self.Account == other.Account)
 
     def __repr__(self):
-        return "<%sMember id=%d account=%s>" % (self.Type, self.MembershipId, self.Account)
+        return "<%sMember account=%s roles=%r>" % (self.Type, self.Account, self.Roles)
 
     @staticmethod
     def new(member):
@@ -109,12 +108,13 @@ class Sharing(SOAPService):
         memberships = {}
         for role, members in response.iteritems():
             for member in members:
+                membership_id = XMLTYPE.int.decode(member.find("./ab:MembershipId").text)
                 member_obj = Member.new(member)
                 member_id = hash(member_obj)
                 if member_id in memberships:
-                    memberships[member_id].Roles.append(role)
+                    memberships[member_id].Roles[role] = membership_id
                 else:
-                    member_obj.Roles.append(role)
+                    member_obj.Roles[role] = membership_id
                     memberships[member_id] = member_obj
         callback[0](memberships.values(), *callback[1:])
 

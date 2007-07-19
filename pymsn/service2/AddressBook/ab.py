@@ -25,6 +25,31 @@ from pymsn.service2.SingleSignOn import *
 __all__ = ['AB']
 
 
+class Group(object):
+    def __init__(self, group):
+        self.GroupId = self.find("./ab:groupId").text
+
+        group_info = group.find("./ab:groupInfo")
+        self.GroupType = group_info.find("./ab:groupType")
+        self.Name = group_info.find("./ab:name")
+        self.IsNotMobileVisible = group_info.find("./ab:IsNotMobileVisible")
+        self.IsPrivate = group_info.find("./ab:IsPrivate")
+        self.Annotations = annotations_to_dict(group_info.find("./ab:Annotations"))
+        
+        self.PropertiesChanged = [] #FIXME: implement this
+        self.Deleted = XMLTYPE.bool.decode(group.find("./ab:fDeleted"))
+        self.LastChanged = XMLTYPE.datetime.decode(member.find("./ab:lastChanged").text)
+
+    def __hash__(self):
+        return hash(self.GroupId)
+
+    def __eq__(self, other):
+        return self.GroupId == other.GroupId
+
+    def __repr__(self):
+        return "<Group id=%s>" % self.GroupId
+
+
 class AB(SOAPService):
     def __init__(self, sso, proxies=None):
         self._sso = sso
