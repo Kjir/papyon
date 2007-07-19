@@ -19,9 +19,9 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-import ab
-import sharing
-import scenario
+import pymsn.service2.AddressBook.ab as ab
+import pymsn.service2.AddressBook.sharing as sharing
+import pymsn.service2.AddressBook.scenario as scenario
 
 import pymsn.profile as profile
 
@@ -42,9 +42,12 @@ class AddressBookStorage(set):
     def remove_contact(self, contact):
         self.remove(contact)
 
-    def get_first(self):
+    def __getitem__(self, key):
+        i = 0
         for contact in self:
-            return contact
+            if i == key:
+                return key
+            i += 1
         return None
 
     def __getattr__(self, name):
@@ -90,6 +93,7 @@ class AddressBookStorage(set):
             result[value].add_contact(contact)
         return result
 
+
 class AddressBookState(object):
     """Addressbook synchronization state.
 
@@ -103,42 +107,46 @@ class AddressBookState(object):
     SYNCHRONIZED = 2
     """The addressbook is already synchornized"""
 
+
 class AddressBook(gobject.GObject):
     
     __gsignals__ = {
-        "messenger-contact-added" : (gobject.SIGNAL_RUN_FIRST,
-                                     gobject.TYPE_NONE,
-                                     (gobject.TYPE_PYOBJECT,)),
-        "email-contact-added"     : (gobject.SIGNAL_RUN_FIRST,
-                                     gobject.TYPE_NONE,
-                                     (gobject.TYPE_PYOBJECT,)),
-        "mobile-contact-added"    : (gobject.SIGNAL_RUN_FIRST,
-                                     gobject.TYPE_NONE,
-                                     (gobject.TYPE_PYOBJECT,)),
-        "contact-deleted"         : (gobject.SIGNAL_RUN_FIRST,
-                                     gobject.TYPE_NONE, ()),
-        "contact-blocked"         : (gobject.SIGNAL_RUN_FIRST,
-                                     gobject.TYPE_NONE,
-                                     (gobject.TYPE_PYOBJECT,)),
-        "contact-unblocked"       : (gobject.SIGNAL_RUN_FIRST,
-                                     gobject.TYPE_NONE,
-                                     (gobject.TYPE_PYOBJECT,)),
-        "group-added"             : (gobject.SIGNAL_RUN_FIRST,
-                                     gobject.TYPE_NONE,
-                                     (gobject.TYPE_PYOBJECT,)),
-        "group-deleted"           : (gobject.SIGNAL_RUN_FIRST,
-                                     gobject.TYPE_NONE),
-        "group-renamed"           : (gobject.SIGNAL_RUN_FIRST,
-                                     gobject.TYPE_NONE,
-                                     (gobject.TYPE_PYOBJECT,)),
-        "group-contact-added"     : (gobject.SIGNAL_RUN_FIRST,
-                                     gobject.TYPE_NONE,
-                                     (gobject.TYPE_PYOBJECT, 
-                                      gobject.TYPE_PYOBJECT)),
-        "group-contact-deleted"   : (gobject.SIGNAL_RUN_FIRST,
-                                     gobject.TYPE_NONE,
-                                     (gobject.TYPE_PYOBJECT,)),
-        }
+            "messenger-contact-added" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            "email-contact-added"     : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            "mobile-contact-added"    : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+
+            "contact-deleted"         : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE, ()),
+            "contact-blocked"         : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            "contact-unblocked"       : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+
+            "group-added"             : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            "group-deleted"           : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            "group-renamed"           : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+
+            "group-contact-added"     : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object, object)),
+            "group-contact-deleted"   : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object, object))
+            }
 
     __gproperties__ = {
         "state":  (gobject.TYPE_INT,
@@ -149,9 +157,9 @@ class AddressBook(gobject.GObject):
         }
 
     def __init__(self, sso, proxies=None):
-        """The address book object.
-        """
+        """The address book object."""
         gobject.GObject.__init__(self)
+
         self._ab = ab.AB(sso, proxies)
         self._sharing = sharing.Sharing(sso, proxies)
 
@@ -166,14 +174,10 @@ class AddressBook(gobject.GObject):
             return
         self._state = AddressBookState.SYNCHRONIZING
         
-        ab_sync = AddressBookInitialScenario(self._ab,
-                                             (self.__ab_sync_callback,),
-                                             (self.__common_errback,))
-        ab_sync.execute()
-        ms_sync = MembershipInitialScenario(self._sharing,
-                                            (self.__membership_sync_callback,),
-                                            (self.__common_errback,))
-        ms_sync.execute()
+        initial_sync = scenario.InitialSyncScenario(self._ab, self._sharing,
+                (self.__initial_sync_callback,),
+                (self.__common_errback,))
+        initial_sync()
 
     # Properties
     def __get_state(self):
@@ -191,107 +195,95 @@ class AddressBook(gobject.GObject):
     # Public API
     def add_messenger_contact(self, account):
         am = MessengerContactAddScenario(self._ab,
-                                         (self.__add_messenger_contact_cb,),
-                                         (self.__common_errback,))
+                (self.__add_messenger_contact_cb,),
+                (self.__common_errback,))
         am.account = account
-        am.execute()
+        am()
 
     def add_email_contact(self, email_address):
         ae = EmailContactAddScenario(self._ab,
-                                     (self.__add_email_contact_cb,),
-                                     (self.__common_errback,))
+                (self.__add_email_contact_cb,),
+                (self.__common_errback,))
         ae.email_address = email_address
-        ae.execute()
+        ae()
 
     def add_mobile_contact(self, phone_number):
         am = MobileContactAddScenario(self._ab,
-                                      (self.__add_mobile_contact_cb,),
-                                      (self.__common_errback,))
+                (self.__add_mobile_contact_cb,),
+                (self.__common_errback,))
         am.phone_number = phone_number
-        am.execute()
+        am()
 
     def delete_contact(self, contact):
         dc = ContactDeleteScenario(self._ab,
-                                   (self.__common_callback, 'contact-deleted'),
-                                   (self.__common_errback,))
+                (self.__common_callback, 'contact-deleted', contact),
+                (self.__common_errback,))
         # dc.contact_guid = contact.guid
-        dc.execute()
+        dc()
 
     def block_contact(self, contact):
         bc = BlockContactScenario(self._sharing,
-                                  (self.__common_callback, 'contact-blocked',
-                                   contact),
-                                  (self.__common_errback,))
+                (self.__common_callback, 'contact-blocked', contact),
+                (self.__common_errback,))
         # bc.type = contact.type
         # bc.account = contact.account
         # bc.state = contact.state
-        bc.execute()
+        bc()
 
     def unblock_contact_cb(self, contact):
         uc = UnblockContactScenario(self._sharing,
-                                    (self.__common_callback, 'contact-unblocked',
-                                     contact),
-                                    (self.__common_errback,))
+                (self.__common_callback, 'contact-unblocked', contact),
+                (self.__common_errback,))
         # uc.type = contact.type
         # uc.membership_id = contact.membership_id
         # uc.account = contact.account
         # uc.state = contact.state
-        uc.execute()
+        uc()
 
     def add_group(self, group_name):
         ag = GroupAddScenario(self._ab,
-                              (self.__add_group_cb,),
-                              (self.__common_errback,))
+                (self.__add_group_cb,),
+                (self.__common_errback,))
         ag.group_name = group_name
-        ag.execute()
+        ag()
 
     def delete_group(self, group):
         dg = GroupDeleteScenario(self._ab,
-                                 (self.__common_callback, 'group-deleted'),
-                                 (self.__common_errback,))
+                (self.__common_callback, 'group-deleted', group),
+                (self.__common_errback,))
         # dg.group_guid = group.guid
-        dg.execute()
+        dg()
 
 
     def rename_group(self, group, new_name):
         rg = GroupRenameScenario(self._ab,
-                                 (self.__common_callback, 'group-renamed',
-                                  group),
-                                 (self.__common_errback,))
+                (self.__common_callback, 'group-renamed', group),
+                (self.__common_errback,))
         # rg.group_guid = group.guid
         rg.group_name = new_name
-        rg.execute()
+        rg()
 
     def add_contact_to_group(self, group, contact):
         ac = GroupContactAddScenario(self._ab,
-                                     (self.__common_callback, 'group-contact-added',
-                                      group, contact),
-                                     (self.__common_errback,))
+                (self.__common_callback, 'group-contact-added', group, contact),
+                (self.__common_errback,))
         # ac.group_guid = group.guid
         # ac.contact_guid = contact.guid
-        ac.execute()
+        ac()
 
     def delete_contact_from_group(self, group, contact):
         dc = GroupContactDeleteScenario(self._ab,
-                                        (self.__common_callback, 'group-contact-deleted',
-                                         group),
-                                        (self.__common_errback,))
+                (self.__common_callback, 'group-contact-deleted', group, contact),
+                (self.__common_errback,))
         # dc.group_id = group.guid
         # dc.contact_id = contact.guid
-        dc.execute()
+        dc()
 
     # Callbacks
-    def __ab_sync_callback(self, groups, contacts, ab):
-        pass
-
-    def __sharing_sync_callback(self, members):
-        pass
-
-    def __common_callback(self, signal, *args):
-        self.emit(signal, args)
-
-    def __common_errback(self, *args):
-        pass
+    def __initial_sync_callback(self, address_book, memberships):
+        ab = address_book.ab
+        contacts = address_book.contacts
+        groups = address_book.groups
 
     def __add_messenger_contact_cb(self):
         # TODO : build the contact object
@@ -309,8 +301,10 @@ class AddressBook(gobject.GObject):
         # TODO : build the group object
         self.emit('group-added')
 
-    # Private
-    def __build_addressbook(self):
+    def __common_callback(self, signal, *args):
+        self.emit(signal, args)
+
+    def __common_errback(self, *args):
         pass
 
 gobject.type_register(AddressBook)

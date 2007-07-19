@@ -20,24 +20,7 @@
 name = "scenario"
 description = ""
 
-import sync.AddressBookInitialScenario
-import sync.MembershipInitialScenario
-
-import contacts.MessengerContactAddScenario
-import contacts.MailContactAddScenario
-import contacts.MobileContactAddScenario
-import contacts.ContactDeleteScenario
-
-import contacts.BlockContactScenario
-import contacts.UnblockContactScenario
-
-import contacts.DeclineInviteScenario
-import contacts.AcceptInviteScenario
-import contacts.CheckPendingInviteScenario
-
-import groups.GroupAddScenario
-import groups.GroupDeleteScenario
-import groups.GroupRenameScenario
-import groups.GroupContactAddScenario
-import groups.GroupContactDeleteScenario
+from sync import *
+from contacts import *
+from groups import *
 

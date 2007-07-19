@@ -25,6 +25,12 @@ from pymsn.service2.AddressBook.common import *
 
 __all__ = ['AB']
 
+class AB(object):
+    """ABFindAll Result object"""
+    def __init__(self, ab, contacts, groups):
+        self.ab = ab
+        self.contacts = contacts
+        self.groups = groups
 
 class Group(object):
     def __init__(self, group):
@@ -195,8 +201,9 @@ class AB(SOAPService):
 
         for contact in response[2]:
             contacts.append(Contact.new(contact))
-
-        callback[0](contacts, groups, *callback[1:])
+        
+        address_book =  AB(None, contacts, groups) #FIXME: add support for the ab param
+        callback[0](address_book, *callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def ContactAdd(self, callback, errback, scenario,
