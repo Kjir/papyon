@@ -21,8 +21,7 @@ from pymsn.service2.SingleSignOn import SingleSignOn
 
 
 class BaseScenario(object):
-    def __init__(self, sso, partner_scenario, callback, errback):
-        self._sso = sso
+    def __init__(self, partner_scenario, callback, errback):
         self._scenario = partner_scenario
         self._callback = callback
         self._errback = errback
