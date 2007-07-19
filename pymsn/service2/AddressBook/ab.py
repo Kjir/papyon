@@ -49,6 +49,39 @@ class Group(object):
     def __repr__(self):
         return "<Group id=%s>" % self.GroupId
 
+
+class ContactEmail(object):
+    def __init__(self, email):
+        self.Type = email.find("./ab:contactEmailType").text
+        self.Email = email.find("./ab:email").text
+        self.IsMessengerEnabled = XMLTYPE.bool.decode(email.find("./ab:isMessengerEnabled").text)
+        self.Capability = XMLTYPE.int.decode(email.find("./ab:Capability"))
+        self.MessengerEnabledExternally = XMLTYPE.bool.decode(email.find("./ab:MessengerEnabledExternally").text)
+        self.PropertiesChanged = [] #FIXME: implement this
+
+class ContactPhone(object):
+    def __init__(self, phone):
+        self.Type = phone.find("./ab:contactPhoneType").text
+        self.Number = phone.find("./ab:number").text
+        self.IsMessengerEnabled = XMLTYPE.bool.decode(phone.find("./ab:isMessengerEnabled").text)
+        self.PropertiesChanged = [] #FIXME: implement this
+
+def _optional_tag(tag, path):
+    subtag = tag.find(path)
+    if subtag is not None:
+        return subtag.text
+    return ""
+
+class ContactLocation(object):
+    def __init__(self, location):
+        self.Type = location.find("./ab:contactLocationType").text
+        self.Name = _optional_tag(location, "./ab:name")
+        self.City = _optional_tag(location, "./ab:city")
+        self.Country = _optional_tag(location, "./ab:country")
+        self.PostalCode = _optional_tag(location, "./ab:postalcode")
+        self.Changes = [] #FIXME: implement this
+
+
 class Contact(object):
     def __init__(self, contact):
         self.ContactId = contact.find("./ab:contactId").text
@@ -85,6 +118,20 @@ class Contact(object):
         self.Deleted = XMLTYPE.bool.decode(group.find("./ab:fDeleted"))
         self.LastChanged = XMLTYPE.datetime.decode(member.find("./ab:lastChanged").text)
 
+    @staticmethod
+    def new(contact):
+        contact_type = contact_info.find("./ab:contactType").text
+
+        if contact_type == "Live":
+            return LiveContact(contact)
+        elif contact_type == "Me":
+            return MeContact(contact)
+        elif contact_type == "Regular":
+            return RegularContact(contact)
+        else:
+            raise NotImplementedError("Contact Type not implemented : " + contact_type)
+
+
 class LiveContact(Contact):
     def __init__(self, contact):
         Contact.__init__(self, contact)
@@ -97,6 +144,7 @@ class MeContact(LiveContact):
         LiveContact.__init__(self, contact)
 
 class RegularContact(Contact):
+
     def __init__(self, contact):
         Contact.__init__(self, contact)
         contact_info = contact.find("./ab:contactInfo")
@@ -106,7 +154,6 @@ class RegularContact(Contact):
         emails = contact_info.find("./ab:emails")
         for contact_email in emails:
             pass
-
 
 
 class AB(SOAPService):
@@ -126,14 +173,24 @@ class AB(SOAPService):
                 (previously sent by the server), or
                 0001-01-01T00:00:00.0000000-08:00 to get the whole list
             @param callback: tuple(callable, *args)
-            @param errback: tuple(callable, *args)
-        """
+            @param errback: tuple(callable, *args)"""
         if not deltas_only: 
             last_change = self._service.ABFindAll.default_timestamp
             
         self.__soap_request(self._service.ABFindAll, scenario,
                 (XMLTYPE.bool.encode(deltas_only), last_change),
                 callback, errback)
+
+    def _HandleFindAllResponse(self, request_id, callback, errback, response):
+        groups = []
+        contacts = []
+        for group in response[1]:
+            groups.append(Group(group))
+
+        for contact in response[2]:
+            contacts.append(Contact.new(contact))
+
+        callback[0](contacts, groups, *callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def ContactAdd(self, callback, errback, scenario,
@@ -349,9 +406,13 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM,
             lambda *args: gobject.idle_add(mainloop.quit()))
 
+    def ab_callback(contacts, groups):
+        print contacts
+        print groups
+
     sso = SingleSignOn(account, password)
     ab = AB(sso)
-    ab.FindAll(None, None, 'Initial', False)
+    ab.FindAll((ab_callback,), None, 'Initial', False)
 
     while mainloop.is_running():
         try:
