@@ -18,6 +18,8 @@
 #
 from pymsn.service2.AddressBook.base import BaseScenario
 
+__all__ = ['CheckPendingInviteScenario']
+
 class CheckPendingInviteScenario(BaseScenario):
     def __init__(self, sharing, callback, errback):
         """Checks the pending invitations.

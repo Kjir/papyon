@@ -19,6 +19,8 @@
 from pymsn.service2.AddressBook.base import BaseScenario
 from pymsn.service2.description.AB import ContactType
 
+__all__ = ['MessengerContactAddScenario']
+
 class MessengerContactAddScenario(BaseScenario):
     def __init__(self, ab, callback, errback, account="", 
                  ContactType.LIVE_PENDING, # TODO : determine contact_type via the sharing service

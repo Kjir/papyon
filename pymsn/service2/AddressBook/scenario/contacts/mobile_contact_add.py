@@ -19,6 +19,8 @@
 from pymsn.service2.AddressBook.base import BaseScenario
 from pymsn.service2.description.AB import ContactType, ContactPhoneType
 
+__all__ = ['MobileContactAddScenario']
+
 class MobileContactAddScenario(BaseScenario):
     def __init__(self, ab, callback, errback, 
                  phone_number="", contact_info={}):

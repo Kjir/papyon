@@ -16,3 +16,13 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
+
+from accept_invite import *
+from block_contact import *
+from check_pending_invite import *
+from contact_delete import *
+from decline_invite import *
+from email_contact_add import *
+from messenger_contact_add import *
+from mobile_contact_add import *
+from unblock_contact import *

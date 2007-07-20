@@ -18,6 +18,8 @@
 #
 from pymsn.service2.AddressBook.base import BaseScenario
 
+__all__ = ['UnblockContactScenario']
+
 class UnblockContactScenario(BaseScenario):
     def __init__(self, sharing, callback, errback, type='', account='', 
                  state='Accepted'):

@@ -18,6 +18,8 @@
 #
 from pymsn.service2.AddressBook.base import BaseScenario
 
+__all__ = ['GroupContactDeleteScenario']
+
 class GroupContactDeleteScenario(BaseScenario):
     def __init__(self, ab, callback, errback, group_guid='', contact_id=''):
         """Deletes a contact to a group.

@@ -18,6 +18,8 @@
 #
 from pymsn.service2.AddressBook.base import BaseScenario
 
+__all__ = ['AcceptInviteScenario']
+
 class AcceptInviteScenario(BaseScenario):
     def __init__(self, ab, sharing, callback, errback, add_to_contact_list=True,
                  type='', membership_id='', account='', state='Accepted'):

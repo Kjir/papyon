@@ -18,6 +18,8 @@
 #
 from pymsn.service2.AddressBook.base import BaseScenario
 
+__all__ = ['GroupContactAddScenario']
+
 class GroupContactAddScenario(BaseScenario):
     def __init__(self, ab, callback, errback, group_guid='', contact_id=''):
         """Adds a contact to a group.

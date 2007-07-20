@@ -18,6 +18,8 @@
 #
 from pymsn.service2.AddressBook.base import BaseScenario
 
+__all__ = ['ContactDeleteScenario']
+
 class ContactDeleteScenario(BaseScenario):
     def __init__(self, ab, callback, errback, contact_guid=''):
         """Deletes a contact from the address book.

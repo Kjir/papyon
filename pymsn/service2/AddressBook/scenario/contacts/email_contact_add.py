@@ -19,6 +19,8 @@
 from pymsn.service2.AddressBook.base import BaseScenario
 from pymsn.service2.description.AB import ContactType
 
+__all__ = ['EmailContactAddScenario']
+
 class EmailContactAddScenario(BaseScenario):
     def __init__(self, ab, callback, errback, email_address="", contact_info={}):
         """Adds a mail contact and updates the address book.

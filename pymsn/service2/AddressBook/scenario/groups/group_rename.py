@@ -18,6 +18,8 @@
 #
 from pymsn.service2.AddressBook.base import BaseScenario
 
+__all__ = ['GroupRenameScenario']
+
 class GroupRenameScenario(BaseScenario):
     def __init__(self, ab, callback, errback, group_guid='', group_name=''):
         """Renames a group to the address book.

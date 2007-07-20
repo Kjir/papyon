@@ -357,3 +357,38 @@ class AddressBook(gobject.GObject):
         pass
 
 gobject.type_register(AddressBook)
+
+if __name__ == '__main__':
+    import sys
+    import getpass
+    import signal
+    import gobject
+    import logging
+    from pymsn.service2.SingleSignOn import *
+
+    logging.basicConfig(level=logging.DEBUG)
+
+    if len(sys.argv) < 2:
+        account = raw_input('Account: ')
+    else:
+        account = sys.argv[1]
+
+    if len(sys.argv) < 3:
+        password = getpass.getpass('Password: ')
+    else:
+        password = sys.argv[2]
+
+    mainloop = gobject.MainLoop(is_running=True)
+    
+    signal.signal(signal.SIGTERM,
+            lambda *args: gobject.idle_add(mainloop.quit()))
+
+    sso = SingleSignOn(account, password)
+    sharing = AddressBook(sso)
+    sharing.sync()
+
+    while mainloop.is_running():
+        try:
+            mainloop.run()
+        except KeyboardInterrupt:
+            mainloop.quit()
