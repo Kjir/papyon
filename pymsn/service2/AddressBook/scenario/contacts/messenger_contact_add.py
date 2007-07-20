@@ -16,14 +16,14 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-from pymsn.service2.AddressBook.base import BaseScenario
+from pymsn.service2.AddressBook.scenario.base import BaseScenario
 from pymsn.service2.description.AB import ContactType
 
 __all__ = ['MessengerContactAddScenario']
 
 class MessengerContactAddScenario(BaseScenario):
     def __init__(self, ab, callback, errback, account="", 
-                 ContactType.LIVE_PENDING, # TODO : determine contact_type via the sharing service
+                 contact_type = ContactType.LIVE_PENDING, # TODO : determine contact_type via the sharing service
                  contact_info={}, invite_info={}):
         """Adds a messenger contact and updates the address book.
 

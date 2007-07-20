@@ -16,7 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-from pymsn.service2.AddressBook.base import BaseScenario
+from pymsn.service2.AddressBook.scenario.base import BaseScenario
 
 __all__ = ['InitialSyncScenario']
 
@@ -38,7 +38,7 @@ class InitialSyncScenario(BaseScenario):
     def execute(self):
         self.__membership.FindMembership((self.__membership_findall_callback,),
                 (self.__membership_findall_errback,),
-                self._scenario, ['Messenger', 'Invitation']
+                self._scenario, ['Messenger', 'Invitation'],
                 False, '')
         self.__address_book.FindAll((self.__ab_findall_callback,),
                 (self.__ab_findall_errback,),

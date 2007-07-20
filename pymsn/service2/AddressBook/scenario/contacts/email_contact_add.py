@@ -16,7 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-from pymsn.service2.AddressBook.base import BaseScenario
+from pymsn.service2.AddressBook.scenario.base import BaseScenario
 from pymsn.service2.description.AB import ContactType
 
 __all__ = ['EmailContactAddScenario']
@@ -36,7 +36,7 @@ class EmailContactAddScenario(BaseScenario):
 
     def __set_email_address(self, email_address):
         self.__email_address = email_address
-    def __get_mail_address(self):
+    def __get_email_address(self):
         return self.__email_address
     email_address = property(__get_email_address, __set_email_address,
                             doc="The mail address of the contact")
