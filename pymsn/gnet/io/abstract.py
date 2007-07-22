@@ -60,11 +60,11 @@ class AbstractClient(gobject.GObject):
 
             "received": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (gobject.TYPE_STRING, gobject.TYPE_ULONG)),
+                (object, gobject.TYPE_ULONG)),
 
             "sent": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (gobject.TYPE_STRING, gobject.TYPE_ULONG)),
+                (object, gobject.TYPE_ULONG)),
             }
     
     def __init__(self, host, port, domain=AF_INET, type=SOCK_STREAM):
