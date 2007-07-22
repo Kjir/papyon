@@ -36,17 +36,11 @@ class AddressBookStorage(set):
     def __repr__(self):
         return "AddressBook : %d contact(s)" % len(self)
 
-    def add(self, contact):
-        self.add(contact)
-
-    def remove(self, contact):
-        self.remove(contact)
-
     def __getitem__(self, key):
         i = 0
         for contact in self:
             if i == key:
-                return key
+                return contact
             i += 1
         return None
 
@@ -290,13 +284,12 @@ class AddressBook(gobject.GObject):
             self.groups[group.Id] = g
 
         for contact in contacts:
-            if (not contact.IsMessengerUser) or (contact.Type != "Live"):
+            if (not contact.IsMessengerUser) or (contact.PassportName == ""):
                 #FIXME: maybe we want to avoid filtering
                 continue
 
-            try:
-                display_name = contact.DisplayName
-            except AttributeError:
+            display_name = contact.DisplayName
+            if display_name == "":
                 display_name = contact.QuickName
 
             c = profile.Contact(contact.Id,

@@ -91,7 +91,12 @@ class Contact(object):
         contact_info = contact.find("./ab:contactInfo")
         self.Type = contact_info.findtext("./ab:contactType")
         self.QuickName = contact_info.findtext("./ab:quickName")
+        self.PassportName = contact_info.findtext("./ab:passportName")
+        self.DisplayName = contact_info.findtext("./ab:displayName")
         self.IsPassportNameHidden = contact_info.findtext("./ab:IsPassportNameHidden", "bool")
+
+        self.FirstName = contact_info.findtext("./ab:firstName")
+        self.LastName = contact_info.findtext("./ab:lastName")
 
         self.PUID = contact_info.findtext("./ab:puid", "int")
         self.CID = contact_info.findtext("./ab:CID", "int")
@@ -144,11 +149,7 @@ class Contact(object):
             raise NotImplementedError("Contact Type not implemented : " + contact_type)
 
 class LiveContact(Contact):
-    def __init__(self, contact):
-        Contact.__init__(self, contact)
-        contact_info = contact.find("./ab:contactInfo")
-        self.PassportName = contact_info.findtext("./ab:passportName")
-        self.DisplayName = contact_info.findtext("./ab:displayName")
+    pass
 
 class LivePendingContact(LiveContact):
     pass
@@ -157,16 +158,10 @@ class LiveRejectedContact(LiveContact):
     pass
 
 class MeContact(LiveContact):
-    def __init__(self, contact):
-        LiveContact.__init__(self, contact)
+    pass
 
 class RegularContact(Contact):
-
-    def __init__(self, contact):
-        Contact.__init__(self, contact)
-        contact_info = contact.find("./ab:contactInfo")
-        self.FirstName = contact_info.findtext("./ab:firstName")
-        self.LastName = contact_info.findtext("./ab:lastName")
+    pass
 
 
 class AB(SOAPService):

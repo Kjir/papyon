@@ -29,15 +29,12 @@ class Member(object):
     def __init__(self, member):
         self.Roles = {}
         self.Account = ""
-        self.Type = member.find("./ab:Type").text
-        try:
-            self.DisplayName = member.find("./ab:DisplayName").text
-        except AttributeError:
-            self.DisplayName = ""
-        self.State = member.find("./ab:State").text
+        self.Type = member.findtext("./ab:Type")
+        self.DisplayName = member.findtext("./ab:DisplayName")
+        self.State = member.findtext("./ab:State")
 
-        self.Deleted = XMLTYPE.bool.decode(member.find("./ab:Deleted").text)
-        self.LastChanged = XMLTYPE.datetime.decode(member.find("./ab:LastChanged").text)
+        self.Deleted = member.findtext("./ab:Deleted", "bool")
+        self.LastChanged = member.findtext("./ab:LastChanged", "datetime")
         self.Changes = [] # FIXME: extract the changes
         self.Annotations = annotations_to_dict(member.find("./ab:Annotations"))
 
@@ -52,11 +49,13 @@ class Member(object):
 
     @staticmethod
     def new(member):
-        type = member.find("./ab:Type").text
+        type = member.findtext("./ab:Type")
         if type == "Passport":
             return PassportMember(member)
         elif type == "Email":
             return EmailMember(member)
+        elif type == "Phone":
+            return PhoneMember(member)
         else:
             raise NotImplementedError("Member type not implemented : " + type)
 
@@ -64,10 +63,10 @@ class Member(object):
 class PassportMember(Member):
     def __init__(self, member):
         Member.__init__(self, member)
-        self.Id = XMLTYPE.int.decode(member.find("./ab:PassportId").text)
-        self.PassportName = member.find("./ab:PassportName").text
-        self.IsPassportNameHidden = XMLTYPE.bool.decode(member.find("./ab:IsPassportNameHidden").text)
-        self.CID = XMLTYPE.int.decode(member.find("./ab:CID").text)
+        self.Id = member.findtext("./ab:PassportId", "int")
+        self.PassportName = member.findtext("./ab:PassportName")
+        self.IsPassportNameHidden = member.findtext("./ab:IsPassportNameHidden", "bool")
+        self.CID = member.findtext("./ab:CID", "int")
         self.Changes = [] # FIXME: extract the changes
 
         self.Account = self.PassportName
@@ -75,9 +74,14 @@ class PassportMember(Member):
 class EmailMember(Member):
     def __init__(self, member):
         Member.__init__(self, member)
-        self.Email = member.find("./ab:Email").text
+        self.Email = member.findtext("./ab:Email")
         
         self.Account = self.Email
+
+class PhoneMember(Member):
+    def __init__(self, member):
+        Member.__init__(self, member)
+        self.PhoneNumber = member.findtext("./ab:PhoneNumber")
 
 
 class Sharing(SOAPService):
