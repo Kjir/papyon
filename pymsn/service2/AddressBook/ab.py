@@ -25,7 +25,7 @@ from pymsn.service2.AddressBook.common import *
 
 __all__ = ['AB']
 
-class AB(object):
+class ABResult(object):
     """ABFindAll Result object"""
     def __init__(self, ab, contacts, groups):
         self.ab = ab
@@ -58,7 +58,6 @@ class Group(object):
     def __repr__(self):
         return "<Group id=%s>" % self.Id
 
-
 class ContactEmail(object):
     def __init__(self, email):
         self.Type = email.findtext("./ab:contactEmailType")
@@ -74,12 +73,6 @@ class ContactPhone(object):
         self.Number = phone.findtext("./ab:number")
         self.IsMessengerEnabled = phone.findtext("./ab:isMessengerEnabled", "bool")
         self.PropertiesChanged = [] #FIXME: implement this
-
-def _optional_tag(tag, path):
-    subtag = tag.find(path)
-    if subtag is not None:
-        return subtag.text
-    return ""
 
 class ContactLocation(object):
     def __init__(self, location):
@@ -139,6 +132,10 @@ class Contact(object):
 
         if contact_type == "Live":
             return LiveContact(contact)
+        if contact_type == "LivePending":
+            return LivePendingContact(contact)
+        if contact_type == "LiveRejected":
+            return LiveRejectedContact(contact)
         elif contact_type == "Me":
             return MeContact(contact)
         elif contact_type == "Regular":
@@ -146,13 +143,18 @@ class Contact(object):
         else:
             raise NotImplementedError("Contact Type not implemented : " + contact_type)
 
-
 class LiveContact(Contact):
     def __init__(self, contact):
         Contact.__init__(self, contact)
         contact_info = contact.find("./ab:contactInfo")
         self.PassportName = contact_info.findtext("./ab:passportName")
         self.DisplayName = contact_info.findtext("./ab:displayName")
+
+class LivePendingContact(LiveContact):
+    pass
+
+class LiveRejectedContact(LiveContact):
+    pass
 
 class MeContact(LiveContact):
     def __init__(self, contact):
@@ -165,9 +167,6 @@ class RegularContact(Contact):
         contact_info = contact.find("./ab:contactInfo")
         self.FirstName = contact_info.findtext("./ab:firstName")
         self.LastName = contact_info.findtext("./ab:lastName")
-
-
-            
 
 
 class AB(SOAPService):
@@ -204,7 +203,7 @@ class AB(SOAPService):
         for contact in response[2]:
             contacts.append(Contact.new(contact))
         
-        address_book =  AB(None, contacts, groups) #FIXME: add support for the ab param
+        address_book =  ABResult(None, contacts, groups) #FIXME: add support for the ab param
         callback[0](address_book, *callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)

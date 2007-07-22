@@ -16,3 +16,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
+
+from group_add import *
+from group_contact_add import *
+from group_contact_delete import *
+from group_delete import *
+from group_rename import *
+

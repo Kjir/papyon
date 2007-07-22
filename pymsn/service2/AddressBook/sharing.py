@@ -65,7 +65,7 @@ class PassportMember(Member):
     def __init__(self, member):
         Member.__init__(self, member)
         self.Id = XMLTYPE.int.decode(member.find("./ab:PassportId").text)
-        self.Name = member.find("./ab:PassportName").text
+        self.PassportName = member.find("./ab:PassportName").text
         self.IsPassportNameHidden = XMLTYPE.bool.decode(member.find("./ab:IsPassportNameHidden").text)
         self.CID = XMLTYPE.int.decode(member.find("./ab:CID").text)
         self.Changes = [] # FIXME: extract the changes

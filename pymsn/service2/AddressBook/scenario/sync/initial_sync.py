@@ -38,7 +38,7 @@ class InitialSyncScenario(BaseScenario):
     def execute(self):
         self.__membership.FindMembership((self.__membership_findall_callback,),
                 (self.__membership_findall_errback,),
-                self._scenario, ['Messenger', 'Invitation'],
+                self._scenario, ['Messenger'],
                 False, '')
         self.__address_book.FindAll((self.__ab_findall_callback,),
                 (self.__ab_findall_errback,),
@@ -48,25 +48,27 @@ class InitialSyncScenario(BaseScenario):
     def __membership_findall_callback(self, result):
         self.__membership_response = result
         if self.__ab_response is not None:
+            callback = self._callback
             callback[0](self.__ab_response,
                     self.__membership_response, *callback[1:])
-        self.__membership_response = None
-        self.__ab_response = None
+            self.__membership_response = None
+            self.__ab_response = None
 
     def __membership_findall_errback(self, reason):
-        callback = self.__errback
-        args = self.__errback[1:]
+        errback = self._errback
+        args = self._errback[1:]
         errback(reason, *args) 
 
     def __ab_findall_callback(self, result):
-        self.__ab_findall_callback = result
+        self.__ab_response = result
         if self.__membership_response is not None:
+            callback = self._callback
             callback[0](self.__ab_response,
                     self.__membership_response, *callback[1:])
-        self.__membership_response = None
-        self.__ab_response = None
+            self.__membership_response = None
+            self.__ab_response = None
 
     def __ab_findall_errback(self, reason):
-        callback = self.__errback
-        args = self.__errback[1:]
+        errback = self._errback
+        args = self._errback[1:]
         errback(reason, *args) 

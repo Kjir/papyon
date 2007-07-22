@@ -290,9 +290,10 @@ class AddressBook(gobject.GObject):
             self.groups[group.Id] = g
 
         for contact in contacts:
-            if not contact.IsMessengerUser:
+            if (not contact.IsMessengerUser) or (contact.Type != "Live"):
                 #FIXME: maybe we want to avoid filtering
                 continue
+
             try:
                 display_name = contact.DisplayName
             except AttributeError:
@@ -300,7 +301,7 @@ class AddressBook(gobject.GObject):
 
             c = profile.Contact(contact.Id,
                     profile.NetworkID.MSN,
-                    contact.Account,
+                    contact.PassportName,
                     display_name,
                     profile.Membership.FORWARD)
             c._server_contact_attribute_changed("im_contact",
@@ -311,27 +312,30 @@ class AddressBook(gobject.GObject):
             else:
                 self.contacts.add(c)
 
-        for membership, members in memberships.iteritems():
-            if membership == "Allow":
-                membership = profile.Membership.ALLOW
-            elif membership == "Block":
-                membership = profile.Membership.BLOCK
-            elif membership == "Reverse":
-                membership = profile.Membership.REVERSE
-            elif membership == "Pending":
-                membership = profile.Membership.PENDING
-            else:
-                raise NotImplementedError("Unknown Membership Type : " + membership)
+        for member in memberships:
+            if member.Type != "Passport":
+                #FIXME: maybe we want to avoid filtering
+                continue
+            
+            contact = self.contacts\
+                    .search_by_account(member.Account)[0]
+            
+            if contact is None:
+                continue
 
-            for member in memebers:
-                if member.Type != "Passport":
-                    #FIXME: maybe we want to avoid filtering
-                    continue
-                
-                contact = self.contacts\
-                        .search_by_account(self.member.Account)[0]
-                if contact is not None:
-                    contact._add_membership(membership)
+            for role in member.Roles:
+                if role == "Allow":
+                    membership = profile.Membership.ALLOW
+                elif role == "Block":
+                    membership = profile.Membership.BLOCK
+                elif role == "Reverse":
+                    membership = profile.Membership.REVERSE
+                elif role == "Pending":
+                    membership = profile.Membership.PENDING
+                else:
+                    raise NotImplementedError("Unknown Membership Type : " + membership)
+
+                contact._add_membership(membership)
         self._state = AddressBookState.SYNCHRONIZED
 
     def __add_messenger_contact_cb(self):
@@ -382,10 +386,19 @@ if __name__ == '__main__':
     
     signal.signal(signal.SIGTERM,
             lambda *args: gobject.idle_add(mainloop.quit()))
+    
+    def address_book_state_changed(address_book, pspec):
+        if address_book.state == AddressBookState.SYNCHRONIZED:
+            for guid, group in address_book.groups.iteritems():
+                print "Group : %s (%s)" % (guid, group.name)
+
+            for contact in address_book.contacts:
+                print "Contact : %s (%s)" % (contact.account, contact.display_name)
 
     sso = SingleSignOn(account, password)
-    sharing = AddressBook(sso)
-    sharing.sync()
+    address_book = AddressBook(sso)
+    address_book.connect("notify::state", address_book_state_changed)
+    address_book.sync()
 
     while mainloop.is_running():
         try:
