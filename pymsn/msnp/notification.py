@@ -191,7 +191,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
             @param friendly_name: the new friendly name
             @type friendly_name: string"""
-        self._transport.send_command_ex('PRP', ('MFN', urllib.quote(display_name)))
+        self._transport.send_command_ex('PRP',
+                ('MFN', urllib.quote(display_name)))
 
     def set_personal_message(self, personal_message=''):
         """Sets the new personal message
@@ -205,7 +206,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 '<MachineGuid>{CAFEBABE-DEAD-BEEF-BAAD-FEEDDEADC0DE}</MachineGuid>'\
             '</Data>' % message
         self._transport.send_command_ex('UUX', payload=pm)
-        self._client.profile._server_property_changed("personal-message", personal_message)
+        self._client.profile._server_property_changed("personal-message",
+                personal_message)
 
     def signoff(self):
         """Logout from the server"""
@@ -226,7 +228,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             @type network_id: integer
             @see L{pymsn.profile.NetworkID}"""
         contact = self._address_book.contacts.search_by_account(account).\
-                search_by_network_id(network_id).get_first()
+                search_by_network_id(network_id)[0]
         
         if contact is None:
             self._address_book.add_contact(account)
@@ -276,7 +278,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self.add_contact_to_membership(contact.account, contact.network_id,
                 profile.Membership.BLOCK)
 
-    def add_contact_to_membership(self, account, network_id=profile.NetworkID.MSN,
+    def add_contact_to_membership(self, account,
+            network_id=profile.NetworkID.MSN,
             membership=profile.Membership.FORWARD):
         """Add a contact to a given membership.
 
@@ -301,7 +304,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     (domain, contact, membership, network_id)
             self._transport.send_command_ex("ADL", payload=payload)
 
-    def remove_contact_from_membership(self, account, network_id=profile.NetworkID.MSN,
+    def remove_contact_from_membership(self, account,
+            network_id=profile.NetworkID.MSN,
             membership=profile.Membership.FORWARD):
         """Remove a contact from a given membership.
 
@@ -367,7 +371,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         args_len = len(command.arguments)
 
         # MSNP15 have only 4 params for final USR
-        assert(args_len == 3 or args_len == 4), "Received USR with invalid number of params : " + str(command)
+        assert(args_len == 3 or args_len == 4), \
+                "Received USR with invalid number of params : " + str(command)
 
         if command.arguments[0] == "OK":
             self._state = ProtocolState.AUTHENTICATED
@@ -378,12 +383,17 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             password = self._client.profile.password
 
             if command.arguments[0] == "SSO":
-                if 'https' in self._proxies:
-                    sso = SSO.SingleSignOn(account, password, self._proxies['https'])
-                else:
-                    sso = SSO.SingleSignOn(account, password)
-                sso.RequestMultipleSecurityTokens(self._sso_cb, (command.arguments[3],),
-                        SSO.LiveService.MESSENGER_CLEAR, SSO.LiveService.CONTACTS)
+                sso = SSO.SingleSignOn(account, password, self._proxies)
+                sso.RequestMultipleSecurityTokens(
+                        (self._sso_cb, command.arguments[3]),
+                        None,
+                        SSO.LiveService.MESSENGER_CLEAR)
+                self._address_book = AddressBook.AddressBook(sso, self._proxies)
+                
+                self._client.address_book = self._address_book #FIXME: ugly ugly !
+                self._address_book.connect("notify::state",
+                        self._address_book_state_changed_cb)
+
             elif command.arguments[0] == "TWN":
                 raise NotImplementedError, "Missing Implementation, please fix"
 
@@ -395,21 +405,26 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     # --------- Presence & Privacy -------------------------------------------
     def _handle_BLP(self, command):
-        self._client.profile._server_property_changed("privacy", command.arguments[0])
+        self._client.profile._server_property_changed("privacy",
+                command.arguments[0])
 
     def _handle_CHG(self, command):
-        self._client.profile._server_property_changed("presence", command.arguments[0])
+        self._client.profile._server_property_changed("presence",
+                command.arguments[0])
 
     def _handle_ILN(self,command):
         self._handle_NLN(command)
 
     def _handle_FLN(self,command):
-        contacts = self._address_book.contacts.search_by_account(command.arguments[0])
+        contacts = self._address_book.contacts.\
+                search_by_account(command.arguments[0])
         for contact in contacts:
-            contact._server_property_changed("presence", profile.Presence.OFFLINE)
+            contact._server_property_changed("presence",
+                    profile.Presence.OFFLINE)
 
     def _handle_NLN(self,command):
-        contacts = self._address_book.contacts.search_by_account(command.arguments[1])
+        contacts = self._address_book.contacts.\
+                search_by_account(command.arguments[1])
         for contact in contacts:
             presence = command.arguments[0]
             display_name = urllib.unquote(command.arguments[3])
@@ -431,7 +446,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         pass
 
     def _handle_UBX(self,command): # contact infos
-        contacts = self._address_book.contacts.search_by_account(command.arguments[0])
+        contacts = self._address_book.contacts.\
+                search_by_account(command.arguments[0])
         if command.payload:
             for contact in contacts:
                 pm = et.fromstring(command.payload).find("./PSM").text
@@ -449,13 +465,15 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _handle_MSG(self, command):
         msg = IncomingMessage(command)
         if msg.content_type[0] == 'text/x-msmsgsprofile':
-            self._client.profile._server_property_changed("profile", command.payload)
+            self._client.profile._server_property_changed("profile",
+                    command.payload)
 
             if self._protocol_version < 15:
                 #self._transport.send_command_ex('SYN', ('0', '0'))
                 raise NotImplementedError, "Missing Implementation, please fix"
             else:
-                self._transport.send_command_ex("BLP", (self._client.profile.privacy,))
+                self._transport.send_command_ex("BLP",
+                        (self._client.profile.privacy,))
                 self._state = ProtocolState.SYNCHRONIZING
                 self._address_book.sync()
         elif msg.content_type[0] in \
@@ -491,7 +509,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     def _handle_CHL(self,command):
         response = _msn_challenge(command.arguments[0])
-        self._transport.send_command_ex('QRY', (ProtocolConstant.PRODUCT_ID,), payload=response)
+        self._transport.send_command_ex('QRY',
+                (ProtocolConstant.PRODUCT_ID,), payload=response)
 
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
@@ -502,26 +521,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _disconnect_cb(self, transport, reason):
         self._state = ProtocolState.CLOSED
 
-    def _sso_cb(self, nonce, soap_response, *tokens):
-        self.__security_tokens = tokens
-        clear_token = None
-        blob = None
-        for token in tokens:
-            if token.service_address == SSO.LiveService.MESSENGER_CLEAR[0]:
-                clear_token = token
-                blob = token.mbi_crypt(nonce)
-            elif token.service_address == SSO.LiveService.CONTACTS[0]:
-                if 'http' in self._proxies:
-                    self._address_book = AddressBook.AddressBook(token, self._proxies['http'])
-                else:
-                    self._address_book = AddressBook.AddressBook(token)
-                self._client.address_book = self._address_book #FIXME: ugly ugly !
-                self._address_book.connect("notify::state",
-                        self._address_book_state_changed_cb)
-                self._address_book.connect("contact-added",
-                        self._address_book_contact_added_cb)
+    def _sso_cb(self, tokens, nonce):
+        clear_token = tokens[SSO.LiveService.MESSENGER_CLEAR]
+        blob = clear_token.mbi_crypt(nonce)
 
-        assert(clear_token is not None and blob is not None)
         self._transport.send_command_ex("USR",
                 ("SSO", "S", clear_token.security_token, blob))
 
@@ -559,8 +562,3 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             self._transport.send_command_ex("ADL", payload=payload)
         self._state = ProtocolState.SYNCHRONIZED
 
-    def _address_book_contact_added_cb(self, address_book, contact):
-        # FIXME: only consider Messenger contacts and not addressbook only
-        # contacts
-        self.add_contact_to_membership(contact.account, contact.network_id,
-                profile.Membership.FORWARD)

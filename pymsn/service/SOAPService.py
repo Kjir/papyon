@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
-# Copyright (C) 2007  Johann Prieur <johann.prieur@gmail.com>
+# pymsn - a python client library for Msn
+#
+# Copyright (C) 2005-2007 Ali Sabil <ali.sabil@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,225 +16,266 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-#
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+import description
+from SOAPUtils import *
 
 import pymsn.gnet.protocol
-import pymsn.gnet.message.SOAP as SOAP
-
+import pymsn.util.ElementTree as ElementTree
+import pymsn.util.StringIO as StringIO
+import re
 import logging
+
+__all__ = ['SOAPService', 'SOAPResponse']
+
 logger = logging.getLogger('Service')
 
-class SOAPUtils(object):
-    def __init__(self, ns_shorthands):
-        self._ns_shorthands = ns_shorthands
+def url_split(url, default_scheme='http'):
+    from urlparse import urlsplit, urlunsplit
+    if "://" not in url: # fix a bug in urlsplit
+        url = default_scheme + "://" + url
+    protocol, host, path, query, fragment = urlsplit(url)
+    if path == "": path = "/"
+    try:
+        host, port = host.rsplit(":", 1)
+        port = int(port)
+    except:
+        port = None
+    resource = urlunsplit(('', '', path, query, fragment))
+    return protocol, host, port, resource
 
-    def find_ex(self, xml_node, path):
-        return SOAPUtils.find(xml_node, path, self._ns_shorthands)
+def compress_xml(xml_string):
+    space_regex = [(re.compile('>\s+<'), '><'),
+        (re.compile('>\s+'), '>'),
+        (re.compile('\s+<'), '<')]
 
-    @staticmethod
-    def find(xml_node, path, ns_shorthands):
-        for sh, ns in ns_shorthands.iteritems():
-            path = path.replace("/%s:" % sh, "/{%s}" % ns)
-        return xml_node.find(path)
+    for regex, replacement in space_regex:
+        xml_string = regex.sub(replacement, xml_string)
+    return xml_string
 
-    @staticmethod
-    def bool_type(s):
-        if s.lower() in ("false", "no", "f", "n", "0", ""):
-            return False
-        return True
+soap_template = """<?xml version='1.0' encoding='utf-8'?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+    <soap:Header xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+        %s
+    </soap:Header>
+    <soap:Body xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+        %s
+    </soap:Body>
+</soap:Envelope>"""
 
-    @staticmethod
-    def bool_to_string(b):
-        if b: return "true"
-        return "false"
+class _SOAPElement(object):
+    def __init__(self, element, ns_shorthands):
+        self.element = element
+        self.ns_shorthands = ns_shorthands.copy()
 
-    @staticmethod
-    def int_type(s):
+    def __getattr__(self, name):
+        return getattr(self.element, name)
+
+    def __getitem__(self, name):
+        for sh, ns in self.ns_shorthands.iteritems():
+            name = name.replace("%s:" % sh, "{%s}" % ns)
+        return self.element[name]
+
+    def __iter__(self):
+        for node in self.element:
+            yield _SOAPElement(node, self.ns_shorthands)
+
+    def __contains__(self, node):
+        return node in self.element
+
+    def __repr__(self):
+        return "<SOAPElement name=\"%s\">" % (self.element.tag,)
+
+    def find(self, path):
+        for sh, ns in self.ns_shorthands.iteritems():
+            path = path.replace("%s:" % sh, "{%s}" % ns)
+        node = self.element.find(path)
+        if node is None:
+            return None
+        return _SOAPElement(node, self.ns_shorthands)
+
+    def findall(self, path):
+        for sh, ns in self.ns_shorthands.iteritems():
+            path = path.replace("%s:" % sh, "{%s}" % ns)
+        
+        result = []
+        nodes = self.element.findall(path)
+        for node in nodes:
+            result.append(_SOAPElement(node, self.ns_shorthands))
+        return result
+
+    def findtext(self, path, type=None):
+        result = self.find(path)
+        if result is None:
+            return ""
+        result = result.text
+        
+        if type is None:
+            return result
+        return getattr(XMLTYPE, type).decode(result)
+
+
+class SOAPResponse(object):
+    NS_SHORTHANDS = {'soap' : XMLNS.SOAP.ENVELOPE,
+            "xmlenc" : XMLNS.ENCRYPTION.BASE,
+            "wsse" : XMLNS.WS.SECEXT,
+            "wst" : XMLNS.WS.TRUST,
+            "wsa" : XMLNS.WS.ADDRESSING,
+            "wsp" : XMLNS.WS.POLICY,
+            "wsi" : XMLNS.WS.ISSUE,
+            "wsu" : XMLNS.WS.UTILITY,
+            "ps" : XMLNS.MICROSOFT.PASSPORT,
+            "ab" : XMLNS.MICROSOFT.LIVE.ADDRESSBOOK}
+
+    def __init__(self, soap_data):
         try:
-            return int(s)
+            tree = self._parse(soap_data)
+            self.tree = _SOAPElement(tree, self.NS_SHORTHANDS)
+            self.header = self.tree.find("soap:Header")
+            self.body = self.tree.find("soap:Body")
+            self.fault = self.tree.find("soap:Fault")
         except:
-            return 0
+            self.tree = None
+            self.header = None
+            self.body = None
+            self.fault = None
+            logger.warning("SOAPResponse: Invalid xml+soap data")
 
-class SOAPFault(Exception):
+    def __getitem__(self, name):
+        return self.tree[name]
 
-    SOAP_ENVELOPE = "http://schemas.xmlsoap.org/soap/envelope/"
-    NS_SHORTHANDS = { "soap": SOAP_ENVELOPE }
+    def find(self, path):
+        return self.tree.find(path)
 
-    def __init__(self, xml_node):
-        self._soap_utils = SOAPUtils(SOAPFault.NS_SHORTHANDS)
-        fault = self._soap_utils.find_ex(xml_node, "./soap:Fault")
-        self.code = self._soap_utils.find_ex(fault, "./faultcode").text
-        self.string = self._soap_utils.find_ex(fault, "./faultstring").text
-        #self.actor = self._soap_utils.find_ex(fault, "./faultactor").text
+    def findall(self, path):
+        return self.tree.findall(path)
+    
+    def findtext(self, path, type=None):
+        return self.tree.findtext(path, type)
 
-    def __str__(self):
-        return "SOAPFault : " + self.string
+    def is_fault(self):
+        return self.fault is not None
 
-class BaseSOAPService(object):
-    DEFAULT_PROTOCOL = "http"
+    def is_valid(self):
+        return self.tree is not None and self.header is not None
 
-    def __init__(self, url, proxy=None):
-        protocol, host, self.resource = self._url_split(url)
-        self.http_headers = {}
-        self.request = None
-        self.request_queue = []
-        self.transport = pymsn.gnet.protocol.ProtocolFactory(protocol, host, proxy=proxy)
-        self.transport.connect("response-received", self._response_handler)
-        self.transport.connect("request-sent", self._request_handler)
-        self.transport.connect("error", self._error_handler)
+    def _parse(self, data):
+        events = ("start", "end", "start-ns", "end-ns")
+        ns = []
+        data = StringIO.StringIO(data)
+        context = ElementTree.iterparse(data, events=events)
+        for event, elem in context:
+            if event == "start-ns":
+                ns.append(elem)
+            elif event == "end-ns":
+                ns.pop()
+            elif event == "start":
+                elem.set("(xmlns)", tuple(ns))
+        data.close()
+        return context.root
 
-    def _url_split(self, url):
-        from urlparse import urlsplit, urlunsplit
-        if "://" not in url: # fix a bug in urlsplit
-            url = self.DEFAULT_PROTOCOL + "://" + url
-        protocol, host, path, query, fragment = urlsplit(url)
-        if path == "": path = "/"
-        resource = urlunsplit(('', '', path, query, fragment))
-        return protocol, host, resource
 
-    def _response_handler(self, transport, response):
-        logger.debug("<<< " + str(response))
-        soap_response = SOAP.SOAPResponse(response.body)
-        #logger.debug("<<< SOAP Response: " + soap_response.body[0].tag)
+class SOAPService(object):
 
-    def _request_handler(self, transport, request):
-        logger.debug(">>> " + str(request))
-        soap_request = SOAP.SOAPResponse(request.body)
-        #logger.debug(">>> SOAP Request: " + soap_request.body[0].tag)
+    def __init__(self, name, proxies=None):
+        self._name = name
+        self._service = getattr(description, self._name)
+        self._active_transports = {}
+        self._proxies = proxies or {}
+
+    def _send_request(self, name, url, soap_header, soap_body, soap_action,
+            callback, errback=None, transport_headers={}, user_data=None):
+        
+        scheme, host, port, resource = url_split(url)
+        http_headers = transport_headers.copy()
+        if soap_action is not None:
+            http_headers["SOAPAction"] = str(soap_action)
+        http_headers["Content-Type"] = "text/xml; charset=utf-8"
+        http_headers["Cache-Control"] = "no-cache"
+        http_headers["Accept"] = "text/*"
+        http_headers["Proxy-Connection"] = "Keep-Alive"
+        http_headers["Connection"] = "Keep-Alive"
+
+        request = compress_xml(soap_template % (soap_header, soap_body))
+
+        transport = self._get_transport(name, scheme, host, port,
+                callback, errback, user_data)
+        transport.request(resource, http_headers, request, 'POST')
+
+    def _response_handler(self, transport, http_response):
+        logger.debug("<<< " + str(http_response))
+        soap_response = SOAPResponse(http_response.body)
+        if not soap_response.is_valid():
+            logger.warning("Invalid SOAP Response")
+            return #FIXME: propagate the error up
+
+        request_id, callback, errback, user_data = self._unref_transport(transport)
+        if not soap_response.is_fault():
+            handler = getattr(self,
+                    "_Handle" + request_id + "Response",
+                    None)
+            method = getattr(self._service, request_id)
+            response = method.process_response(soap_response)
+            
+            if handler is not None:
+                handler(callback, errback, response, user_data)
+            else:
+                self._HandleUnhandledResponse(request_id, callback, errback,
+                        response, user_data)
+        else:
+            self._HandleSOAPFault(request_id, callback, errback, soap_response,
+                    user_data)
+
+    def _request_handler(self, transport, http_request):
+        logger.debug(">>> " + str(http_request))
 
     def _error_handler(self, transport, error):
         logger.warning("Transport Error :" + str(error))
+        request_id, callback, errback = self._unref_transport(transport)
+        return request_id, callback, errback #FIXME: do something sensible here
 
-    def _send_request(self):
-        """This method sends the SOAP request over the wire"""
-        self.transport.request(resource = self.resource,
-                headers = self.http_headers,
-                data = str(self.request),
-                method = 'POST')
-        self.http_headers = {}
-        self.soap_headers = None
-        self.request = None
+    # Handlers
+    def _HandleSOAPFault(self, request_id, callback, errback,
+            soap_response, user_data):
+        logger.warning("Unhandled SOAPFault to %s" % request_id)
 
+    def _HandleUnhandledResponse(self, request_id, callback, errback,
+            response, user_data):
+        logger.warning("Unhandled Response to %s" % request_id)
 
-class SOAPService(BaseSOAPService):
-    """Base class for all Windows Live Services."""
+    # Transport management
+    def _get_transport(self, request_id, scheme, host, port,
+            callback, errback, user_data):
+        key = (scheme, host, port)
+        if key in self._active_transports:
+            trans = self._active_transports[key]
+            transport = trans[0]
+            trans[1].append((request_id, callback, errback, user_data))
+        else:
+            proxy = self._proxies.get(scheme, None)
+            transport = pymsn.gnet.protocol.ProtocolFactory(scheme,
+                    host, port, proxy=proxy)
+            handler_id = [transport.connect("response-received",
+                    self._response_handler),
+                transport.connect("request-sent", self._request_handler),
+                transport.connect("error", self._error_handler)]
 
-    def __init__(self, url, proxy=None):
-        BaseSOAPService.__init__(self, url, proxy)
-        self._response_extractor = {}
+            trans = [transport, [(request_id, callback, errback, user_data)], handler_id]
+            self._active_transports[key] = trans
+        return transport
 
-    def __getattr__(self, name):
-        def method(callback, *params):
-            self._simple_method(name, callback, *params)
-        method.__name__ = name
-        return method
+    def _unref_transport(self, transport):
+        for key, trans in self._active_transports.iteritems():
+            if trans[0] == transport:
+                response = trans[1].pop(0)
+                
+                if len(trans[1]) != 0:
+                    return response
 
-    def _method(self, method_name, callback, callback_args, attributes, *params):
-        """Used for method construction, the SOAP tree is built
-        but not sent, so that the ComplexMethods can use it and add
-        various things to the SOAP tree before sending it.
-
-            @param method_name: the SOAP method name
-            @type method_name: string
-
-            @param callback: the callback to use when the response is received
-            @type callback: callable(callback_args, response)
-
-            @param callback_args: additional arguments to be passed to the callback
-            @type callback_args: tuple(callback)
-
-            @param attributes: the attributes to be attached to the method call
-            @type attributes: dict
-
-            @param params: tuples containing the attribute name and the
-                attribute value
-            @type params: tuple(name, value) or tuple(type, name, value)
-
-            @note: this method does not actually send the request and
-            L{_send_request} must be called"""
-        ns = self._method_namespace(method_name)
-        request = SOAP.SOAPRequest(method_name, ns, **attributes)
-        for param in params:
-            assert(len(param) == 2 or len(param) == 3)
-            if len(param) == 2:
-                request.add_argument(param[0], value=param[1])
-            elif len(param) == 3:
-                request.add_argument(param[1], type=param[0], value=param[2])
-        self.request = request
-        self._soap_headers(method_name)
-        self._http_headers(method_name)
-        self.request_queue.append((method_name, callback, callback_args))
-
-    def _simple_method(self, method_name, callback, callback_args, *params):
-        """Methods that are auto handled.
-
-            @param method_name: the SOAP method name
-            @type method_name: string
-
-            @param callback: the callback to use when the response is received
-            @type callback: callable(response)
-
-            @param callback_args: additional arguments to be passed to the callback
-            @type callback_args: tuple(callback)
-
-            @param params: tuples containing the attribute name and the
-                attribute value
-            @type params: tuple(name, value) or tuple(type, name, value)"""
-        self._method(method_name, callback, callback_args, {}, *params)
-        self._send_request()
-
-    def _response_handler(self, transport, response):
-        BaseSOAPService._response_handler(self, transport, response)
-        soap_response = SOAP.SOAPResponse(response.body)
-        method, callback, callback_args = self.request_queue.pop(0)
-        if callback is not None:
-            result = self._extract_response(method, soap_response)
-            arguments = tuple(callback_args)
-            if result is not None: arguments += tuple(result)
-            callback(*arguments)
-
-    def _extract_response(self, method, soap_response):
-        if method in self._response_extractor:
-            result = [soap_response]
-            values = self._response_extractor[method]
-            for value in values:
-                result.append(soap_response.find(value))
-            return tuple(result)
-        return (soap_response,)
-
-    def _soap_action(self, method):
-        """return the SOAPAction header value to be used
-        for the given method.
-
-            @param method: the method name
-            @type method: string"""
-        raise NotImplementedError
-
-    def _method_namespace(self, method):
-        """return the namespace of the given method.
-
-            @param method: the method name
-            @type method: string"""
-        raise NotImplementedError
-
-    def _soap_headers(self, method):
-        """Add the needed headers for the current method"""
-        pass
-
-    def _http_headers(self, method):
-        """Sets the needed http headers for the current method"""
-        if self._soap_action(method):
-            self.http_headers['SOAPAction'] = self._soap_action(method)
-        self.http_headers['Content-Type'] = "text/xml; charset=utf-8"
-        self.http_headers['Cache-Control'] ="no-cache"
-        self.http_headers['Accept'] = "text/*"
-        # fix : (to be removed later)
-        self.http_headers["Proxy-Connection"] = "Keep-Alive"
-        self.http_headers["Connection"] = "Keep-Alive"
-
-
-class SOAPServiceRequest(object):
-    def __init__(callback, callback_args):
-        pass
+                for handle in trans[2]:
+                    transport.disconnect(handle)
+                del self._active_transports[key]
+                return response
+        return None
 

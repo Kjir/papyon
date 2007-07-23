@@ -121,7 +121,7 @@ class Conversation(SwitchboardClient):
                     account=account,
                     display_name=display_name)
         else:
-            sender = senders.get_first()
+            sender = senders[0]
 
         if message_type == 'text/plain':
             self._dispatch("on_conversation_message_received",

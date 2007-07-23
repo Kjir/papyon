@@ -21,6 +21,8 @@
 
 import ab
 import sharing
+import scenario
+
 import pymsn.profile as profile
 
 import gobject
@@ -34,15 +36,12 @@ class AddressBookStorage(set):
     def __repr__(self):
         return "AddressBook : %d contact(s)" % len(self)
 
-    def add_contact(self, contact):
-        self.add(contact)
-
-    def remove_contact(self, contact):
-        self.remove(contact)
-
-    def get_first(self):
+    def __getitem__(self, key):
+        i = 0
         for contact in self:
-            return contact
+            if i == key:
+                return contact
+            i += 1
         return None
 
     def __getattr__(self, name):
@@ -60,7 +59,7 @@ class AddressBookStorage(set):
             return group_by_func
         else:
             raise AttributeError, name
-
+        
     def search_by_memberships(self, memberships):
         result = []
         for contact in self:
@@ -85,7 +84,7 @@ class AddressBookStorage(set):
             value = getattr(contact, field)
             if value not in result:
                 result[value] = AddressBookStorage()
-            result[value].add_contact(contact)
+            result[value].add(contact)
         return result
 
 
@@ -102,30 +101,64 @@ class AddressBookState(object):
     SYNCHRONIZED = 2
     """The addressbook is already synchornized"""
 
-class AddressBook(gobject.GObject):
 
-    __gsignals__ =  {
-        "contact-added": (gobject.SIGNAL_RUN_FIRST,
-            gobject.TYPE_NONE,
-            (gobject.TYPE_PYOBJECT,)),
-        }
+class AddressBook(gobject.GObject):
+    
+    __gsignals__ = {
+            "messenger-contact-added" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            "email-contact-added"     : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            "mobile-contact-added"    : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+
+            "contact-deleted"         : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE, ()),
+            "contact-blocked"         : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            "contact-unblocked"       : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+
+            "group-added"             : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            "group-deleted"           : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            "group-renamed"           : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+
+            "group-contact-added"     : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object, object)),
+            "group-contact-deleted"   : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object, object))
+            }
+
     __gproperties__ = {
         "state":  (gobject.TYPE_INT,
-            "State",
-            "The state of the addressbook.",
-            0, 2, AddressBookState.NOT_SYNCHRONIZED,
-            gobject.PARAM_READABLE)
+                   "State",
+                   "The state of the addressbook.",
+                   0, 2, AddressBookState.NOT_SYNCHRONIZED,
+                   gobject.PARAM_READABLE)
         }
 
-    def __init__(self, contacts_security_token, http_proxy=None): #TODO: pass an SSO client instead of the security token
+    def __init__(self, sso, proxies=None):
+        """The address book object."""
         gobject.GObject.__init__(self)
-        self._ab_client = ab.AB(contacts_security_token, http_proxy)
-        self._sharing_client = sharing.Sharing(contacts_security_token, http_proxy)
-        self.__state = AddressBookState.NOT_SYNCHRONIZED
-        self.__ab_find_all_groups_response = None
-        self.__ab_find_all_contacts_response = None
-        self.__find_membership_response = None
 
+        self._ab = ab.AB(sso, proxies)
+        self._sharing = sharing.Sharing(sso, proxies)
+
+        self.__state = AddressBookState.NOT_SYNCHRONIZED
+        
         self.groups = {}
         self.contacts = AddressBookStorage()
         self._profile = None
@@ -134,48 +167,11 @@ class AddressBook(gobject.GObject):
         if self._state != AddressBookState.NOT_SYNCHRONIZED:
             return
         self._state = AddressBookState.SYNCHRONIZING
-        self._ab_client.ABFindAll("Initial", False, self._ab_find_all_cb)
-        self._sharing_client.FindMembership("Initial", self._find_membership_cb)
-
-    # Manipulation
-    def add_contact(self, passport, messenger=True):
-        self._ab_client.ABContactAdd("ContactSave", passport, messenger,
-                                     "LivePending", self._ab_contact_add_cb)
-
-    def delete_contact(self, contact, messenger_only=False):
-        if messenger_only:
-            properties = { "displayName":"", "isMessengerUser":"false" }
-            self._ab_client.ABContactUpdate("Timer", contact.id(), properties,
-                                            self._ab_delete_contact_msgr_cb)
-        else:
-            self._ab_client.ABContactDelete("Timer", contact.id(),
-                                            self._ab_delete_contact_cb)
-
-    def block_contact(self, contact):
-        pass
-
-    def unblock_contact(self, contact):
-        pass
-
-    def add_group(self, group_name):
-        self._ab_client.ABGroupAdd("GroupSave", group_name,
-                                   self._ab_add_group_cb)
-
-    def delete_group(self, group):
-        self._ab_client.ABGroupDelete("Timer", group.id(),
-                                      self._ab_delete_group_cb)
-
-    def change_group_name(self, group, new_name):
-        self._ab_client.ABGroupUpdate("GroupSave", group.id(), new_name,
-                                      self._ab_change_group_name_cb)
-
-    def add_contact_to_group(self, contact, group):
-        self._ab_client.ABGroupContactAdd("GroupSave", group.id(), contact.id(),
-                                          self._ab_add_contact_to_group_cb)
-
-    def delete_contact_from_group(self, contact, group):
-        self._ab_client.ABGroupDelete("GroupSave", contact.id(), group.id(),
-                                      self._ab_delete_contact_from_group_cb)
+        
+        initial_sync = scenario.InitialSyncScenario(self._ab, self._sharing,
+                (self.__initial_sync_callback,),
+                (self.__common_errback,))
+        initial_sync()
 
     # Properties
     def __get_state(self):
@@ -190,111 +186,216 @@ class AddressBook(gobject.GObject):
     def profile(self):
         return self._profile
 
+    # Public API
+    def add_messenger_contact(self, account):
+        am = MessengerContactAddScenario(self._ab,
+                (self.__add_messenger_contact_cb,),
+                (self.__common_errback,))
+        am.account = account
+        am()
+
+    def add_email_contact(self, email_address):
+        ae = EmailContactAddScenario(self._ab,
+                (self.__add_email_contact_cb,),
+                (self.__common_errback,))
+        ae.email_address = email_address
+        ae()
+
+    def add_mobile_contact(self, phone_number):
+        am = MobileContactAddScenario(self._ab,
+                (self.__add_mobile_contact_cb,),
+                (self.__common_errback,))
+        am.phone_number = phone_number
+        am()
+
+    def delete_contact(self, contact):
+        dc = ContactDeleteScenario(self._ab,
+                (self.__common_callback, 'contact-deleted', contact),
+                (self.__common_errback,))
+        # dc.contact_guid = contact.guid
+        dc()
+
+    def block_contact(self, contact):
+        bc = BlockContactScenario(self._sharing,
+                (self.__common_callback, 'contact-blocked', contact),
+                (self.__common_errback,))
+        # bc.type = contact.type
+        # bc.account = contact.account
+        # bc.state = contact.state
+        bc()
+
+    def unblock_contact_cb(self, contact):
+        uc = UnblockContactScenario(self._sharing,
+                (self.__common_callback, 'contact-unblocked', contact),
+                (self.__common_errback,))
+        # uc.type = contact.type
+        # uc.membership_id = contact.membership_id
+        # uc.account = contact.account
+        # uc.state = contact.state
+        uc()
+
+    def add_group(self, group_name):
+        ag = GroupAddScenario(self._ab,
+                (self.__add_group_cb,),
+                (self.__common_errback,))
+        ag.group_name = group_name
+        ag()
+
+    def delete_group(self, group):
+        dg = GroupDeleteScenario(self._ab,
+                (self.__common_callback, 'group-deleted', group),
+                (self.__common_errback,))
+        # dg.group_guid = group.guid
+        dg()
+
+
+    def rename_group(self, group, new_name):
+        rg = GroupRenameScenario(self._ab,
+                (self.__common_callback, 'group-renamed', group),
+                (self.__common_errback,))
+        # rg.group_guid = group.guid
+        rg.group_name = new_name
+        rg()
+
+    def add_contact_to_group(self, group, contact):
+        ac = GroupContactAddScenario(self._ab,
+                (self.__common_callback, 'group-contact-added', group, contact),
+                (self.__common_errback,))
+        # ac.group_guid = group.guid
+        # ac.contact_guid = contact.guid
+        ac()
+
+    def delete_contact_from_group(self, group, contact):
+        dc = GroupContactDeleteScenario(self._ab,
+                (self.__common_callback, 'group-contact-deleted', group, contact),
+                (self.__common_errback,))
+        # dc.group_id = group.guid
+        # dc.contact_id = contact.guid
+        dc()
+
     # Callbacks
-    def _ab_find_all_cb(self, soap_response, groups, contacts):
-        self.__ab_find_all_groups_response = groups
-        self.__ab_find_all_contacts_response = contacts
-        if self.__find_membership_response is not None:
-            self.__build_addressbook()
+    def __initial_sync_callback(self, address_book, memberships):
+        ab = address_book.ab
+        contacts = address_book.contacts
+        groups = address_book.groups
 
-    def _find_membership_cb(self, soap_response, members):
-        self.__find_membership_response = members
-        if self.__ab_find_all_contacts_response is not None:
-            self.__build_addressbook()
+        for group in groups:
+            g = profile.Group(group.Id, group.Name)
+            self.groups[group.Id] = g
 
-    def _ab_contact_add_cb(self, soap_response, contact):
-        c = profile.Contact(contact.id,
-                            contact.network_id,
-                            contact.account,
-                            contact.display_name)
-        self.contacts.add_contact(c)
-        self.emit("contact-added", c)
+        for contact in contacts:
+            if (not contact.IsMessengerUser and contact.Type != "Me") or \
+                    (contact.PassportName == ""):
+                #FIXME: maybe we want to avoid filtering
+                continue
 
-    def _ab_contact_add_find_all_cb(self, soap_response, groups, contacts):
-        # find the new contact in contacts and add it
-        pass
+            display_name = contact.DisplayName
+            if display_name == "":
+                display_name = contact.QuickName
 
-    def _ab_delete_contact_msgr_cb(self, soap_response):
-        pass
-
-    def _ab_delete_contact_cb(self, soap_response):
-        pass
-
-    def _ab_add_group_cb(self, soap_response, group_guid):
-        pass
-
-    def _ab_delete_group_cb(self, soap_response):
-        pass
-
-    def _ab_change_group_name_cb(self, soap_response):
-        pass
-
-    def _ab_add_contact_to_group_cb(self, soap_response):
-        pass
-
-    def _ab_delete_contact_from_group_cb(self, soap_response):
-        pass
-
-    ### gobject properties
-    def do_get_property(self, pspec):
-        if pspec.name == "state":
-            return self._state
-        else:
-            raise AttributeError, "unknown property %s" % pspec.name
-
-    def do_set_property(self, pspec, value):
-        raise AttributeError, "unknown property %s" % pspec.name
-
-    # Private
-    def __build_addressbook(self):
-        for group in self.__ab_find_all_groups_response:
-            g = profile.Group(group.id, group.name)
-            self.groups[group.id] = g
-
-        for contact in self.__ab_find_all_contacts_response:
-            c = profile.Contact(contact.id,
-                                contact.network_id,
-                                contact.account,
-                                contact.display_name)
+            c = profile.Contact(contact.Id,
+                    profile.NetworkID.MSN,
+                    contact.PassportName,
+                    display_name,
+                    profile.Membership.FORWARD)
             c._server_contact_attribute_changed("im_contact",
-                    contact.is_messenger_user)
-            if contact.type == "Me":
+                    contact.IsMessengerUser)
+            
+            if contact.Type == "Me":
                 self._profile = c
             else:
-                c._add_membership(profile.Membership.FORWARD)
-                self.contacts.add_contact(c)
+                self.contacts.add(c)
 
-        for membership, members in self.__find_membership_response.iteritems():
-            if membership == "Allow":
-                membership = profile.Membership.ALLOW
-            elif membership == "Block":
-                membership = profile.Membership.BLOCK
-            elif membership == "Reverse":
-                membership = profile.Membership.REVERSE
-            elif membership == "Pending":
-                membership = profile.Membership.PENDING
-            else:
-                raise NotImplementedError("Unknown Membership Type : " + membership)
-            for member in members:
-                key = (member.network_id, member.account)
-                result_set = self.contacts\
-                        .search_by_account(member.account)\
-                        .search_by_network_id(member.network_id)
-                if len(result_set) > 0:
-                    assert(len(result_set) == 1)
-                    for contact in result_set:
-                        contact._add_membership(membership)
+        for member in memberships:
+            if member.Type != "Passport":
+                #FIXME: maybe we want to avoid filtering
+                continue
+            
+            contact = self.contacts\
+                    .search_by_account(member.Account)[0]
+            
+            if contact is None:
+                continue
+
+            for role in member.Roles:
+                if role == "Allow":
+                    membership = profile.Membership.ALLOW
+                elif role == "Block":
+                    membership = profile.Membership.BLOCK
+                elif role == "Reverse":
+                    membership = profile.Membership.REVERSE
+                elif role == "Pending":
+                    membership = profile.Membership.PENDING
                 else:
-                    contact = profile.Contact(
-                            "00000000-0000-0000-0000-000000000000",
-                            member.network_id,
-                            member.account,
-                            member.display_name,
-                            membership)
-                    self.contacts.add_contact(contact)
-        del self.__ab_find_all_contacts_response
-        del self.__ab_find_all_groups_response
-        del self.__find_membership_response
+                    raise NotImplementedError("Unknown Membership Type : " + membership)
+
+                contact._add_membership(membership)
         self._state = AddressBookState.SYNCHRONIZED
 
+    def __add_messenger_contact_cb(self):
+        # TODO : build the contact object
+        self.emit('messenger-contact-added')
+
+    def __add_email_contact_cb(self):
+        # TODO : build the contact object
+        self.emit('email-contact-added')
+
+    def __add_mobile_contact_cb(self):
+        # TODO : build the group object
+        self.emit('mobile-contact-added')
+
+    def __add_group_cb(self):
+        # TODO : build the group object
+        self.emit('group-added')
+
+    def __common_callback(self, signal, *args):
+        self.emit(signal, *args)
+
+    def __common_errback(self, *args):
+        pass
+
 gobject.type_register(AddressBook)
+
+if __name__ == '__main__':
+    import sys
+    import getpass
+    import signal
+    import gobject
+    import logging
+    from pymsn.service.SingleSignOn import *
+
+    logging.basicConfig(level=logging.DEBUG)
+
+    if len(sys.argv) < 2:
+        account = raw_input('Account: ')
+    else:
+        account = sys.argv[1]
+
+    if len(sys.argv) < 3:
+        password = getpass.getpass('Password: ')
+    else:
+        password = sys.argv[2]
+
+    mainloop = gobject.MainLoop(is_running=True)
+    
+    signal.signal(signal.SIGTERM,
+            lambda *args: gobject.idle_add(mainloop.quit()))
+    
+    def address_book_state_changed(address_book, pspec):
+        if address_book.state == AddressBookState.SYNCHRONIZED:
+            for guid, group in address_book.groups.iteritems():
+                print "Group : %s (%s)" % (guid, group.name)
+
+            for contact in address_book.contacts:
+                print "Contact : %s (%s)" % (contact.account, contact.display_name)
+
+    sso = SingleSignOn(account, password)
+    address_book = AddressBook(sso)
+    address_book.connect("notify::state", address_book_state_changed)
+    address_book.sync()
+
+    while mainloop.is_running():
+        try:
+            mainloop.run()
+        except KeyboardInterrupt:
+            mainloop.quit()

@@ -16,32 +16,35 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-from pymsn.service2.AddressBook.scenario.base import BaseScenario
+from pymsn.service.AddressBook.scenario.base import BaseScenario
 
-__all__ = ['GroupDeleteScenario']
+__all__ = ['GroupContactAddScenario']
 
-class GroupDeleteScenario(BaseScenario):
-    def __init__(self, ab, callback, errback, group_guid=''):
-        """Deletes a group from the address book.
+class GroupContactAddScenario(BaseScenario):
+    def __init__(self, ab, callback, errback, group_guid='', contact_id=''):
+        """Adds a contact to a group.
 
             @param ab: the address book service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
-            @param group_guid: the guid of the group to delete"""
+            @param group_guid: the guid of the group
+            @param contact_guid: the guid of the contact to add to the group"""
         BaseScenario.__init__(self, 'GroupSave', callback, errback)
         self.__ab = ab
 
         self.group_guid = group_guid
+        self.contact_guid = contact_guid
 
     def execute(self):
-        self.__ab.GroupDelete((self.__group_delete_callback,),
-                              (self.__group_delete_errback,),
-                              self._scenario, self.group_guid)
+        self.__ab.GroupContactAdd((self.__group_contact_add_callback,),
+                                  (self.__group_contact_add_errback,),
+                                  self._scenario, self._group_id, 
+                                  self._contact_id)
 
-    def __group_delete_callback(self):
+    def __group_contact_add_callback(self):
         callback, args = self._callback
         callback(*args)
 
-    def __group_delete_errback(self, reason):
+    def __group_contact_add_errback(self, reason):
         errback, args = self._errback
         errback(reason, *args)

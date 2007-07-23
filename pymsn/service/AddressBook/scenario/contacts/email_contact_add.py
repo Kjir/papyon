@@ -16,46 +16,45 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-from pymsn.service2.AddressBook.scenario.base import BaseScenario
-from pymsn.service2.description.AB import ContactType, ContactPhoneType
+from pymsn.service.AddressBook.scenario.base import BaseScenario
+from pymsn.service.description.AB import ContactType
 
-__all__ = ['MobileContactAddScenario']
+__all__ = ['EmailContactAddScenario']
 
-class MobileContactAddScenario(BaseScenario):
-    def __init__(self, ab, callback, errback, 
-                 phone_number="", contact_info={}):
-        """Adds a mobile contact and updates the address book.
+class EmailContactAddScenario(BaseScenario):
+    def __init__(self, ab, callback, errback, email_address="", contact_info={}):
+        """Adds a mail contact and updates the address book.
 
             @param ab: the adress book service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)"""
-        BaseScenario.__init__(self, 'MobileContactMsgrAPI', callback, errback)
+        BaseScenario.__init__(self, 'ContactSave', callback, errback)
         self.__ab = ab
 
-        self.__phone_number = phone_number
+        self.__email_address = email_address
         self.__contact_info = contact_info
 
-    def __set_phone_number(self, phone_number):
-        self.__phone_number = phone_number
-    def __get_phone_number(self):
-        return self.__phone_number
-    phone_number = property(__get_phone_number, __set_phone_number)
+    def __set_email_address(self, email_address):
+        self.__email_address = email_address
+    def __get_email_address(self):
+        return self.__email_address
+    email_address = property(__get_email_address, __set_email_address,
+                            doc="The mail address of the contact")
     
     def __set_contact_info(self, contact_info):
         self.__contact_info = contact_info
     def __get_contact_info(self):
         return self.__contact_info
-    contact_info = property(__get_contact_info, __set_contact_info)
+    contact_info = property(__get_contact_info, __set_contact_info,
+                            doc="A dict which contains addressbook " \
+                                "information about the contact")
 
     def execute(self):
-        phones = self.__contact_info.get('phone', {})
-        phones[ContactPhoneType.MOBILE] = self.__phone_number
-        # self.__contact_info['phone'] = phones 
-        self.__ab.ContactAdd((self.__contact_add_callback,),
+        contact_info['passport_name'] = self.__mail_address
+        contact_info['is_messenger_user'] = False
+        self.__ab.ContactAdd((self.__contact_add_callback,), 
                              (self.__contact_add_errback,),
-                             self.__scenario,
-                             self.__contact_info,
-                             {})
+                             self.__scenario, self.__contact_info, {})
 
     def __contact_add_callback(self, stuff):
         self._callback(stuff)

@@ -16,8 +16,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-from pymsn.service2.AddressBook.scenario.base import BaseScenario
-from pymsn.service2.description.AB import ContactType
+from pymsn.service.AddressBook.scenario.base import BaseScenario
+from pymsn.service.description.AB import ContactType
 
 __all__ = ['MessengerContactAddScenario']
 

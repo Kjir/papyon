@@ -16,22 +16,20 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-from pymsn.service2.AddressBook.scenario.base import BaseScenario
+from pymsn.service.AddressBook.scenario.base import BaseScenario
 
-__all__ = ['AcceptInviteScenario']
+__all__ = ['DeclineInviteScenario']
 
-class AcceptInviteScenario(BaseScenario):
-    def __init__(self, ab, sharing, callback, errback, add_to_contact_list=True,
-                 type='', membership_id='', account='', state='Accepted'):
-        """Accepts an invitation.
+class DeclineInviteScenario(BaseScenario):
+    def __init__(self, sharing, callback, errback,
+                 type='', membership_id='', state=''):
+        """Declines an invitation.
 
-            @param ab: the address book service
             @param sharing: the membership service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        BaseScenario.__init__(self, 'ContactMsgrAPI', callback, errback)
-        self.__ab = ab
+        BaseScenario.__init__(self, 'Timer', callback, errback)
         self.__sharing = sharing
 
         self.type = type
@@ -40,38 +38,35 @@ class AcceptInviteScenario(BaseScenario):
         self.state = state
 
     def execute(self):
-        if add_to_contact_list:
-            contact_info = { 'passport_name' : self.account }
-            self.__ab.ContactAdd((self.__add_contact_callback,),
-                                 (self.__add_contact_errback,),
-                                 self._scenario, contact_info, {})
-        else:
-            self.__add_contact_callback()
-            
-    def __add_contact_callback(self):
         self.__sharing.DeleteMember((self.__delete_member_callback,),
                                     (self.__delete_member_errback,),
                                     self._scenario, 'Pending', self.type,
                                     self.membership_id, None)
 
-    def __add_contact_errback(self):
-        errback, args = self.__errback
-        errback(*args)
-
     def __delete_member_callback(self):
-        self.__sharing.AddMember((self.__add_member_callback,),
-                                 (self.__add_member_errback,),
-                                 self._scenario, 'Allow', self.type, 
+        self.__sharing.AddMember((self.__add_member_block_callback,),
+                                 (self.__add_member_block_errback,),
+                                 self._scenario, 'Block', self.type, 
                                  self.state, self.account)
 
     def __delete_member_errback(self):
         errback, args = self.__errback
         errback(*args)
     
-    def __add_member_callback(self):
+    def __add_member_block_callback(self):
+        self.__sharing.AddMember((self.__add_member_reverse_callback,),
+                                 (self.__add_member_reverse_errback,),
+                                 self._scenario, 'Reverse', self.type, 
+                                 self.state, self.account)
+
+    def __add_member_block_errback(self):
+        errback, args = self.__errback
+        errback(*args)
+
+    def __add_member_reverse_callback(self):
         callback, args = self._callback
         callback(*args)
 
-    def __add_member_errback(self):
+    def __add_member_reverse_errback(self):
         errback, args = self.__errback
         errback(*args)

@@ -16,22 +16,23 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-from pymsn.service2.AddressBook.scenario.base import BaseScenario
+from pymsn.service.AddressBook.scenario.base import BaseScenario
 
-__all__ = ['DeclineInviteScenario']
+__all__ = ['BlockContactScenario']
 
-class DeclineInviteScenario(BaseScenario):
-    def __init__(self, sharing, callback, errback,
-                 type='', membership_id='', state=''):
-        """Declines an invitation.
+class BlockContactScenario(BaseScenario):
+    def __init__(self, sharing, callback, errback, type='',
+                 membership_id='', account='', state='Accepted'):
+        """Blocks a contact.
 
             @param sharing: the membership service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
+            @param type: 'Passport' | 'Email'
         """
-        BaseScenario.__init__(self, 'Timer', callback, errback)
+        BaseScenario.__init__(self, 'BlockUnblock', callback, errback)
         self.__sharing = sharing
-
+        
         self.type = type
         self.membership_id = membership_id
         self.account = account
@@ -40,12 +41,12 @@ class DeclineInviteScenario(BaseScenario):
     def execute(self):
         self.__sharing.DeleteMember((self.__delete_member_callback,),
                                     (self.__delete_member_errback,),
-                                    self._scenario, 'Pending', self.type,
-                                    self.membership_id, None)
+                                    self._scenario, 'Allow', self.type, 
+                                    self.state, self.membership_id, None)
 
     def __delete_member_callback(self):
-        self.__sharing.AddMember((self.__add_member_block_callback,),
-                                 (self.__add_member_block_errback,),
+        self.__sharing.AddMember((self.__add_member_callback,),
+                                 (self.__add_member_errback,),
                                  self._scenario, 'Block', self.type, 
                                  self.state, self.account)
 
@@ -53,20 +54,10 @@ class DeclineInviteScenario(BaseScenario):
         errback, args = self.__errback
         errback(*args)
     
-    def __add_member_block_callback(self):
-        self.__sharing.AddMember((self.__add_member_reverse_callback,),
-                                 (self.__add_member_reverse_errback,),
-                                 self._scenario, 'Reverse', self.type, 
-                                 self.state, self.account)
-
-    def __add_member_block_errback(self):
-        errback, args = self.__errback
-        errback(*args)
-
-    def __add_member_reverse_callback(self):
+    def __add_member_callback(self):
         callback, args = self._callback
         callback(*args)
 
-    def __add_member_reverse_errback(self):
+    def __add_member_errback(self):
         errback, args = self.__errback
         errback(*args)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
+# Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,21 +16,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-from pymsn.service2.AddressBook.scenario.base import BaseScenario
 
-__all__ = ['CheckPendingInviteScenario']
-
-class CheckPendingInviteScenario(BaseScenario):
-    def __init__(self, sharing, callback, errback):
-        """Checks the pending invitations.
-
-            @param sharing: the membership service
-            @param callback: tuple(callable, *args)
-            @param errback: tuple(callable, *args)
-        """
-        BaseScenario.__init__(self, 'MessengerPendingList', callback, errback)
-        self.__sharing = sharing
-
-    def execute(self):
-        # check using FindMembership
-        pass
+"""Windows Live Services clients.
+Contains a set of clients to connect and interact with Windows Live services."""

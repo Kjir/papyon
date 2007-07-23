@@ -203,7 +203,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
                     account=account,
                     display_name=display_name)
         else:
-            contact = contacts.get_first()
+            contact = contacts[0]
         contact._server_property_changed("client-capabilities", client_id)
         self.participants[account] = contact
         self.emit("user-joined", contact)

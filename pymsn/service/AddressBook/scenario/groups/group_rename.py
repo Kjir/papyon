@@ -16,32 +16,35 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-from pymsn.service2.AddressBook.scenario.base import BaseScenario
+from pymsn.service.AddressBook.scenario.base import BaseScenario
 
-__all__ = ['GroupAddScenario']
+__all__ = ['GroupRenameScenario']
 
-class GroupAddScenario(BaseScenario):
-    def __init__(self, ab, callback, errback, group_name=''):
-        """Adds a group to the address book.
+class GroupRenameScenario(BaseScenario):
+    def __init__(self, ab, callback, errback, group_guid='', group_name=''):
+        """Renames a group to the address book.
 
             @param ab: the address book service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
-            @param group_name: the name of the new group"""
+            @param group_guid: the guid of the group to rename
+            @param group_name: the new name for the group"""
         BaseScenario.__init__(self, 'GroupSave', callback, errback)
         self.__ab = ab
 
+        self.group_guid = group_guid
         self.group_name = group_name
 
     def execute(self):
-        self.__ab.GroupAdd((self.__group_add_callback,),
-                           (self.__group_add_errback,),
-                           self._scenario, group_name)
+        self.__ab.GroupUpdate((self.__group_rename_callback,),
+                              (self.__group_rename_errback,),
+                              self._scenario, self.group_id, 
+                              self.group_name)
 
-    def __group_add_callback(self, group_guid):
+    def __group_rename_callback(self):
         callback, args = self._callback
-        callback(group_name, group_guid, *args)
+        callback(*args)
 
-    def __group_add_errback(self, reason):
+    def __group_rename_errback(self, reason):
         errback, args = self._errback
         errback(reason, *args)
