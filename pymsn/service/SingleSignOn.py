@@ -117,6 +117,9 @@ class SingleSignOn(SOAPService):
     def __init__(self, username, password, proxies=None):
         self.__credentials = (username, password)
         self.__storage = pymsn.storage.get_storage(username, "security-tokens")
+
+        self.__pending_response = False
+        self.__pending_requests = []
         SOAPService.__init__(self, "SingleSignOn", proxies)
 
     def RequestMultipleSecurityTokens(self, callback, errback, *services):
@@ -124,6 +127,14 @@ class SingleSignOn(SOAPService):
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
             @param services: one or more L{LiveService}"""
+
+        #FIXME: we should instead check what are the common requested tokens
+        # and if some tokens are not common then do a parallel request, needs
+        # to be fixed later, for now, we just queue the requests
+        if self.__pending_response:
+            self.__pending_requests.append((callback, errback, services))
+            return
+
         method = self._service.RequestMultipleSecurityTokens
 
         response_tokens = {}
@@ -150,6 +161,7 @@ class SingleSignOn(SOAPService):
         soap_header = method.soap_header(*self.__credentials)
         soap_body = method.soap_body(*services)
 
+        self.__pending_response = True
         self._send_request("RequestMultipleSecurityTokens", url,
                 soap_header, soap_body, soap_action,
                 callback, errback, http_headers, response_tokens)
@@ -185,8 +197,14 @@ class SingleSignOn(SOAPService):
             result[service] = token
         result.update(response_tokens)
 
+        self.__pending_response = False
+
         if callback is not None:
             callback[0](result, *callback[1:])
+
+        if len(self.__pending_requests):
+            callback, errback, services = self.__pending_requests.pop(0)
+            self.RequestMultipleSecurityTokens(callback, errback, *services)
 
 if __name__ == '__main__':
     import sys
