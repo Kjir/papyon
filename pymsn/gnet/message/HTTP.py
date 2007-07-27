@@ -19,8 +19,32 @@
 #
 
 """HTTP Messages structures."""
+from UserDict import DictMixin
 
 from pymsn.gnet.constants import *
+
+__all__ = ['HTTPMessage', 'HTTPResponse', 'HTTPRequest']
+
+class odict(DictMixin):
+    def __init__(self, dict=None):
+        self._keys = []
+        self.data = dict or {}
+
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __delitem__(self, key):
+        del self.data[key]
+        self._keys.remove(key)
+
+    def __setitem__(self, key, item):
+        self.data[key] = item
+        if key not in self._keys:
+            self._keys.append(key)
+
+    def keys(self):
+        return self._keys[:]
+
 
 class HTTPMessage(object):
     """HTTP style message abstraction
@@ -45,7 +69,7 @@ class HTTPMessage(object):
 
     def clear(self):
         """Empties the HTTP message"""
-        self.headers = {}
+        self.headers = odict()
         self.body = ""
         
     def parse(self, chunk):
@@ -70,6 +94,7 @@ class HTTPMessage(object):
         result.append("")
         result.append(self.body)
         return "\r\n".join(result)
+
 
 class HTTPResponse(HTTPMessage):
     def __init__(self, headers=None, body="", status=200, reason="OK", version="1.0"):
@@ -97,6 +122,7 @@ class HTTPResponse(HTTPMessage):
         message = HTTPMessage.__str__(self)
         start_line = "HTTP/%s %d %s" % (self.version, self.status, self.reason)
         return start_line + "\r\n" + message
+
 
 class HTTPRequest(HTTPMessage):
     def __init__(self, headers=None, body="", method="GET", resource="/", version="1.0"):
