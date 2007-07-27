@@ -26,8 +26,8 @@ use, it simplifies the complexity of the switchboard crack."""
 import logging
 import gobject
 
-import msnp
-from transport import ServerType
+import pymsn.msnp as msnp
+from pymsn.transport import ServerType
 
 __all__ = ['SwitchboardManager']
 

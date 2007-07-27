@@ -18,13 +18,58 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""MSN protocol commands.
-
-G{classtree Command}"""
+"""MSN protocol commands."""
 
 from urllib import quote, unquote
 
+from pymsn.msnp.message import Message
+
 __all__ = ['Command']
+
+class CommandPrinter(object):
+    def __init__(self, command):
+        self.command = command
+
+    def __repr__(self):
+        printer = getattr(self, "_print_" + self.command.name,
+                self._print_default)
+        return printer()
+    
+    def _print_MSG(self):
+        command = self.command
+        
+        result = command.name
+        if command.transaction_id is not None:
+            result += ' ' + str(command.transaction_id)
+
+        if command.arguments is not None and len(command.arguments) > 0:
+            result += ' ' + ' '.join(command.arguments) 
+
+        if command.payload is not None:
+            result += "\n" + repr(Message(command.payload))
+        return result
+
+    
+    def _print_default(self):
+        command = self.command
+        
+        result = command.name
+        if command.transaction_id is not None:
+            result += ' ' + str(command.transaction_id)
+
+        if command.arguments is not None and len(command.arguments) > 0:
+            result += ' ' + ' '.join(command.arguments) 
+
+        if command.payload is not None:
+            length = len(command.payload)
+            if length > 0:
+                result += ' ' + str(length) + '\r\n'
+                if not command.is_error():
+                    result += '\t[payload]'
+                else:
+                    result += command.payload
+        return result
+
 
 class Command(object):
     """Abstraction of MSN commands, this class enables parsing and construction
@@ -139,24 +184,8 @@ class Command(object):
         return result + '\r\n'
 
     def __repr__(self):
-        result = self.name[:]
-        if self.transaction_id is not None:
-            result += ' ' + str(self.transaction_id)
-
-        if self.arguments is not None and len(self.arguments) > 0:
-            result += ' ' + ' '.join(self.arguments) 
-
-        if self.payload is not None:
-            length = len(self.payload)
-            if length > 0:
-                result += ' ' + str(length) + '\r\n'
-                if not self.is_error():
-                    result += '\t[payload]'
-                else:
-                    result += self.payload
-
-                return result
-        return result
+        return repr(CommandPrinter(self))
+        #return pymsn.util.debug.raw_cmd_to_debug(self.__str__())
 
     def __parse_command(self, buf):
         words = buf.split()

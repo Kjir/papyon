@@ -18,15 +18,15 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""MSN protocol special command : MSG
-
-G{classtree Message, IncomingMessage, OutgoingMessage}"""
+"""MSN protocol special command : MSG"""
 
 from pymsn.gnet.message.HTTP import HTTPMessage
+import pymsn.util.debug as debug
 
 from urllib import quote, unquote
 
 __all__ = ['MessageAcknowledgement', 'Message', 'IncomingMessage', 'OutgoingMessage']
+
 
 class MessageAcknowledgement(object):
     """Message Acknowledgement"""
@@ -57,7 +57,7 @@ class Message(HTTPMessage):
         @ivar content_type: the message content type
         @type content_type: tuple(mime_type, encoding)"""
 
-    def __init__(self, body=""):
+    def __init__(self, message=""):
         """Initializer
             
             @param body: The body of the message, it is put after the headers
@@ -65,20 +65,34 @@ class Message(HTTPMessage):
         HTTPMessage.__init__(self)
         self.account = 'Hotmail'
         self.friendly_name = 'Hotmail'
-        self.body = body
-        self.headers = {'MIME-Version' : '1.0', 'Content-Type' : 'text/plain'}
-
+        if message:
+            self.parse(message)
 
     def __repr__(self):
         """Represents the payload of the message"""
         message = ''
-        if 'Content-Type' in self.headers:
-            message += '\tContent-Type: ' + self.headers['Content-Type']
+        for header_name, header_value in self.headers.iteritems():
+            message += '\t%s: %s\\r\\n\n' % (header_name, header_value)
+        message += '\t\\r\\n\n'
+        if self.headers['Content-Type'] != "application/x-msnmsgrp2p":
+            message += '\t' + debug.escape_string(self.body).\
+                    replace("\r\n", "\\r\\n\n\t")
         else:
-            message += '\tContent-Type: text/plain'
-        message += '\r\n' + '\tHeaders-count: ' + str(len(self.headers))
-        message += '\r\n' + '\t[message body]'
-        return message
+            tlp_header = self.body[:48]
+            tlp_footer = self.body[-4:]
+            tlp_flags = struct.unpack("<L", self.body[28:32])[0]
+            body = self.body[48:-4]
+
+            message += debug.hexify_string(tlp_header).replace("\r\n", "\n\t")
+
+            if tlp_flags == 0:
+                message += "\n\t" + debug.escape_string(body).\
+                        replace("\r\n", "\\r\\n\n\t")
+            elif len(body) > 0:
+                message += "\n\t" + "[%d bytes of data]" % len(body)
+            message += "\n\t" + debug.hexify_string(tlp_footer)
+
+        return message.rstrip("\n\t")
 
     def __get_content_type(self):
         if 'Content-Type' in self.headers:
@@ -107,10 +121,9 @@ class IncomingMessage(Message):
         
             @param command: the MSG command received from the server
             @type command: L{command.Command}"""
-        Message.__init__(self)
+        Message.__init__(self, command.payload)
         self.account = command.arguments[0]
         self.friendly_name = unquote(command.arguments[1])
-        self.parse(command.payload)
 
     def __str__(self):
         """Represents the message
@@ -124,18 +137,18 @@ class IncomingMessage(Message):
             
         @rtype: string"""
         message = Message.__str__(self)
-        command = 'MSG %s %s %u\r\n' % (   self.account,
-                                            quote(self.friendly_name),
-                                            len(message))
+        command = 'MSG %s %s %u\r\n' % (self.account,
+                quote(self.friendly_name),
+                len(message))
         return command + message
     
     def __repr__(self):
         """Represents the message"""
         message = Message.__repr__(self)
         length = len(Message.__str__(self))
-        command = 'MSG %s %s %u\r\n' % (   self.account,
-                                            quote(self.friendly_name),
-                                            length)
+        command = 'MSG %s %s %u\n' % (self.account,
+                quote(self.friendly_name),
+                length)
         return command + message
 
 
