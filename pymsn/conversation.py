@@ -217,7 +217,7 @@ class TextFormat(object):
     def family(self):
         return self._family
 
-    def __init__(self, font=quote(DEFAULT_FONT), style=NO_EFFECT, color='0', 
+    def __init__(self, font=DEFAULT_FONT, style=NO_EFFECT, color='0', 
                  charset=DEFAULT_CHARSET, family=FF_DONTCARE, 
                  pitch=DEFAULT_PITCH, right_alignment=False):
         self._font = font
@@ -250,8 +250,9 @@ class TextFormat(object):
                 self._charset = value
             elif key == 'PF':
                 # Family and pitch
-                self._family = value[0]
-                self._pitch = value[1]
+                value = value.zfill(2)
+                self._family = int(value[0])
+                self._pitch = int(value[1])
             elif key == 'RL':
                 # Right alignment
                 if value == '1': self._right_alignement = True
@@ -269,7 +270,7 @@ class TextFormat(object):
         
         color = '%s%s%s' % (self._color[4:6], self._color[2:4], self._color[0:2])
 
-        format = 'FN=%s; EF=%s; CO=%s; CS=%s; PF=%s%s'  % (quote(self._font), 
+        format = 'FN=%s; EF=%s; CO=%s; CS=%s; PF=%d%d'  % (quote(self._font), 
                                                            style, color,
                                                            self._charset,
                                                            self._family,

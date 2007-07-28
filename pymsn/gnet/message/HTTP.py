@@ -67,6 +67,10 @@ class HTTPMessage(object):
         value = str(value)
         self.headers[name] = value
 
+    def get_header(self, name):
+        """Returns the value of a given header"""
+        return self.headers[name]
+
     def clear(self):
         """Empties the HTTP message"""
         self.headers = odict()

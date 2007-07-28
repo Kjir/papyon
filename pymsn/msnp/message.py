@@ -24,6 +24,7 @@ from pymsn.gnet.message.HTTP import HTTPMessage
 import pymsn.util.debug as debug
 
 from urllib import quote, unquote
+import struct
 
 __all__ = ['MessageAcknowledgement', 'Message', 'IncomingMessage', 'OutgoingMessage']
 
