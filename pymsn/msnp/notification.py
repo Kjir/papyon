@@ -14,7 +14,7 @@
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU General Public License for more details
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
@@ -450,8 +450,11 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 search_by_account(command.arguments[0])
         if command.payload:
             for contact in contacts:
-                pm = et.fromstring(command.payload).find("./PSM").text
-                if pm is None: pm = ""
+                pm = et.fromstring(command.payload).find("./PSM")
+                if pm is not None and pm.text is not None:
+                    pm = pm.text.encode("utf-8")
+                else:
+                    pm = ""
                 contact._server_property_changed("personal-message", pm)
     # --------- Contact List -------------------------------------------------
     def _handle_ADL(self, command):

@@ -23,9 +23,6 @@
 This module contains the class needed to have a conversation with a
 contact."""
 
-from transport import *
-from event import ClientState, ClientErrorType
-
 import msnp
 from switchboard_manager import SwitchboardClient
 

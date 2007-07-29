@@ -70,7 +70,7 @@ class SwitchboardClient(object):
             self.__request_switchboard()
             self._invite_queue.append(contact)
         else:
-            self._switchboard.invite_user(message)
+            self._switchboard.invite_user(contact)
 
     def _leave(self):
         if self._switchboard is not None and \

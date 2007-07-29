@@ -37,7 +37,7 @@ import msnp
 import logging
 import gobject
 
-__all__=['ServerType', 'BaseTransport', 'DirectConnection']
+__all__=['ServerType', 'DirectConnection']
 
 logger = logging.getLogger('Transport')
 
