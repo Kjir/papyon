@@ -295,8 +295,8 @@ class AddressBook(gobject.GObject):
 
             c = profile.Contact(contact.Id,
                     profile.NetworkID.MSN,
-                    contact.PassportName,
-                    display_name,
+                    contact.PassportName.encode("utf-8"),
+                    display_name.encode("utf-8"),
                     profile.Membership.FORWARD)
             c._server_contact_attribute_changed("im_contact",
                     contact.IsMessengerUser)
