@@ -78,7 +78,7 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
         emails = ""
         for type, email in email.iteritems():
             yahoo_tags = changed = ""
-            if type == ContactEmailType.YAHOO:
+            if type == ContactEmailType.EXTERNAL:
                 yahoo_tags = """<isMessengerEnabled>
                                    true
                                 </isMessengerEnabled>

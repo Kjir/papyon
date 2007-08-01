@@ -126,7 +126,7 @@ class Contact(object):
         self.Gender = contact_info.findtext("./ab:Gender")
         self.TimeZone = contact_info.findtext("./ab:TimeZone")
 
-        self.Annotations = annotations_to_dict(contact_info.find("./ab:contactInfo/ab:Annotations"))
+        self.Annotations = annotations_to_dict(contact_info.find("./ab:annotations"))
         
         self.Emails = []
         emails = contact_info.find("./ab:emails") or []

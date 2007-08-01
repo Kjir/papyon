@@ -24,7 +24,7 @@ import sharing
 import scenario
 
 import pymsn.profile as profile
-from pymsn.service.description.AB.constants import ContactEmailType
+from pymsn.service.description.AB.constants import *
 
 import gobject
 
@@ -305,11 +305,12 @@ class AddressBook(gobject.GObject):
                     break
 
             if not contact.IsMessengerUser and is_external:
-
-                display_name = contact.DisplayName
+                display_name = \
+                    contact.Annotations.get(ContactAnnotations.NICKNAME,
+                                            contact.DisplayName)
                 if display_name == "":
-                    display_name = contact.QuickName
-                # check nickname first
+                    display_name = external_email.Email
+
 
                 c = profile.Contact(contact.Id,
                                     profile.NetworkID.EXTERNAL,
@@ -324,11 +325,13 @@ class AddressBook(gobject.GObject):
 
             elif (not contact.IsMessengerUser and contact.Type != "Me") or \
                     contact.PassportName == "":
-                #FIXME: maybe we want to avoid filtering
+                # FIXME : mobile phone and mail contacts here
                 continue
 
             else:
-                display_name = contact.DisplayName
+                display_name = \
+                    contact.Annotations.get(ContactAnnotations.NICKNAME,
+                                            contact.DisplayName)
                 if display_name == "":
                     display_name = contact.QuickName
 
@@ -378,13 +381,46 @@ class AddressBook(gobject.GObject):
         contacts = address_book_delta.contacts
         
         for contact in contacts:
-            if (not contact.IsMessengerUser and contact.Type != "Me") or \
-                    (contact.PassportName == ""):
-                #FIXME: maybe we want to avoid filtering
+            if contact.Id != contact_guid:
+                continue
+
+            external_email = None
+            is_external = False
+            for email in contact.Emails:
+                if email.Type == ContactEmailType.EXTERNAL:
+                    external_email = email
+                    is_external = True
+                    break
+
+            if not contact.IsMessengerUser and is_external:
+                display_name = \
+                    contact.Annotations.get(ContactAnnotations.NICKNAME,
+                                            contact.DisplayName)
+                if display_name == "":
+                    display_name = external_email.Email
+
+
+                c = profile.Contact(contact.Id,
+                                    profile.NetworkID.EXTERNAL,
+                                    external_email.Email.encode("utf-8"),
+                                    display_name.encode("utf-8"),
+                                    profile.Membership.FORWARD)
+                                    
+                for group_id in contact.Groups:
+                    c._add_group_ownership(self.groups[group_id])
+
+                self.contacts.add(c)
+                self.emit('messenger-contact-added', c)
+
+            elif (not contact.IsMessengerUser and contact.Type != "Me") or \
+                    contact.PassportName == "":
+                # FIXME : mobile phone and mail contacts here
                 continue
         
-            if contact.Id == contact_guid:
-                display_name = contact.DisplayName
+            else:
+                display_name = \
+                    contact.Annotations.get(ContactAnnotations.NICKNAME,
+                                            contact.DisplayName)
                 if display_name == "":
                     display_name = contact.QuickName
 
@@ -474,7 +510,10 @@ if __name__ == '__main__':
                 print "Group : %s (%s)" % (guid, group.name)
 
             for contact in address_book.contacts:
-                print "Contact : %s (%s)" % (contact.account, contact.display_name)
+                print "Contact : %s (%s) %s %s" % (contact.account, 
+                                                   contact.display_name, 
+                                                   contact.network_id,
+                                                   contact.memberships)
 
             #address_book.add_group("callback test6")
             #address_book.delete_group(address_book.groups.values()[0])
@@ -490,11 +529,18 @@ if __name__ == '__main__':
 
             #for i in range(5):
             #    address_book.delete_contact(address_book.contacts[i])
-            #address_book.add_messenger_contact("pymsn.rewrite@yahoo.com")
+            #address_book.add_messenger_contact("toto@yahoo.com")
+
+    def messenger_contact_added(address_book, contact):
+        print "Added contact : %s (%s) %s %s" % (contact.account, 
+                                                 contact.display_name, 
+                                                 contact.network_id,
+                                                 contact.memberships)
 
     sso = SingleSignOn(account, password)
     address_book = AddressBook(sso)
     address_book.connect("notify::state", address_book_state_changed)
+    address_book.connect("messenger-contact-added", messenger_contact_added)
     address_book.sync()
 
     while mainloop.is_running():
