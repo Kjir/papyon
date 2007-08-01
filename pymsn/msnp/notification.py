@@ -458,6 +458,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 contact._server_property_changed("personal-message", pm)
     # --------- Contact List -------------------------------------------------
     def _handle_ADL(self, command):
+        if command.transaction_id == 0: # incoming ADL from the server
+            raise NotImplementedError, "We need to handle async ADL commands"
         if command.arguments[0] == "OK":
             if self._state != ProtocolState.OPEN: # Initial ADL
                 self._state = ProtocolState.OPEN
