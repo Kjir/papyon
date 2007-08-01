@@ -2,7 +2,7 @@
 #
 # pymsn - a python client library for Msn
 #
-# Copyright (C) 2007  Ole André Vadla Ravnås <oleavr@gmail.com>
+# Copyright (C) 2007 Ole André Vadla Ravnås <oleavr@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

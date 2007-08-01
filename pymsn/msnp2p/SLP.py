@@ -2,7 +2,8 @@
 #
 # pymsn - a python client library for Msn
 #
-# Copyright (C) 2007  Ole André Vadla Ravnås <oleavr@gmail.com>
+# Copyright (C) 2007 Ole André Vadla Ravnås <oleavr@gmail.com>
+# Copyright (C) 2007 Ali Sabil <ali.sabil@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +21,9 @@
 
 from pymsn.gnet.message.HTTP import HTTPMessage
 from pymsn.msnp2p.expections import ParseError
+from pymsn.msnp2p.constants import SLPContentType
 
+__all__ = ['SLPRequestMessage', 'SLPResponseMessage', 'SLPMessageBody']
 
 class SLPMessage(HTTPMessage):
     STD_HEADERS = [ "To", "From", "Via", "CSeq", "Call-ID", "Max-Forwards" ]
@@ -59,6 +62,12 @@ class SLPMessage(HTTPMessage):
             status = int(start_line[1].strip())
             slp_message = SLPResponseMessage(status)
         slp_message.parse(content)
+
+        content_type = slp_message.headers.get("Content-Type", "")
+        raw_body = slp_message.body
+
+        slp_message.body = SLPMessageBody(content_type, raw_body)
+        
         return slp_message
 
 
@@ -72,3 +81,36 @@ class SLPResponseMessage(SLPMessage):
         SLPMessage.__init_(self, *args, **kwargs)
         self.status = int(status)
 
+
+class SLPMessageBody(HTTPMessage):
+    def __init__(self, content_type, data=""):
+        HTTPMessage.__init__(self)
+        self.parse(data)
+
+    def parse(self, data):
+        if len(data) == 0:
+            return
+        if data[-1:] == "\x00":
+            data = data[:-1]
+        HTTPMessage.parse(self, data)
+
+    def __str__(self):
+        return = HTTPMessage.__str__(self) + "\x00"
+
+
+class SLPSession(object):
+    def __init__(self, client, euf_guid, application_id):
+        self._client = client
+        self._euf_guid = euf_guid
+        self._application_id = application_id
+    
+    def invite(self, peer):
+        pass
+
+    def close(self):
+        pass
+
+    def acknowledge(self):
+        pass
+
+    
