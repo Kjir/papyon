@@ -416,22 +416,39 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._handle_NLN(command)
 
     def _handle_FLN(self,command):
+        network_id = int(command.arguments[1])
+        account = command.arguments[0]
+
         contacts = self._address_book.contacts.\
-                search_by_account(command.arguments[0])
+                search_by_network_id(network_id).\
+                search_by_account(account)
+
+        if len(contacts) == 0:
+            logger.warning("Contact (netword_id=%d) %s not found" % \
+                    (netword_id, account))
+
         for contact in contacts:
             contact._server_property_changed("presence",
                     profile.Presence.OFFLINE)
 
     def _handle_NLN(self,command):
+        network_id = int(command.arguments[2])
+        account = command.arguments[1]
+
         contacts = self._address_book.contacts.\
-                search_by_account(command.arguments[1])
+                search_by_network_id(network_id).\
+                search_by_account(account)
+        
+        if len(contacts) == 0:
+            logger.warning("Contact (netword_id=%d) %s not found" % \
+                    (netword_id, account))
         for contact in contacts:
             presence = command.arguments[0]
             display_name = urllib.unquote(command.arguments[3])
+            capabilities = int(command.arguments[4])
             contact._server_property_changed("presence", presence)
             contact._server_property_changed("display-name", display_name)
-            contact._server_property_changed("client-capabilities",
-                    int(command.arguments[4]))
+            contact._server_property_changed("client-capabilities", capabilities)
 
     # --------- Display name and co ------------------------------------------
     def _handle_PRP(self, command):
@@ -446,16 +463,26 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         pass
 
     def _handle_UBX(self,command): # contact infos
+        if not command.payload:
+            return
+        
+        network_id = int(command.arguments[1])
+        account = command.arguments[0] 
+
         contacts = self._address_book.contacts.\
-                search_by_account(command.arguments[0])
-        if command.payload:
-            for contact in contacts:
-                pm = et.fromstring(command.payload).find("./PSM")
-                if pm is not None and pm.text is not None:
-                    pm = pm.text.encode("utf-8")
-                else:
-                    pm = ""
-                contact._server_property_changed("personal-message", pm)
+                search_by_network_id(network_id).\
+                search_by_account(account)
+
+        if len(contacts) == 0:
+            logger.warning("Contact (netword_id=%d) %s not found" % \
+                    (netword_id, account))
+        for contact in contacts:
+            pm = et.fromstring(command.payload).find("./PSM")
+            if pm is not None and pm.text is not None:
+                pm = pm.text.encode("utf-8")
+            else:
+                pm = ""
+            contact._server_property_changed("personal-message", pm)
     # --------- Contact List -------------------------------------------------
     def _handle_ADL(self, command):
         if command.transaction_id == 0: # incoming ADL from the server
