@@ -22,7 +22,7 @@ __all__ = ['AcceptInviteScenario']
 
 class AcceptInviteScenario(BaseScenario):
     def __init__(self, ab, sharing, callback, errback, add_to_contact_list=True,
-                 type='', membership_id='', account='', state='Accepted'):
+                 type='', account='', state='Accepted'):
         """Accepts an invitation.
 
             @param ab: the address book service
@@ -33,14 +33,14 @@ class AcceptInviteScenario(BaseScenario):
         BaseScenario.__init__(self, 'ContactMsgrAPI', callback, errback)
         self.__ab = ab
         self.__sharing = sharing
+        self.__add_to_contact_list = add_to_contact_list
 
         self.type = type
-        self.membership_id = membership_id
         self.account = account
         self.state = state
 
     def execute(self):
-        if add_to_contact_list:
+        if self.__add_to_contact_list:
             contact_info = { 'passport_name' : self.account }
             self.__ab.ContactAdd((self.__add_contact_callback,),
                                  (self.__add_contact_errback,),
@@ -52,11 +52,12 @@ class AcceptInviteScenario(BaseScenario):
         self.__sharing.DeleteMember((self.__delete_member_callback,),
                                     (self.__delete_member_errback,),
                                     self._scenario, 'Pending', self.type,
-                                    self.membership_id, None)
+                                    self.state, self.account)
 
     def __add_contact_errback(self):
-        errback, args = self.__errback
-        errback(*args)
+        errback = self._errback[0]
+        args = self._errback[1:]
+        errback(reason, *args)
 
     def __delete_member_callback(self):
         self.__sharing.AddMember((self.__add_member_callback,),
@@ -65,13 +66,15 @@ class AcceptInviteScenario(BaseScenario):
                                  self.state, self.account)
 
     def __delete_member_errback(self):
-        errback, args = self.__errback
-        errback(*args)
+        errback = self._errback[0]
+        args = self._errback[1:]
+        errback(reason, *args)
     
     def __add_member_callback(self):
-        callback, args = self._callback
-        callback(*args)
+        callback = self._callback
+        callback[0](*callback[1:])
 
     def __add_member_errback(self):
-        errback, args = self.__errback
-        errback(*args)
+        errback = self._errback[0]
+        args = self._errback[1:]
+        errback(reason, *args)

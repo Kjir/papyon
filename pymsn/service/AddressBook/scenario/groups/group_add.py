@@ -36,12 +36,13 @@ class GroupAddScenario(BaseScenario):
     def execute(self):
         self.__ab.GroupAdd((self.__group_add_callback,),
                            (self.__group_add_errback,),
-                           self._scenario, group_name)
+                           self._scenario, self.group_name)
 
     def __group_add_callback(self, group_guid):
-        callback, args = self._callback
-        callback(group_name, group_guid, *args)
+        callback = self._callback
+        callback[0](group_guid, *callback[1:])
 
     def __group_add_errback(self, reason):
-        errback, args = self._errback
+        errback = self._errback[0]
+        args = self._errback[1:]
         errback(reason, *args)

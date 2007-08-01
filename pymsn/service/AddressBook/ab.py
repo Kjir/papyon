@@ -65,14 +65,13 @@ class ContactEmail(object):
         self.IsMessengerEnabled = email.findtext("./ab:isMessengerEnabled", "bool")
         self.Capability = email.findtext("./ab:Capability", "int")
         self.MessengerEnabledExternally = email.findtext("./ab:MessengerEnabledExternally", "bool")
-        self.PropertiesChanged = [] #FIXME: implement this
 
 class ContactPhone(object):
     def __init__(self, phone):
         self.Type = phone.findtext("./ab:contactPhoneType")
         self.Number = phone.findtext("./ab:number")
         self.IsMessengerEnabled = phone.findtext("./ab:isMessengerEnabled", "bool")
-        self.PropertiesChanged = [] #FIXME: implement this
+        self.PropertiesChanged = phone.findtext("./ab:propertiesChanged").split(' ')
 
 class ContactLocation(object):
     def __init__(self, location):
@@ -81,14 +80,20 @@ class ContactLocation(object):
         self.City = location.findtext("./ab:city")
         self.Country = location.findtext("./ab:country")
         self.PostalCode = location.findtext("./ab:postalcode")
-        self.Changes = [] #FIXME: implement this
-
+        self.Changes = location.findtext("./ab:Changes").split(' ')
 
 class Contact(object):
     def __init__(self, contact):
         self.Id = contact.findtext("./ab:contactId")
 
         contact_info = contact.find("./ab:contactInfo")
+
+        self.Groups = []
+        groups = contact_info.find("./ab:groupIds")
+        if groups is not None:
+            for group in groups:
+                self.Groups.append(group.text)
+
         self.Type = contact_info.findtext("./ab:contactType")
         self.QuickName = contact_info.findtext("./ab:quickName")
         self.PassportName = contact_info.findtext("./ab:passportName")
@@ -170,10 +175,11 @@ class AB(SOAPService):
         self._sso = sso
         self._tokens = {}
         SOAPService.__init__(self, "AB", proxies)
+
+        self._last_changes = "0001-01-01T00:00:00.0000000-08:00"
    
     @RequireSecurityTokens(LiveService.CONTACTS)
-    def FindAll(self, callback, errback, scenario,
-            deltas_only, last_change=''):
+    def FindAll(self, callback, errback, scenario, deltas_only):
         """Requests the contact list.
             @param scenario: "Initial" | "ContactSave" ...
             @param deltas_only: True if the method should only check changes
@@ -183,14 +189,16 @@ class AB(SOAPService):
                 0001-01-01T00:00:00.0000000-08:00 to get the whole list
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)"""
-        if not deltas_only: 
-            last_change = self._service.ABFindAll.default_timestamp
             
         self.__soap_request(self._service.ABFindAll, scenario,
-                (XMLTYPE.bool.encode(deltas_only), last_change),
+                (XMLTYPE.bool.encode(deltas_only), self._last_changes),
                 callback, errback)
 
     def _HandleABFindAllResponse(self, callback, errback, response, user_data):
+        last_changes = response[0].find("./ab:lastChange")
+        if last_changes is not None:
+            self._last_changes = last_changes.text
+
         groups = []
         contacts = []
         for group in response[1]:
@@ -214,9 +222,11 @@ class AB(SOAPService):
             @param errback: tuple(callable, *args)
         """
         is_messenger_user = contact_info.get('is_messenger_user', None)
-        self.__soap_request(self._service.ContactAdd, scenario,
+        if is_messenger_user is not None:
+            is_messenger_user = XMLTYPE.bool.encode(is_messenger_user)
+        self.__soap_request(self._service.ABContactAdd, scenario,
                 (contact_info.get('passport_name', None), 
-                    XMLTYPE.bool.encode(is_messenger_user),
+                    is_messenger_user,
                     contact_info.get('contact_type', None),
                     contact_info.get('first_name', None),
                     contact_info.get('last_name', None),
@@ -229,11 +239,12 @@ class AB(SOAPService):
                     contact_info.get('comment', None),
                     contact_info.get('anniversary', None),
                     invite_info.get('display_name', None),
-                    invite_info.get('invite_message', None)),
+                    invite_info.get('invite_message', None),
+                    contact_info.get('capability', None)),
                 callback, errback)
 
     def _HandleABContactAddResponse(self, callback, errback, response, user_data):
-        pass
+        callback[0](response.text, *callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def ContactDelete(self, callback, errback, scenario,
@@ -245,11 +256,11 @@ class AB(SOAPService):
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        self.__soap_request(self._service.ABContactUpdate, scenario,
+        self.__soap_request(self._service.ABContactDelete, scenario,
                 (contact_id,), callback, errback)
         
     def _HandleABContactDeleteResponse(self, callback, errback, response, user_data):
-        pass
+        callback[0](*callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def ContactUpdate(self, callback, errback,
@@ -286,7 +297,7 @@ class AB(SOAPService):
                 callback, errback)
 
     def _HandleABContactUpdateResponse(self, callback, errback, response, user_data):
-        pass
+        callback[0](*callback[1:])
         
     @RequireSecurityTokens(LiveService.CONTACTS)
     def GroupAdd(self, callback, errback, scenario,
@@ -303,7 +314,7 @@ class AB(SOAPService):
                 callback, errback)
 
     def _HandleABGroupAddResponse(self, callback, errback, response, user_data):
-        pass
+        callback[0](response.text, *callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def GroupDelete(self, callback, errback, scenario,
@@ -319,7 +330,7 @@ class AB(SOAPService):
                 (group_id,), callback, errback)
 
     def _HandleABGroupDeleteResponse(self, callback, errback, response, user_data):
-        pass
+        callback[0](*callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def GroupUpdate(self, callback, errback, scenario,
@@ -336,7 +347,7 @@ class AB(SOAPService):
                 (group_id, group_name), callback, errback)
 
     def _HandleABGroupUpdateResponse(self, callback, errback, response, user_data):
-        pass
+        callback[0](*callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def GroupContactAdd(self, callback, errback, scenario,
@@ -353,8 +364,8 @@ class AB(SOAPService):
         self.__soap_request(self._service.ABGroupContactAdd, scenario,
                 (group_id, contact_id), callback, errback)
 
-    def _HandleABContactAddResponse(self, callback, errback, response, user_data):
-        pass
+    def _HandleABGroupContactAddResponse(self, callback, errback, response, user_data):
+        callback[0](*callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def GroupContactDelete(self, callback, errback, scenario,
@@ -371,8 +382,8 @@ class AB(SOAPService):
         self.__soap_request(self._service.ABGroupContactDelete, scenario,
                 (group_id, contact_id), callback, errback)
 
-    def _HandleABContactDeleteResponse(self, callback, errback, response, user_data):
-        pass
+    def _HandleABGroupContactDeleteResponse(self, callback, errback, response, user_data):
+        callback[0](*callback[1:])
 
     def __soap_request(self, method, scenario, args, callback, errback):
         token = str(self._tokens[LiveService.CONTACTS])

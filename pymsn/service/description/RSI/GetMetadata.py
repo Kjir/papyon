@@ -29,31 +29,11 @@ def soap_action():
     """Returns the SOAPAction value to pass to the transport
     or None if no SOAPAction needs to be specified"""
 
-    return "http://www.msn.com/webservices/AddressBook/ABGroupContactDelete"
+    return "http://www.hotmail.msn.com/ws/2004/09/oim/rsi/GetMetadata"
 
-def soap_body(group_id, contact_id):
+def soap_body():
     """Returns the SOAP xml body"""
 
-    return """ 
-        <ABGroupContactDelete xmlns="http://www.msn.com/webservices/AddressBook">
-            <abId>
-                00000000-0000-0000-0000-000000000000
-            </abId>
-            <contacts>
-                <Contact>
-                    <contactId>
-                        %s
-                    </contactId>
-                </Contact>
-            </contacts>
-            <groupFilter>
-                <groupIds>
-                    <guid>
-                        %s
-                    </guid>
-                </groupIds>
-            </groupFilter>
-        </ABGroupContactDelete>""" % (contact_id, group_id)
+    return """
+        <GetMetadata xmlns="http://www.hotmail.msn.com/ws/2004/09/oim/rsi" />""" 
 
-def process_response(soap_response):
-    return None

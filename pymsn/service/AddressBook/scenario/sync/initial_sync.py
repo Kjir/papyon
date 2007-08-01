@@ -37,13 +37,12 @@ class InitialSyncScenario(BaseScenario):
 
     def execute(self):
         self.__membership.FindMembership((self.__membership_findall_callback,),
-                (self.__membership_findall_errback,),
-                self._scenario, ['Messenger'],
-                False, '')
+                                         (self.__membership_findall_errback,),
+                                         self._scenario, ['Messenger'],
+                                         False, '')
         self.__address_book.FindAll((self.__ab_findall_callback,),
-                (self.__ab_findall_errback,),
-                self._scenario,
-                False, '')
+                                    (self.__ab_findall_errback,),
+                                    self._scenario, False)
 
     def __membership_findall_callback(self, result):
         self.__membership_response = result
@@ -55,7 +54,7 @@ class InitialSyncScenario(BaseScenario):
             self.__ab_response = None
 
     def __membership_findall_errback(self, reason):
-        errback = self._errback
+        errback = self._errback[0]
         args = self._errback[1:]
         errback(reason, *args) 
 
@@ -69,6 +68,6 @@ class InitialSyncScenario(BaseScenario):
             self.__ab_response = None
 
     def __ab_findall_errback(self, reason):
-        errback = self._errback
+        errback = self._errback[0]
         args = self._errback[1:]
         errback(reason, *args) 

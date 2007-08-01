@@ -22,7 +22,7 @@ __all__ = ['DeclineInviteScenario']
 
 class DeclineInviteScenario(BaseScenario):
     def __init__(self, sharing, callback, errback,
-                 type='', membership_id='', state=''):
+                 type='', account='', state='LivePending'):
         """Declines an invitation.
 
             @param sharing: the membership service
@@ -33,7 +33,6 @@ class DeclineInviteScenario(BaseScenario):
         self.__sharing = sharing
 
         self.type = type
-        self.membership_id = membership_id
         self.account = account
         self.state = state
 
@@ -41,7 +40,7 @@ class DeclineInviteScenario(BaseScenario):
         self.__sharing.DeleteMember((self.__delete_member_callback,),
                                     (self.__delete_member_errback,),
                                     self._scenario, 'Pending', self.type,
-                                    self.membership_id, None)
+                                    self.state, self.account)
 
     def __delete_member_callback(self):
         self.__sharing.AddMember((self.__add_member_block_callback,),
@@ -50,8 +49,9 @@ class DeclineInviteScenario(BaseScenario):
                                  self.state, self.account)
 
     def __delete_member_errback(self):
-        errback, args = self.__errback
-        errback(*args)
+        errback = self._errback[0]
+        args = self._errback[1:]
+        errback(reason, *args)
     
     def __add_member_block_callback(self):
         self.__sharing.AddMember((self.__add_member_reverse_callback,),
@@ -60,13 +60,15 @@ class DeclineInviteScenario(BaseScenario):
                                  self.state, self.account)
 
     def __add_member_block_errback(self):
-        errback, args = self.__errback
-        errback(*args)
+        errback = self._errback[0]
+        args = self._errback[1:]
+        errback(reason, *args)
 
     def __add_member_reverse_callback(self):
-        callback, args = self._callback
-        callback(*args)
+        callback = self._callback
+        callback[0](*callback[1])
 
     def __add_member_reverse_errback(self):
-        errback, args = self.__errback
-        errback(*args)
+        errback = self._errback[0]
+        args = self._errback[1:]
+        errback(reason, *args)

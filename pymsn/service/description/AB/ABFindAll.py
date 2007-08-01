@@ -33,8 +33,6 @@ def soap_action():
 
     return "http://www.msn.com/webservices/AddressBook/ABFindAll"
 
-default_timestamp = "0001-01-01T00:00:00.0000000-08:00"
-
 def soap_body(deltas_only, last_change):
     """Returns the SOAP xml body"""
 
@@ -44,7 +42,6 @@ def soap_body(deltas_only, last_change):
           <abView>Full</abView>
           <deltasOnly>%(deltas_only)s</deltasOnly>
           <lastChange>%(last_change)s</lastChange>
-          <dynamicItemView>Gleam</dynamicItemView>
        </ABFindAll>""" % {'deltas_only' : deltas_only,
                           'last_change' : last_change}
 

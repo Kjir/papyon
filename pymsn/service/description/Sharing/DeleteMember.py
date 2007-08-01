@@ -31,12 +31,9 @@ def soap_action():
 
     return "http://www.msn.com/webservices/AddressBook/DeleteMember"
 
-def soap_body(member_role, type, state, membership_id, account):
+def soap_body(member_role, type, state, account):
     """Returns the SOAP xml body"""
-    membership = address = ""
-
-    if membership_id is not None:
-        membership = "<MembershipId>%s</MembershipId>" % membership_id
+    address = ""
     
     if account is not None:
         if type == 'Passport':
@@ -46,10 +43,9 @@ def soap_body(member_role, type, state, membership_id, account):
     
     member =  """<Member xsi:type="%sMember" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                      <Type>%s</Type>
-                     %s
                      <State>%s</State>
                      %s
-                 </Member>""" % (type, type, membership, state, address)
+                 </Member>""" % (type, type, state, address)
 
     return """
         <DeleteMember xmlns="http://www.msn.com/webservices/AddressBook">

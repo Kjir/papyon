@@ -21,7 +21,7 @@ from pymsn.service.AddressBook.scenario.base import BaseScenario
 __all__ = ['GroupContactAddScenario']
 
 class GroupContactAddScenario(BaseScenario):
-    def __init__(self, ab, callback, errback, group_guid='', contact_id=''):
+    def __init__(self, ab, callback, errback, group_guid='', contact_guid=''):
         """Adds a contact to a group.
 
             @param ab: the address book service
@@ -38,13 +38,14 @@ class GroupContactAddScenario(BaseScenario):
     def execute(self):
         self.__ab.GroupContactAdd((self.__group_contact_add_callback,),
                                   (self.__group_contact_add_errback,),
-                                  self._scenario, self._group_id, 
-                                  self._contact_id)
+                                  self._scenario, self.group_guid, 
+                                  self.contact_guid)
 
     def __group_contact_add_callback(self):
-        callback, args = self._callback
-        callback(*args)
+        callback = self._callback
+        callback[0](*callback[1:])
 
     def __group_contact_add_errback(self, reason):
-        errback, args = self._errback
+        errback = self._errback[0]
+        args = self._errback[1:]
         errback(reason, *args)

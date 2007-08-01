@@ -24,6 +24,7 @@ import sharing
 import scenario
 
 import pymsn.profile as profile
+from pymsn.service.description.AB.constants import ContactEmailType
 
 import gobject
 
@@ -116,7 +117,8 @@ class AddressBook(gobject.GObject):
                 (object,)),
 
             "contact-deleted"         : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE, ()),
+                gobject.TYPE_NONE, 
+                 (object,)),
             "contact-blocked"         : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -188,89 +190,99 @@ class AddressBook(gobject.GObject):
 
     # Public API
     def add_messenger_contact(self, account):
-        am = MessengerContactAddScenario(self._ab,
+        am = scenario.MessengerContactAddScenario(self._ab,
                 (self.__add_messenger_contact_cb,),
                 (self.__common_errback,))
         am.account = account
         am()
+        if account.split("@", 1)[1].startswith("yahoo"):
+            accounts = self.contacts.search_by_account(account)
+            for contact in accounts:
+                if contact.network_id == profile.NetworkID.EXTERNAL:
+                    return            
 
-    def add_email_contact(self, email_address):
-        ae = EmailContactAddScenario(self._ab,
-                (self.__add_email_contact_cb,),
-                (self.__common_errback,))
-        ae.email_address = email_address
-        ae()
+            ae = scenario.ExternalContactAddScenario(self._ab,
+                    (self.__add_messenger_contact_cb,),
+                    (self.__common_errback,))
+            ae.account = account
+            ae()
 
-    def add_mobile_contact(self, phone_number):
-        am = MobileContactAddScenario(self._ab,
-                (self.__add_mobile_contact_cb,),
-                (self.__common_errback,))
-        am.phone_number = phone_number
-        am()
+#     def add_email_contact(self, email_address):
+#         ae = scenario.EmailContactAddScenario(self._ab,
+#                 (self.__add_email_contact_cb,),
+#                 (self.__common_errback,))
+#         ae.email_address = email_address
+#         ae()
+
+#     def add_mobile_contact(self, phone_number):
+#         am = scenario.MobileContactAddScenario(self._ab,
+#                 (self.__add_mobile_contact_cb,),
+#                 (self.__common_errback,))
+#         am.phone_number = phone_number
+#         am()
 
     def delete_contact(self, contact):
-        dc = ContactDeleteScenario(self._ab,
-                (self.__common_callback, 'contact-deleted', contact),
+        dc = scenario.ContactDeleteScenario(self._ab,
+                (self.__delete_contact_cb, contact),
                 (self.__common_errback,))
-        # dc.contact_guid = contact.guid
+        dc.contact_guid = contact.id
         dc()
 
     def block_contact(self, contact):
-        bc = BlockContactScenario(self._sharing,
+        bc = scenario.BlockContactScenario(self._sharing,
                 (self.__common_callback, 'contact-blocked', contact),
                 (self.__common_errback,))
         # bc.type = contact.type
-        # bc.account = contact.account
-        # bc.state = contact.state
+        bc.type = 'Passport'
+        bc.account = contact.account
         bc()
 
-    def unblock_contact_cb(self, contact):
-        uc = UnblockContactScenario(self._sharing,
+    def unblock_contact(self, contact):
+        uc = scenario.UnblockContactScenario(self._sharing,
                 (self.__common_callback, 'contact-unblocked', contact),
                 (self.__common_errback,))
         # uc.type = contact.type
-        # uc.membership_id = contact.membership_id
-        # uc.account = contact.account
-        # uc.state = contact.state
+        uc.type = 'Passport'
+        uc.account = contact.account
         uc()
 
     def add_group(self, group_name):
-        ag = GroupAddScenario(self._ab,
-                (self.__add_group_cb,),
+        ag = scenario.GroupAddScenario(self._ab,
+                (self.__add_group_cb, group_name),
                 (self.__common_errback,))
         ag.group_name = group_name
         ag()
 
     def delete_group(self, group):
-        dg = GroupDeleteScenario(self._ab,
-                (self.__common_callback, 'group-deleted', group),
+        dg = scenario.GroupDeleteScenario(self._ab,
+                (self.__delete_group_cb, group),
                 (self.__common_errback,))
-        # dg.group_guid = group.guid
+        dg.group_guid = group.id
         dg()
 
 
     def rename_group(self, group, new_name):
-        rg = GroupRenameScenario(self._ab,
-                (self.__common_callback, 'group-renamed', group),
+        rg = scenario.GroupRenameScenario(self._ab,
+                (self.__rename_group_cb, group, new_name),
                 (self.__common_errback,))
-        # rg.group_guid = group.guid
+        rg.group_guid = group.id
         rg.group_name = new_name
         rg()
 
     def add_contact_to_group(self, group, contact):
-        ac = GroupContactAddScenario(self._ab,
-                (self.__common_callback, 'group-contact-added', group, contact),
+        ac = scenario.GroupContactAddScenario(self._ab,
+                (self.__add_contact_to_group_cb, group, contact),
                 (self.__common_errback,))
-        # ac.group_guid = group.guid
-        # ac.contact_guid = contact.guid
+        ac.group_guid = group.id
+        ac.contact_guid = contact.id
         ac()
 
     def delete_contact_from_group(self, group, contact):
-        dc = GroupContactDeleteScenario(self._ab,
-                (self.__common_callback, 'group-contact-deleted', group, contact),
+        dc = scenario.GroupContactDeleteScenario(self._ab,
+                (self.__delete_contact_from_group_cb, group, contact),
                 (self.__common_errback,))
-        # dc.group_id = group.guid
-        # dc.contact_id = contact.guid
+        dc.group_guid = group.id
+        dc.contact_guid = contact.id
         dc()
 
     # Callbacks
@@ -284,32 +296,62 @@ class AddressBook(gobject.GObject):
             self.groups[group.Id] = g
 
         for contact in contacts:
-            if (not contact.IsMessengerUser and contact.Type != "Me") or \
-                    (contact.PassportName == ""):
+            external_email = None
+            is_external = False
+            for email in contact.Emails:
+                if email.Type == ContactEmailType.EXTERNAL:
+                    external_email = email
+                    is_external = True
+                    break
+
+            if not contact.IsMessengerUser and is_external:
+
+                display_name = contact.DisplayName
+                if display_name == "":
+                    display_name = contact.QuickName
+                # check nickname first
+
+                c = profile.Contact(contact.Id,
+                                    profile.NetworkID.EXTERNAL,
+                                    external_email.Email.encode("utf-8"),
+                                    display_name.encode("utf-8"),
+                                    profile.Membership.FORWARD)
+                                    
+                for group_id in contact.Groups:
+                    c._add_group_ownership(self.groups[group_id])
+
+                self.contacts.add(c)
+
+            elif (not contact.IsMessengerUser and contact.Type != "Me") or \
+                    contact.PassportName == "":
                 #FIXME: maybe we want to avoid filtering
                 continue
 
-            display_name = contact.DisplayName
-            if display_name == "":
-                display_name = contact.QuickName
-
-            c = profile.Contact(contact.Id,
-                    profile.NetworkID.MSN,
-                    contact.PassportName.encode("utf-8"),
-                    display_name.encode("utf-8"),
-                    profile.Membership.FORWARD)
-            c._server_contact_attribute_changed("im_contact",
-                    contact.IsMessengerUser)
-            
-            if contact.Type == "Me":
-                self._profile = c
             else:
-                self.contacts.add(c)
+                display_name = contact.DisplayName
+                if display_name == "":
+                    display_name = contact.QuickName
+
+                c = profile.Contact(contact.Id,
+                        profile.NetworkID.MSN,
+                        contact.PassportName.encode("utf-8"),
+                        display_name.encode("utf-8"),
+                        profile.Membership.FORWARD)
+                c._server_contact_attribute_changed("im_contact",
+                                                    contact.IsMessengerUser)
+            
+                for group_id in contact.Groups:
+                    c._add_group_ownership(self.groups[group_id])
+                    
+                if contact.Type == "Me":
+                    self._profile = c
+                else:
+                    self.contacts.add(c)
 
         for member in memberships:
             if member.Type != "Passport":
-                #FIXME: maybe we want to avoid filtering
-                continue
+                 #FIXME: maybe we want to avoid filtering
+                 continue
             
             contact = self.contacts\
                     .search_by_account(member.Account)[0]
@@ -332,21 +374,66 @@ class AddressBook(gobject.GObject):
                 contact._add_membership(membership)
         self._state = AddressBookState.SYNCHRONIZED
 
-    def __add_messenger_contact_cb(self):
-        # TODO : build the contact object
-        self.emit('messenger-contact-added')
+    def __add_messenger_contact_cb(self, contact_guid, address_book_delta):
+        contacts = address_book_delta.contacts
+        
+        for contact in contacts:
+            if (not contact.IsMessengerUser and contact.Type != "Me") or \
+                    (contact.PassportName == ""):
+                #FIXME: maybe we want to avoid filtering
+                continue
+        
+            if contact.Id == contact_guid:
+                display_name = contact.DisplayName
+                if display_name == "":
+                    display_name = contact.QuickName
 
-    def __add_email_contact_cb(self):
-        # TODO : build the contact object
-        self.emit('email-contact-added')
+                c = profile.Contact(contact.Id,
+                                    profile.NetworkID.MSN,
+                                    contact.PassportName,
+                                    display_name,
+                                    profile.Membership.FORWARD)
+                c._server_contact_attribute_changed("im_contact",
+                                                    contact.IsMessengerUser)
+            
+                for group_id in contact.Groups:
+                    c._add_group_ownership(self.groups[group_id])
 
-    def __add_mobile_contact_cb(self):
-        # TODO : build the group object
-        self.emit('mobile-contact-added')
+                self.contacts.add(c)
+                self.emit('messenger-contact-added', c)
 
-    def __add_group_cb(self):
-        # TODO : build the group object
-        self.emit('group-added')
+#     def __add_email_contact_cb(self, contact_guid):
+#         self.emit('email-contact-added')
+
+#     def __add_mobile_contact_cb(self, contact_guid):
+#         self.emit('mobile-contact-added')
+
+    def __delete_contact_cb(self, contact):
+        self.contacts.discard(contact)
+        self.emit('contact-deleted', contact)
+
+    def __add_group_cb(self, group_id, group_name):
+        group = profile.Group(group_id, group_name)
+        self.groups[group_id] = group
+        self.emit('group-added', group)
+
+    def __delete_group_cb(self, group):
+        for contact in self.contacts:
+            contact._delete_group_ownership(group)
+        del self.groups[group.id]
+        self.emit('group-deleted', group)
+
+    def __rename_group_cb(self, group, group_name):
+        group.name = group_name
+        self.emit('group-renamed', group)
+
+    def __add_contact_to_group_cb(self, group, contact):
+        contact._add_group_ownership(group)
+        self.emit('group-contact-added', group, contact)
+
+    def __delete_contact_from_group_cb(self, group, contact):
+        contact._delete_group_ownership(group)
+        self.emit('group-contact-delete', group, contact)
 
     def __common_callback(self, signal, *args):
         self.emit(signal, *args)
@@ -388,6 +475,22 @@ if __name__ == '__main__':
 
             for contact in address_book.contacts:
                 print "Contact : %s (%s)" % (contact.account, contact.display_name)
+
+            #address_book.add_group("callback test6")
+            #address_book.delete_group(address_book.groups.values()[0])
+            #address_book.rename_group(address_book.groups.values()[0], "new group name")
+            #address_book.add_contact_to_group(address_book.groups.values()[1],
+            #                                  address_book.contacts[0])
+            #address_book.delete_contact_from_group(address_book.groups.values()[0],
+            #                                       address_book.contacts[0])
+            #address_book.block_contact(address_book.contacts[0])
+            #address_book.unblock_contact(address_book.contacts[0])
+            #address_book.delete_contact(address_book.contacts[2])
+            #address_book.add_messenger_contact("tryggve2@gmail.com")
+
+            #for i in range(5):
+            #    address_book.delete_contact(address_book.contacts[i])
+            #address_book.add_messenger_contact("pymsn.rewrite@yahoo.com")
 
     sso = SingleSignOn(account, password)
     address_book = AddressBook(sso)

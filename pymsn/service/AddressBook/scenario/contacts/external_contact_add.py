@@ -18,31 +18,35 @@
 #
 
 from pymsn.service.AddressBook.scenario.base import BaseScenario
+from pymsn.service.description.AB.constants import ContactEmailType
+from pymsn.profile import NetworkID
 
-__all__ = ['MessengerContactAddScenario']
+__all__ = ['ExternalContactAddScenario']
 
-class MessengerContactAddScenario(BaseScenario):
+class ExternalContactAddScenario(BaseScenario):
     def __init__(self, ab, callback, errback, account='', 
-                 contact_type='LivePending', contact_info={}, invite_info={}):
-        """Adds a messenger contact and updates the address book.
+                 network_id=NetworkID.EXTERNAL, contact_info={}, invite_info={}):
+        """Adds an external messenger contact and updates the address book.
 
             @param ab: the address book service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)"""
-        BaseScenario.__init__(self, 'ContactSave', callback, errback)
+        BaseScenario.__init__(self, 'ContactMsgrAPI', callback, errback)
 
         self._ab = ab
 
         self.account = account 
-
-        self.contact_type = contact_type
+        self.network_id = network_id
         self.contact_info = contact_info
         self.invite_info = invite_info
 
     def execute(self):
-        self.contact_info['passport_name'] = self.account
-        self.contact_info['contact_type'] = self.contact_type
-        self.contact_info['is_messenger_user'] = True
+        if self.contact_info.get('email', None) is None:
+            self.contact_info['email'] = \
+                { ContactEmailType.EXTERNAL : self.account }
+        else:
+            self.contact_info['email'][ContactEmailType.EXTERNAL] = self.account
+        self.contact_info['capability'] = self.network_id
         self._ab.ContactAdd((self.__contact_add_callback,),
                             (self.__contact_add_errback,),
                             self._scenario, 

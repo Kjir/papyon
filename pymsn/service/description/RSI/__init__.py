@@ -17,17 +17,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-from accept_invite import *
-from decline_invite import *
-from check_pending_invite import *
+name = "RSI"
+description = "Offline message service"
 
-from block_contact import *
-from unblock_contact import *
-
-from contact_delete import *
-
-from email_contact_add import *
-from messenger_contact_add import *
-from external_contact_add import *
-from mobile_contact_add import *
-
+url = "https://rsi.hotmail.com/rsi/rsi.amx"

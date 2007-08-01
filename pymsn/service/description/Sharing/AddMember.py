@@ -59,7 +59,7 @@ def soap_body(member_role, type, state, account):
             <memberships>
                 <Membership>
                     <MemberRole>
-                        %(member_role)s
+                        %s
                     </MemberRole>
                     <Members>
                         <Member xsi:type="%sMember" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">

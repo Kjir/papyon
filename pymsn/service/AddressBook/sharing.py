@@ -29,6 +29,7 @@ class Member(object):
     def __init__(self, member):
         self.Roles = {}
         self.Account = ""
+        self.MembershipId = member.findtext("./ab:MembershipId")
         self.Type = member.findtext("./ab:Type")
         self.DisplayName = member.findtext("./ab:DisplayName")
         self.State = member.findtext("./ab:State")
@@ -132,16 +133,15 @@ class Sharing(SOAPService):
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        type, state, passport = passport_member
         self.__soap_request(self._service.AddMember, scenario,
                 (member_role, type, state, account), callback, errback)
 
     def _HandleAddMemberResponse(self, callback, errback, response, user_data):
-        pass
+        callback[0](*callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def DeleteMember(self, callback, errback, scenario, member_role, type, 
-                     state, membership_id=None, account=None):
+                     state, account):
         """Deletes a member from a membership list.
 
             @param scenario: 'Timer' | 'BlockUnblock' | ...
@@ -150,11 +150,11 @@ class Sharing(SOAPService):
             @param errback: tuple(callable, *args)
         """
         self.__soap_request(self._service.DeleteMember, scenario,
-                            (member_role, type, state, membership_id, account), 
+                            (member_role, type, state, account),
                             callback, errback)
 
     def _HandleDeleteMemberResponse(self, callback, errback, response, user_data):
-        pass
+        callback[0](*callback[1:])
 
     def __soap_request(self, method, scenario, args, callback, errback):
         token = str(self._tokens[LiveService.CONTACTS])

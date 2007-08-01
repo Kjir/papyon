@@ -34,14 +34,15 @@ class ContactDeleteScenario(BaseScenario):
         self.contact_guid = contact_guid
 
     def execute(self):
-        self.__ab.ContactDelete((self.___contact_delete_callback,),
-                                (self.___contact_delete_errback,),
+        self.__ab.ContactDelete((self.__contact_delete_callback,),
+                                (self.__contact_delete_errback,),
                                 self._scenario, self.contact_guid)
 
-    def ___contact_delete_callback(self):
-        callback, args = self._callback
-        callback(*args)
+    def __contact_delete_callback(self):
+        callback = self._callback
+        callback[0](*callback[1:])
 
     def __contact_delete_errback(self, reason):
-        errback, args = self._errback
+        errback = self._errback[0]
+        args = self._errback[1:]
         errback(reason, *args)

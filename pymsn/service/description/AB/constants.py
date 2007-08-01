@@ -37,7 +37,7 @@ class ContactEmailType(object):
     MESSENGER = "ContactEmailMessenger"
     OTHER = "ContactEmailOther"
     PERSONAL = "ContactEmailPersonal"
-    YAHOO = "Messenger2"
+    EXTERNAL = "Messenger2"
 
 class ContactPhoneType(object):
     BUSINESS = "ContactPhoneBusiness"

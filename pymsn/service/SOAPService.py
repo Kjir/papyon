@@ -206,11 +206,12 @@ class SOAPService(object):
     def _response_handler(self, transport, http_response):
         logger.debug("<<< " + str(http_response))
         soap_response = SOAPResponse(http_response.body)
+        request_id, callback, errback, user_data = self._unref_transport(transport)
+
         if not soap_response.is_valid():
             logger.warning("Invalid SOAP Response")
             return #FIXME: propagate the error up
 
-        request_id, callback, errback, user_data = self._unref_transport(transport)
         if not soap_response.is_fault():
             handler = getattr(self,
                     "_Handle" + request_id + "Response",

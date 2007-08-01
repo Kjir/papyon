@@ -314,6 +314,13 @@ class Contact(gobject.GObject):
                 Presence.OFFLINE,
                 gobject.PARAM_READABLE),
 
+# FIXME : got an error on this
+#             "groups": (gobject.TYPE_PYOBJECT,
+#                 "Groups",
+#                 "The groups the contact belong to",
+#                 object,
+#                 gobject.PARAM_READABLE),
+
             "client-capabilities": (gobject.TYPE_UINT64,
                 "Client capabilities",
                 "The client capabilities of the contact 's client",
@@ -333,6 +340,7 @@ class Contact(gobject.GObject):
         self._display_name = display_name
         self._presence = Presence.OFFLINE
         self._personal_message = ""
+        self._groups = set()
 
         self._memberships = memberships
         self._client_capabilities = ClientCapabilities()
@@ -372,6 +380,11 @@ class Contact(gobject.GObject):
     def personal_message(self):
         """Contact personal message"""
         return self._personal_message
+
+    @property
+    def groups(self):
+        """Contact list of groups"""
+        return self._groups
 
     @property
     def memberships(self):
@@ -433,7 +446,13 @@ class Contact(gobject.GObject):
 
     def _server_contact_attribute_changed(self, name, value):
         self._attributes[name] = value
+        
+    ### group management
+    def _add_group_ownership(self, group):
+        self._groups.add(group)
 
+    def _delete_group_ownership(self, group):
+        self._groups.discard(group)
 
     def do_get_property(self, pspec):
         name = pspec.name.lower().replace("-", "_")

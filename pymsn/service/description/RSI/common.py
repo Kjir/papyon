@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #
+# pymsn - a python client library for Msn
+#
 # Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -14,20 +16,15 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-#
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from accept_invite import *
-from decline_invite import *
-from check_pending_invite import *
+def soap_header(security_token):
+    """Returns the SOAP xml header"""
 
-from block_contact import *
-from unblock_contact import *
+    t,p = security_token.split(';')
 
-from contact_delete import *
-
-from email_contact_add import *
-from messenger_contact_add import *
-from external_contact_add import *
-from mobile_contact_add import *
-
+    return """
+      <PassportCookie xmlns="http://www.hotmail.msn.com/ws/2004/09/oim/rsi">
+          <t>%s</t> 
+          <p>%s</p>
+      </PassportCookie>""" % (t[2:len(t)], p[2:len(p)])

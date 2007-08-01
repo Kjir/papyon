@@ -21,8 +21,8 @@ from pymsn.service.AddressBook.scenario.base import BaseScenario
 __all__ = ['BlockContactScenario']
 
 class BlockContactScenario(BaseScenario):
-    def __init__(self, sharing, callback, errback, type='',
-                 membership_id='', account='', state='Accepted'):
+    def __init__(self, sharing, callback, errback, type='', account='', 
+                 state='Accepted'):
         """Blocks a contact.
 
             @param sharing: the membership service
@@ -34,7 +34,6 @@ class BlockContactScenario(BaseScenario):
         self.__sharing = sharing
         
         self.type = type
-        self.membership_id = membership_id
         self.account = account
         self.state = state
 
@@ -42,7 +41,7 @@ class BlockContactScenario(BaseScenario):
         self.__sharing.DeleteMember((self.__delete_member_callback,),
                                     (self.__delete_member_errback,),
                                     self._scenario, 'Allow', self.type, 
-                                    self.state, self.membership_id, None)
+                                    self.state, self.account)
 
     def __delete_member_callback(self):
         self.__sharing.AddMember((self.__add_member_callback,),
@@ -51,13 +50,16 @@ class BlockContactScenario(BaseScenario):
                                  self.state, self.account)
 
     def __delete_member_errback(self):
-        errback, args = self.__errback
-        errback(*args)
+        errback = self._errback[0]
+        args = self._errback[1:]
+        errback(reason, *args)
     
     def __add_member_callback(self):
-        callback, args = self._callback
-        callback(*args)
+        callback = self._callback
+        callback[0](*callback[1:])
 
     def __add_member_errback(self):
-        errback, args = self.__errback
-        errback(*args)
+        errback = self._errback[0]
+        args = self._errback[1:]
+        errback(reason, *args)
+        

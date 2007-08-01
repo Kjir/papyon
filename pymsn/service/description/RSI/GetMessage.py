@@ -29,31 +29,17 @@ def soap_action():
     """Returns the SOAPAction value to pass to the transport
     or None if no SOAPAction needs to be specified"""
 
-    return "http://www.msn.com/webservices/AddressBook/ABGroupContactDelete"
+    return "http://www.hotmail.msn.com/ws/2004/09/oim/rsi/GetMessage"
 
-def soap_body(group_id, contact_id):
-    """Returns the SOAP xml body"""
-
-    return """ 
-        <ABGroupContactDelete xmlns="http://www.msn.com/webservices/AddressBook">
-            <abId>
-                00000000-0000-0000-0000-000000000000
-            </abId>
-            <contacts>
-                <Contact>
-                    <contactId>
-                        %s
-                    </contactId>
-                </Contact>
-            </contacts>
-            <groupFilter>
-                <groupIds>
-                    <guid>
-                        %s
-                    </guid>
-                </groupIds>
-            </groupFilter>
-        </ABGroupContactDelete>""" % (contact_id, group_id)
-
-def process_response(soap_response):
-    return None
+def soap_body(message_id, also_mark_as_read):
+    """Returns the SOAP xml body
+    
+        @param message_id: the id of the message to get (guid)
+        @param also_mark_as_read: "true if the message should be marked as read
+                                  "false else
+    """
+    return """    
+       <GetMessage xmlns="http://www.hotmail.msn.com/ws/2004/09/oim/rsi">
+           <messageId>%s</messageId>
+           <alsoMarkAsRead>%s</alsoMarkAsRead>
+       </GetMessage>""" % (message_id, also_mark_as_read)

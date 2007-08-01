@@ -34,7 +34,8 @@ def soap_action():
 
 def soap_body(passport_name, is_messenger_user, contact_type, first_name, 
               last_name, birth_date, email, phone, location, web_site,  
-              annotation, comment, anniversary, display_name, invite_message):
+              annotation, comment, anniversary, display_name, invite_message,
+              capability):
     """Returns the SOAP xml body
 
             @param passport_name: the passport adress if the contact to add
@@ -54,9 +55,15 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
             @param display_name: display name used in the invitation
             @param invite_message: message sent for the invitation"""
 
-    contact_info = "<passportName>%s</passportName>" % passport_name
-    contact_info += "<isMessengerUser>%s</isMessengerUser>" % is_messenger_user
-    contact_info += "<contactType>%s</contactType>" % contact_type
+    contact_info = ''
+    if passport_name is not None:
+        contact_info += "<passportName>%s</passportName>" % passport_name
+
+    if is_messenger_user is not None:
+        contact_info += "<isMessengerUser>%s</isMessengerUser>" % is_messenger_user
+
+    if contact_type is not None:
+        contact_info += "<contactType>%s</contactType>" % contact_type
             
     if first_name is not None:
         contact_info += "<firstName>%s</firstName>" % first_name
@@ -76,8 +83,8 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
                                    true
                                 </isMessengerEnabled>
                                 <Capability>
-                                   32
-                                </Capability>"""
+                                   %s
+                                </Capability>""" % capability
                 changed = " IsMessengerEnabled Capability"
             emails += """<ContactEmail>
                             <contactEmailType>%s</contactEmailType>
@@ -170,11 +177,11 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
                 </EnableAllowListManagement>
             </options>
         </ABContactAdd>""" % { 'contact_info' : contact_info,
-                               'invite_info' : invote_info }
+                               'invite_info' : invite_info }
 
 def process_response(soap_response):
     body = soap_response.body
     try:
-        return body.find("./ABContactAddResponse/ABContactAddResult/guid").text
+        return body.find("./ab:ABContactAddResponse/ab:ABContactAddResult/ab:guid")
     except AttributeError:
         return None

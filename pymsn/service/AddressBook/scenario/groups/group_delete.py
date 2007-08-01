@@ -39,9 +39,10 @@ class GroupDeleteScenario(BaseScenario):
                               self._scenario, self.group_guid)
 
     def __group_delete_callback(self):
-        callback, args = self._callback
-        callback(*args)
+        callback = self._callback
+        callback[0](*callback[1:])
 
     def __group_delete_errback(self, reason):
-        errback, args = self._errback
+        errback = self._errback[0]
+        args = self._errback[1:]
         errback(reason, *args)

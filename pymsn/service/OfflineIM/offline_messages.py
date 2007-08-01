@@ -17,17 +17,20 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-from accept_invite import *
-from decline_invite import *
-from check_pending_invite import *
+import rsi
+import oim
+import scenario
 
-from block_contact import *
-from unblock_contact import *
+import gobject
 
-from contact_delete import *
+__all__ = ['OfflineMessages']
 
-from email_contact_add import *
-from messenger_contact_add import *
-from external_contact_add import *
-from mobile_contact_add import *
+class OfflineMessages(gobject.GObject):
 
+    def __init__(self, sso, proxies=None):
+        gobject.GObject.__init__(self)
+
+        self._rsi = rsi.RSI(sso, proxies)
+        self._oim = oim.OIM(sso, proxies)
+
+gobject.type_register(OfflineMessages)

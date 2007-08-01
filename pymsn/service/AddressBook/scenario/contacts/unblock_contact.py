@@ -41,7 +41,7 @@ class UnblockContactScenario(BaseScenario):
         self.__sharing.DeleteMember((self.__delete_member_callback,),
                                     (self.__delete_member_errback,),
                                     self._scenario, 'Block', self.type,
-                                    self.state, None, self.account)
+                                    self.state, self.account)
 
     def __delete_member_callback(self):
         self.__sharing.AddMember((self.__add_member_callback,),
@@ -50,13 +50,15 @@ class UnblockContactScenario(BaseScenario):
                                  self.state, self.account)
 
     def __delete_member_errback(self):
-        errback, args = self.__errback
-        errback(*args)
+        errback = self._errback[0]
+        args = self._errback[1:]
+        errback(reason, *args)
     
     def __add_member_callback(self):
-        callback, args = self._callback
-        callback(*args)
+        callback = self._callback
+        callback[0](*callback[1:])
 
     def __add_member_errback(self):
-        errback, args = self.__errback
-        errback(*args)
+        errback = self._errback[0]
+        args = self._errback[1:]
+        errback(reason, *args)
