@@ -292,8 +292,7 @@ class AddressBook(gobject.GObject):
         groups = address_book.groups
 
         for group in groups:
-            g = profile.Group(group.Id, group.Name)
-            self.groups[group.Id] = g
+            self.groups[group.Id] = profile.Group(group.Id, group.Name)
 
         for contact in contacts:
             external_email = None

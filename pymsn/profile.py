@@ -314,12 +314,10 @@ class Contact(gobject.GObject):
                 Presence.OFFLINE,
                 gobject.PARAM_READABLE),
 
-# FIXME : got an error on this
-#             "groups": (gobject.TYPE_PYOBJECT,
-#                 "Groups",
-#                 "The groups the contact belong to",
-#                 object,
-#                 gobject.PARAM_READABLE),
+             "groups": (gobject.TYPE_PYOBJECT,
+                 "Groups",
+                 "The groups the contact belongs to",
+                 gobject.PARAM_READABLE),
 
             "client-capabilities": (gobject.TYPE_UINT64,
                 "Client capabilities",
@@ -462,12 +460,6 @@ gobject.type_register(Contact)
 class Group(gobject.GObject):
 
     __gsignals__ = {
-        "added": (gobject.SIGNAL_RUN_FIRST,
-                  gobject.TYPE_NONE,
-                  ()),
-        "deleted": (gobject.SIGNAL_RUN_FIRST,
-                    gobject.TYPE_NONE,
-                    ()),
         "updated": (gobject.SIGNAL_RUN_FIRST,
                     gobject.TYPE_NONE,
                     ())
@@ -478,7 +470,7 @@ class Group(gobject.GObject):
                  "Group name",
                  "Name that the user chooses for the group",
                  "",
-                 gobject.PARAM_READWRITE)
+                 gobject.PARAM_READABLE)
         }
 
     def __init__(self, id, name):

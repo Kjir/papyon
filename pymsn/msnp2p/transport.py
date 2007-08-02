@@ -234,7 +234,7 @@ class BaseP2PTransport(gobject.GObject):
         if self._seq_num >= 2 ** 32 - 1
             self._seq_num = 1
 
-    def _try_send_ack(self, received_chunk, dw1=0):
+    def _try_send_ack(self, received_chunk):
         flags = chunk.header.flags
 
         if flags & (TLPFlag.NAK | TLPFlag.ACK):
@@ -251,7 +251,7 @@ class BaseP2PTransport(gobject.GObject):
 
         ack_blob = ControlBlob(0, flags, 
                 dw1 = received_chunk.header.blob_id,
-                dw2 = dw1,
+                dw2 = received_chunk.header.dw1,
                 qw1 = received_chunk.header.blob_size)
 
         self.send(ack_blob)
