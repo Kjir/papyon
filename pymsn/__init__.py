@@ -28,7 +28,7 @@ instant messaging service.
 
 from client import *
 from conversation import *
-from profile import NetworkID, Presence, Privacy, Membership, Contact
+from profile import NetworkID, Presence, Privacy, Membership, Contact, Group
 import event
 
 import gnet.proxy
