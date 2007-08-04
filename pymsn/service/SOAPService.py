@@ -73,8 +73,7 @@ class _SOAPElement(object):
         return getattr(self.element, name)
 
     def __getitem__(self, name):
-        for sh, ns in self.ns_shorthands.iteritems():
-            name = name.replace("%s:" % sh, "{%s}" % ns)
+        path = self._process_path(path)
         return self.element[name]
 
     def __iter__(self):
@@ -87,17 +86,23 @@ class _SOAPElement(object):
     def __repr__(self):
         return "<SOAPElement name=\"%s\">" % (self.element.tag,)
 
-    def find(self, path):
+    def _process_path(self, path):
         for sh, ns in self.ns_shorthands.iteritems():
-            path = path.replace("%s:" % sh, "{%s}" % ns)
+            path = path.replace("/%s:" % sh, "/{%s}" % ns)
+            if path.startswith("%s:" % sh):
+                path = path.replace("%s:" % sh, "{%s}" % ns, 1)
+        return path
+
+    def find(self, path):
+        path = self._process_path(path)
+        
         node = self.element.find(path)
         if node is None:
             return None
         return _SOAPElement(node, self.ns_shorthands)
 
     def findall(self, path):
-        for sh, ns in self.ns_shorthands.iteritems():
-            path = path.replace("%s:" % sh, "{%s}" % ns)
+        path = self._process_path(path)
         
         result = []
         nodes = self.element.findall(path)
