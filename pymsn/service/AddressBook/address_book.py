@@ -521,7 +521,7 @@ if __name__ == '__main__':
             #                                  address_book.contacts[0])
             #address_book.delete_contact_from_group(address_book.groups.values()[0],
             #                                       address_book.contacts[0])
-            #address_book.block_contact(address_book.contacts[0])
+            #address_book.block_contact(address_book.contacts.search_by_account('pymsn.rewrite@yahoo.com')[0])
             #address_book.unblock_contact(address_book.contacts[0])
             #address_book.delete_contact(address_book.contacts[2])
             #address_book.add_messenger_contact("tryggve2@gmail.com")

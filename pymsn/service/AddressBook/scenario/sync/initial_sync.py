@@ -53,6 +53,8 @@ class InitialSyncScenario(BaseScenario):
             self.__membership_response = None
             self.__ab_response = None
 
+    # FIXME : use ab.Add to create the addressbook on the server if needed
+
     def __membership_findall_errback(self, reason):
         errback = self._errback[0]
         args = self._errback[1:]

@@ -17,23 +17,9 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-name = "AB"
-description = "Hotmail address book service"
+name = "SchematizedStore"
+description = "MSN Storage service"
 
-url = "http://contacts.msn.com/abservice/abservice.asmx"
+url = "http://storage.msn.com/storageservice/SchematizedStore.asmx"
 
-from constants import *
-
-import ABAdd
-
-import ABFindAll
-
-import ABContactAdd
-import ABContactDelete
-import ABContactUpdate
-
-import ABGroupAdd
-import ABGroupDelete
-import ABGroupUpdate
-import ABGroupContactAdd
-import ABGroupContactDelete
+import GetProfile

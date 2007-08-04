@@ -23,9 +23,13 @@ import scenario
 
 import gobject
 
-__all__ = ['OfflineMessages']
+__all__ = ['OfflineMessagesBox']
 
-class OfflineMessages(gobject.GObject):
+class OfflineMessage(object):
+    def __init__(self):
+        pass
+
+class OfflineMessagesBox(gobject.GObject):
 
     def __init__(self, sso, proxies=None):
         gobject.GObject.__init__(self)
@@ -33,4 +37,14 @@ class OfflineMessages(gobject.GObject):
         self._rsi = rsi.RSI(sso, proxies)
         self._oim = oim.OIM(sso, proxies)
 
-gobject.type_register(OfflineMessages)
+    # Public API
+    def fetch(self):
+        pass
+
+    def send(self, recipient, message):
+        pass
+
+    def delete(self, message):
+        pass
+
+gobject.type_register(OfflineMessagesBox)

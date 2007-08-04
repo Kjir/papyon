@@ -147,6 +147,8 @@ class Contact(object):
             return LivePendingContact(contact)
         if contact_type == "LiveRejected":
             return LiveRejectedContact(contact)
+        if contact_type == "LiveDropped":
+            return LiveDroppedContact(contact)
         elif contact_type == "Me":
             return MeContact(contact)
         elif contact_type == "Regular":
@@ -161,6 +163,9 @@ class LivePendingContact(LiveContact):
     pass
 
 class LiveRejectedContact(LiveContact):
+    pass
+
+class LiveDroppedContact(LiveContact):
     pass
 
 class MeContact(LiveContact):
@@ -179,6 +184,20 @@ class AB(SOAPService):
         self._last_changes = "0001-01-01T00:00:00.0000000-08:00"
    
     @RequireSecurityTokens(LiveService.CONTACTS)
+    def Add(self, callback, errback, scenario, account):
+        """Creates the address book on the server.
+
+            @param callback: tuple(callable, *args)
+            @param errback: tuple(callable, *args)
+            @param scenario: "Initial"
+            @param account: the owner account"""
+        self.__soap_request(self._service.ABAll, scenario, (account,),
+                            callback, errback)
+
+    def _HandleABAddResponse(self, callback, errback, response, user_data):
+        pass
+
+    @RequireSecurityTokens(LiveService.CONTACTS)
     def FindAll(self, callback, errback, scenario, deltas_only):
         """Requests the contact list.
             @param scenario: "Initial" | "ContactSave" ...
@@ -188,8 +207,7 @@ class AB(SOAPService):
                 (previously sent by the server), or
                 0001-01-01T00:00:00.0000000-08:00 to get the whole list
             @param callback: tuple(callable, *args)
-            @param errback: tuple(callable, *args)"""
-            
+            @param errback: tuple(callable, *args)"""            
         self.__soap_request(self._service.ABFindAll, scenario,
                 (XMLTYPE.bool.encode(deltas_only), self._last_changes),
                 callback, errback)
@@ -396,10 +414,10 @@ class AB(SOAPService):
         
         method_name = method.__name__.rsplit(".", 1)[1]
         self._send_request(method_name,
-                self._service.url, 
-                soap_header, soap_body, soap_action, 
-                callback, errback,
-                http_headers)
+                           self._service.url, 
+                           soap_header, soap_body, soap_action, 
+                           callback, errback,
+                           http_headers)
 
 
 if __name__ == '__main__':

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #
+# pymsn - a python client library for Msn
+#
 # Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -14,26 +16,20 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-#
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-name = "AB"
-description = "Hotmail address book service"
+def soap_header(scenario, security_token):
+    """Returns the SOAP xml header"""
 
-url = "http://contacts.msn.com/abservice/abservice.asmx"
-
-from constants import *
-
-import ABAdd
-
-import ABFindAll
-
-import ABContactAdd
-import ABContactDelete
-import ABContactUpdate
-
-import ABGroupAdd
-import ABGroupDelete
-import ABGroupUpdate
-import ABGroupContactAdd
-import ABGroupContactDelete
+    return """<StorageApplicationHeader xmlns="http://www.msn.com/webservices/storage/w10">
+            <ApplicationID>Messenger Client 8.0</ApplicationID>
+            <Scenario>
+                %s
+            </Scenario>
+        </StorageApplicationHeader>
+        <StorageUserHeader xmlns="http://www.msn.com/webservices/storage/w10">
+            <Puid>0</Puid>
+            <TicketToken>
+                %s
+            </TicketToken>
+        </StorageUserHeader>""" % (scenario, security_token)
