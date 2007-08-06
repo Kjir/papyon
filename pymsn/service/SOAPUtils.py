@@ -3,6 +3,7 @@
 # pymsn - a python client library for Msn
 #
 # Copyright (C) 2005-2007 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -93,4 +94,6 @@ class XMLNS(object):
 
         class LIVE:
             ADDRESSBOOK = "http://www.msn.com/webservices/AddressBook"
-
+            STORAGE = "http://www.msn.com/webservices/storage/w10"
+            OIM = "http://messenger.msn.com/ws/2004/09/oim/"
+            RSI = "http://www.hotmail.msn.com/ws/2004/09/oim/rsi"

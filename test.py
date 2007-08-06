@@ -9,6 +9,7 @@ import gobject
 logging.basicConfig(level=logging.DEBUG)
 
 finished = False
+
 def get_proxies():
     import urllib
     proxies = urllib.getproxies()

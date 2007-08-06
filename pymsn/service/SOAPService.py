@@ -3,6 +3,7 @@
 # pymsn - a python client library for Msn
 #
 # Copyright (C) 2005-2007 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -131,7 +132,10 @@ class SOAPResponse(object):
             "wsi" : XMLNS.WS.ISSUE,
             "wsu" : XMLNS.WS.UTILITY,
             "ps" : XMLNS.MICROSOFT.PASSPORT,
-            "ab" : XMLNS.MICROSOFT.LIVE.ADDRESSBOOK}
+            "ab" : XMLNS.MICROSOFT.LIVE.ADDRESSBOOK,
+            "st" : XMLNS.MICROSOFT.LIVE.STORAGE,
+            "oim" : XMLNS.MICROSOFT.LIVE.OIM,
+            "rsi" : XMLNS.MICROSOFT.LIVE.RSI }
 
     def __init__(self, soap_data):
         try:

@@ -18,6 +18,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import xml.sax.saxutils as xml
+
 def soap_header(security_token):
     """Returns the SOAP xml header"""
 
@@ -27,4 +29,5 @@ def soap_header(security_token):
       <PassportCookie xmlns="http://www.hotmail.msn.com/ws/2004/09/oim/rsi">
           <t>%s</t> 
           <p>%s</p>
-      </PassportCookie>""" % (t[2:len(t)], p[2:len(p)])
+      </PassportCookie>""" % (xml.escape(t[2:len(t)]), 
+                              xml.escape(p[2:len(p)]))

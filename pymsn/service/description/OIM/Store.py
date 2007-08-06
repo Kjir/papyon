@@ -68,3 +68,6 @@ def soap_body(message_type, message_content):
       <Content xmlns="http://messenger.msn.com/ws/2004/09/oim/">
           %s
       </Content>""" % (message_type, message_content)
+
+def process_response(soap_response):
+    return None

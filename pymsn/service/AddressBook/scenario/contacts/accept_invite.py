@@ -17,12 +17,15 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from pymsn.service.AddressBook.scenario.base import BaseScenario
+from pymsn.profile import NetworkID
+
+from pymsn.service.AddressBook.scenario import *
 
 __all__ = ['AcceptInviteScenario']
 
 class AcceptInviteScenario(BaseScenario):
     def __init__(self, ab, sharing, callback, errback, add_to_contact_list=True,
-                 type='', account='', state='Accepted'):
+                 account='', network=NetworkID.MSN, state='Accepted'):
         """Accepts an invitation.
 
             @param ab: the address book service
@@ -35,24 +38,39 @@ class AcceptInviteScenario(BaseScenario):
         self.__sharing = sharing
         self.__add_to_contact_list = add_to_contact_list
 
-        self.type = type
         self.account = account
+        self.network = network
         self.state = state
+
+    def _type(self):
+        if self.network == NetworkID.MSN:
+            return 'Passport'
+        elif self.network == NetworkID.EXTERNAL:
+            return 'Email'
 
     def execute(self):
         if self.__add_to_contact_list:
-            contact_info = { 'passport_name' : self.account }
-            self.__ab.ContactAdd((self.__add_contact_callback,),
-                                 (self.__add_contact_errback,),
-                                 self._scenario, contact_info, {})
-        else:
-            self.__add_contact_callback()
-            
-    def __add_contact_callback(self):
+            if self.network == NetworkID.MSN:
+                am = MessengerContactAddScenario(self.__ab,
+                         (self.__add_contact_callback,),
+                         (self.__add_contact_errback,),
+                         self.account)
+                am()
+            elif self.network == NetworkID.EXTERNAL:
+                em = ExternalContactAddScenario(self.__ab,
+                         (self.__add_contact_callback,),
+                         (self.__add_contact_errback,),
+                         self.account)
+                em()
         self.__sharing.DeleteMember((self.__delete_member_callback,),
                                     (self.__delete_member_errback,),
-                                    self._scenario, 'Pending', self.type,
+                                    self._scenario, 'Pending', self._type(),
                                     self.state, self.account)
+            
+    def __add_contact_callback(self, contact_guid):
+        self._ab.FindAll((self.__find_all_callback, contact_guid),
+                         (self.__find_all_errback, contact_guid),
+                         self._scenario, True)
 
     def __add_contact_errback(self):
         errback = self._errback[0]
@@ -62,7 +80,7 @@ class AcceptInviteScenario(BaseScenario):
     def __delete_member_callback(self):
         self.__sharing.AddMember((self.__add_member_callback,),
                                  (self.__add_member_errback,),
-                                 self._scenario, 'Allow', self.type, 
+                                 self._scenario, 'Allow', self._type(), 
                                  self.state, self.account)
 
     def __delete_member_errback(self):
@@ -78,3 +96,13 @@ class AcceptInviteScenario(BaseScenario):
         errback = self._errback[0]
         args = self._errback[1:]
         errback(reason, *args)
+
+    def __find_all_callback(self, delta, contact_guid):
+        callback = self._callback
+        callback[0](contact_guid, delta, *callback[1:])
+
+    def __find_all_errback(self, reason):
+        errback = self._errback[0]
+        args = self._errback[1:]
+        errback(reason, *args)
+

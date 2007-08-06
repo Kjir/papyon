@@ -86,3 +86,6 @@ def soap_body(cid):
                                 'user_tile_url' : user_tile_url,
                                 'photo' : photo,
                                 'flags' : flags }
+
+def process_response(soap_response):
+    return None

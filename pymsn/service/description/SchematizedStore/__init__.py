@@ -20,6 +20,6 @@
 name = "SchematizedStore"
 description = "MSN Storage service"
 
-url = "http://storage.msn.com/storageservice/SchematizedStore.asmx"
+url = "https://storage.msn.com/storageservice/SchematizedStore.asmx"
 
 import GetProfile

@@ -40,3 +40,6 @@ def soap_body(message_id):
               <messageId>%s</messageId>
           </messageIds>
       </DeleteMessages>""" % message_id
+
+def process_response(soap_response):
+    return None

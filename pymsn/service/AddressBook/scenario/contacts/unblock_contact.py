@@ -17,12 +17,13 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from pymsn.service.AddressBook.scenario.base import BaseScenario
+from pymsn.profile import NetworkID
 
 __all__ = ['UnblockContactScenario']
 
 class UnblockContactScenario(BaseScenario):
-    def __init__(self, sharing, callback, errback, type='', account='', 
-                 state='Accepted'):
+    def __init__(self, sharing, callback, errback, account='', 
+                 network=NetworkID.MSN, state='Accepted'):
         """Unblocks a contact.
 
             @param sharing: the membership service
@@ -33,20 +34,26 @@ class UnblockContactScenario(BaseScenario):
         BaseScenario.__init__(self, 'BlockUnblock', callback, errback)
         self.__sharing = sharing
         
-        self.type = type
         self.account = account
+        self.network = network
         self.state = state
+
+    def _type(self):
+        if self.network == NetworkID.MSN:
+            return 'Passport'
+        elif self.network == NetworkID.EXTERNAL:
+            return 'Email'
 
     def execute(self):
         self.__sharing.DeleteMember((self.__delete_member_callback,),
                                     (self.__delete_member_errback,),
-                                    self._scenario, 'Block', self.type,
+                                    self._scenario, 'Block', self._type(),
                                     self.state, self.account)
 
     def __delete_member_callback(self):
         self.__sharing.AddMember((self.__add_member_callback,),
                                  (self.__add_member_errback,),
-                                 self._scenario, 'Allow', self.type, 
+                                 self._scenario, 'Allow', self._type(), 
                                  self.state, self.account)
 
     def __delete_member_errback(self):

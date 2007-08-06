@@ -43,3 +43,6 @@ def soap_body(message_id, also_mark_as_read):
            <messageId>%s</messageId>
            <alsoMarkAsRead>%s</alsoMarkAsRead>
        </GetMessage>""" % (message_id, also_mark_as_read)
+
+def process_response(soap_response):
+    return None

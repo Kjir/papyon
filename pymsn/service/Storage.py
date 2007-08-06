@@ -18,22 +18,22 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from pymsn.service.SOAPService import SOAPService
+from pymsn.service.SOAPService import SOAPService, url_split
 from pymsn.service.SOAPUtils import XMLTYPE
 from pymsn.service.SingleSignOn import *
+
+from pymsn.gnet.protocol import ProtocolFactory
 
 __all__ = ['Storage']
 
 class Storage(SOAPService):
-
-    # FIXME : find which security token is used with that service
 
     def __init__(self, sso, proxies=None):
         self._sso = sso
         self._tokens = {}
         SOAPService.__init__(self, "SchematizedStore", proxies)
 
-    @RequireSecurityTokens(LiveService.MESSENGER_CLEAR)
+    @RequireSecurityTokens(LiveService.CONTACTS)
     def GetProfile(self, callback, errback, scenario, cid, profile_rid, 
                    p_date_modified, expression_rid, e_date_modified, 
                    display_name, dn_last_modified, personal_status, 
@@ -54,37 +54,48 @@ class Storage(SOAPService):
                  callback, errback)
 
     def _HandleGetProfileResponse(self, callback, errback, response, user_date):
-        pass
+        location = response.find("./st:ExpressionProfile/st:Photo/st:DocumentStreams/st:DocumentStream/st:PreAuthURLPartner").text
+        location2 = response.find("./st:ExpressionProfile/st:Photo/st:DocumentStreams/st:DocumentStream/st:PreAuthURL").text
+        #print location2
+        #print location
+        url = location + str(self._tokens[LiveService.CONTACTS])
+        self.get_display_picture(url, None, None)
 
-    @RequireSecurityTokens(LiveService.MESSENGER_CLEAR)
+    def _dp_callback(self, *args):
+        print '###############'
+
+    def _dp_errback(self, *args):
+        print '{{{{{{{{{{{{{{{{'
+
+    @RequireSecurityTokens(LiveService.CONTACTS)
     def UpdateProfile(self, callback, errback):
         pass
 
     def _HandleUpdateProfileResponse(self, callback, errback, response, user_date):
         pass
 
-    @RequireSecurityTokens(LiveService.MESSENGER_CLEAR)
+    @RequireSecurityTokens(LiveService.CONTACTS)
     def CreateRelationships(self, callback, errback):
         pass
 
     def _HandleCreateRelationshipsResponse(self, callback, errback, response, user_date):
         pass
 
-    @RequireSecurityTokens(LiveService.MESSENGER_CLEAR)
+    @RequireSecurityTokens(LiveService.CONTACTS)
     def DeleteRelationships(self, callback, errback):
         pass
 
     def _HandleDeleteRelationshipsResponse(self, callback, errback, response, user_date):
         pass
 
-    @RequireSecurityTokens(LiveService.MESSENGER_CLEAR)
+    @RequireSecurityTokens(LiveService.CONTACTS)
     def CreateDocument(self, callback, errback):
         pass
 
     def _HandleCreateDocumentResponse(self, callback, errback, response, user_date):
         pass
 
-    @RequireSecurityTokens(LiveService.MESSENGER_CLEAR)
+    @RequireSecurityTokens(LiveService.CONTACTS)
     def FindDocuments(self, callback, errback):
         pass
 
@@ -92,7 +103,7 @@ class Storage(SOAPService):
         pass
 
     def __soap_request(self, method, scenario, args, callback, errback):
-        token = str(self._tokens[LiveService.MESSENGER_CLEAR])     
+        token = str(self._tokens[LiveService.CONTACTS])   
 
         http_headers = method.transport_headers()
         soap_action = method.soap_action()
@@ -106,6 +117,37 @@ class Storage(SOAPService):
                            soap_header, soap_body, soap_action, 
                            callback, errback, http_headers)
 
+    def get_display_picture(self, url, callback, errback):
+        scheme, host, port, resource = url_split(url)
+        print "scheme=%s;host=%s;port=%s;resource=%s" % (scheme, host, port, resource)
+        http_headers = {}
+        http_headers["Accept"] = "*/*"
+        http_headers["Proxy-Connection"] = "Keep-Alive"
+        http_headers["Connection"] = "Keep-Alive"
+        
+        proxy = self._proxies.get(scheme, None)
+        transport = ProtocolFactory(scheme, host, 80, proxy=proxy)
+        transport.connect("response-received", self._dp_callback)
+        transport.connect("request-sent", self._request_handler)
+        transport.connect("error", self._dp_errback)
+
+        transport.request(resource, http_headers, method='GET')
+
+def get_proxies():
+    import urllib
+    proxies = urllib.getproxies()
+    result = {}
+    if 'https' not in proxies and \
+            'http' in proxies:
+        url = proxies['http'].replace("http://", "https://")
+        result['https'] = pymsn.Proxy(url)
+    for type, url in proxies.items():
+        if type == 'no': continue
+        if type == 'https' and url.startswith('http://'):
+            url = url.replace('http://', 'https://', 1)
+        result[type] = pymsn.Proxy(url)
+    return result
+
 if __name__ == '__main__':
     import sys
     import getpass
@@ -116,6 +158,12 @@ if __name__ == '__main__':
     from pymsn.service.AddressBook import *
 
     logging.basicConfig(level=logging.DEBUG)
+
+    if "--http" in sys.argv:
+        http_mode = True
+        sys.argv.remove('--http')
+    else:
+        http_mode = False
 
     if len(sys.argv) < 2:
         account = raw_input('Account: ')
@@ -143,8 +191,8 @@ if __name__ == '__main__':
 
             storage = Storage(sso)
             storage.GetProfile(call, err, 'Initial', '2686986376622003804',
-                               True, True, True, True, True, True, 
-                               True, True, True, True, True)
+                               True, False, True, False, True, False, 
+                               True, False, True, True, False)
 
     sso = SingleSignOn(account, password)
     address_book = AddressBook(sso)

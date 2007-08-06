@@ -68,16 +68,20 @@ def soap_body(services_types, deltas_only, last_change):
 def process_response(soap_response):
     # FIXME: don't pick the 1st service only, we need to extract them all
     result = {}
-    memberships = soap_response.body.find("./ab:FindMembershipResponse/"
-            "ab:FindMembershipResult/ab:Services/"
-            "ab:Service/ab:Memberships")
+    service = soap_response.body.find("./ab:FindMembershipResponse/"
+                                      "ab:FindMembershipResult/ab:Services/"
+                                      "ab:Service")
 
+    memberships = service.find("./ab:Memberships")
     for membership in memberships:
         role = membership.find("./ab:MemberRole")
         members = membership.findall("./ab:Members/ab:Member")
         if role is None or len(members) == 0:
             continue
         result[role.text] = members
-    return result
+
+    last_changes = service.find("./ab:LastChange")
+
+    return (result, last_changes)
 
     

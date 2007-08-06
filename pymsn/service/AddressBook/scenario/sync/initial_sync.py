@@ -39,7 +39,7 @@ class InitialSyncScenario(BaseScenario):
         self.__membership.FindMembership((self.__membership_findall_callback,),
                                          (self.__membership_findall_errback,),
                                          self._scenario, ['Messenger'],
-                                         False, '')
+                                         False)
         self.__address_book.FindAll((self.__ab_findall_callback,),
                                     (self.__ab_findall_errback,),
                                     self._scenario, False)

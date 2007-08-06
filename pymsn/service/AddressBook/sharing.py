@@ -91,9 +91,10 @@ class Sharing(SOAPService):
         self._tokens = {}
         SOAPService.__init__(self, "Sharing", proxies)
 
+        self._last_changes = "0001-01-01T00:00:00.0000000-08:00"
+
     @RequireSecurityTokens(LiveService.CONTACTS)
-    def FindMembership(self, callback, errback, scenario,
-            services, deltas_only, last_change=''):
+    def FindMembership(self, callback, errback, scenario, services, deltas_only):
         """Requests the membership list.
 
             @param scenario: 'Initial' | ...
@@ -102,16 +103,18 @@ class Sharing(SOAPService):
                               'Space', 'Profile' ]
             @param deltas_only: True if the method should only check changes 
                                 since last_change, False else
-            @param last_change: an ISO 8601 timestamp
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
         self.__soap_request(self._service.FindMembership, scenario,
-                (services, deltas_only, last_change), callback, errback)
+                (services, deltas_only, self._last_changes), callback, errback)
     
     def _HandleFindMembershipResponse(self, callback, errback, response, user_data):
+        if response[1] is not None:
+            self._last_changes = response[1].text
+
         memberships = {}
-        for role, members in response.iteritems():
+        for role, members in response[0].iteritems():
             for member in members:
                 membership_id = XMLTYPE.int.decode(member.find("./ab:MembershipId").text)
                 member_obj = Member.new(member)

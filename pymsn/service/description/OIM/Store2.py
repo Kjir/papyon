@@ -22,6 +22,8 @@ def soap_header(from_member_name, friendly_name, proxy, msnp_ver, build_ver,
                 lock_key):
     """Returns the SOAP xml header"""
 
+    # FIXME : espace the parameters
+
     return """<From memberName="%(from_member_name)s" 
                     friendlyName="%(friendly_name)s" 
                     xml:lang="en-US" proxy="%(proxy)s" 
@@ -74,3 +76,6 @@ def soap_body(message_type, message_content):
       <Content xmlns="http://messenger.msn.com/ws/2004/09/oim/">
           %s
       </Content>""" % (message_type, message_content)
+
+def process_response(soap_response):
+    return None

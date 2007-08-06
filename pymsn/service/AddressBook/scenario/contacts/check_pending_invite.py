@@ -32,5 +32,16 @@ class CheckPendingInviteScenario(BaseScenario):
         self.__sharing = sharing
 
     def execute(self):
-        # check using FindMembership
-        pass
+        self.__sharing.FindMembership((self.__membership_findall_callback,),
+                (self.__membership_findall_errback,),
+                self._scenario, ['Messenger'], True)
+    
+    def __membership_findall_callback(self, result):
+        callback = self._callback
+        callback[0](result, *callback[1:])
+
+    def __membership_findall_errback(self, reason):
+        errback = self._errback[0]
+        args = self._errback[1:]
+        errback(reason, *args)
+

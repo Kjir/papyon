@@ -37,3 +37,5 @@ def soap_body():
     return """
         <GetMetadata xmlns="http://www.hotmail.msn.com/ws/2004/09/oim/rsi" />""" 
 
+def process_response(soap_response):
+    return None

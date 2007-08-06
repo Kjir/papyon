@@ -72,3 +72,11 @@ def soap_body(cid, profile_rid, p_date_modified, expression_rid,
                               'user_tile_url' : user_tile_url,
                               'photo' : photo,
                               'flags' : flags }
+
+def process_response(soap_response):
+    body = soap_response.body
+    try:
+        return body.find("./st:GetProfileResponse/st:GetProfileResult")
+    except AttributeError:
+        return None
+    return None

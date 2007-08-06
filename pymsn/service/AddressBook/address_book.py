@@ -102,6 +102,37 @@ class AddressBookState(object):
     SYNCHRONIZED = 2
     """The addressbook is already synchornized"""
 
+class PendingContact(object):
+    
+    def __init__(self, account, network, display_name='', invite_message=''):
+        self._account = account
+        self._network = network
+        self._display_name = display_name
+        self._invite_message = invite_message
+
+    @property
+    def account(self):
+        return self._account
+
+    @property
+    def network(self):
+        return self._network
+    
+    @property
+    def display_name(self):
+        return self._display_name
+
+    @property
+    def invite_message(self):
+        return self._invite_message
+
+    def __eq__(self, pending_contact):
+        return self._account == pending_contact.account & \
+            self._network == pending_contact.network
+
+    def __str__(self):
+        return "%s (%s) %s %s" % (self.account, self.display_name, 
+                                  self.network, self.invite_message)
 
 class AddressBook(gobject.GObject):
     
@@ -149,7 +180,11 @@ class AddressBook(gobject.GObject):
                    "State",
                    "The state of the addressbook.",
                    0, 2, AddressBookState.NOT_SYNCHRONIZED,
-                   gobject.PARAM_READABLE)
+                   gobject.PARAM_READABLE),
+        "pending-contacts" : (gobject.TYPE_PYOBJECT,
+                              "Pending contacts",
+                              "The pending contacts",
+                              gobject.PARAM_READABLE)
         }
 
     def __init__(self, sso, proxies=None):
@@ -160,7 +195,8 @@ class AddressBook(gobject.GObject):
         self._sharing = sharing.Sharing(sso, proxies)
 
         self.__state = AddressBookState.NOT_SYNCHRONIZED
-        
+        self.__pending_contacts = set()
+
         self.groups = {}
         self.contacts = AddressBookStorage()
         self._profile = None
@@ -184,11 +220,39 @@ class AddressBook(gobject.GObject):
     state = property(__get_state)
     _state = property(__get_state, __set_state)
 
+    def __get_pending_contacts(self):
+        return self.__pending_contacts
+    def __set_pending_contacts(self, pending_contacts):
+        self.__pending_contacts = pending_contacts
+        self.notify("pending-contacts")
+    pending_contacts = property(__get_pending_contacts)
+    _pending_contacts = property(__get_pending_contacts, 
+                                 __set_pending_contacts)
+
     @property
     def profile(self):
         return self._profile
 
     # Public API
+    def accept_contact_invitation(self, pending_contact, add_to_contact_list=True):
+        self._pending_contacts.discard(pending_contact)
+        ai = scenario.AcceptInviteScenario(self._ab, self._sharing,
+                 (self.__accept_contact_invitation_cb),
+                 (self.__common_errback,),
+                 add_to_contact_list)
+        ai.account = pending_contact.account
+        ai.network = pending_contact.network
+        ai()
+
+    def decline_contact_invitation(self, pending_contact):
+        self._pending_contacts.discard(pending_contact)
+        di = scenario.DeclineInviteScenario(self._ab, self._sharing,
+                 (self.__decline_contact_invitation_cb),
+                 (self.__common_errback,))
+        di.account = pending_contact.account
+        di.network = pending_contact.network
+        di()
+
     def add_messenger_contact(self, account):
         am = scenario.MessengerContactAddScenario(self._ab,
                 (self.__add_messenger_contact_cb,),
@@ -232,18 +296,16 @@ class AddressBook(gobject.GObject):
         bc = scenario.BlockContactScenario(self._sharing,
                 (self.__common_callback, 'contact-blocked', contact),
                 (self.__common_errback,))
-        # bc.type = contact.type
-        bc.type = 'Passport'
         bc.account = contact.account
+        bc.network = contact.network_id
         bc()
 
     def unblock_contact(self, contact):
         uc = scenario.UnblockContactScenario(self._sharing,
                 (self.__common_callback, 'contact-unblocked', contact),
                 (self.__common_errback,))
-        # uc.type = contact.type
-        uc.type = 'Passport'
         uc.account = contact.account
+        uc.network = contact.network_id
         uc()
 
     def add_group(self, group_name):
@@ -259,7 +321,6 @@ class AddressBook(gobject.GObject):
                 (self.__common_errback,))
         dg.group_guid = group.id
         dg()
-
 
     def rename_group(self, group, new_name):
         rg = scenario.GroupRenameScenario(self._ab,
@@ -280,10 +341,53 @@ class AddressBook(gobject.GObject):
     def delete_contact_from_group(self, group, contact):
         dc = scenario.GroupContactDeleteScenario(self._ab,
                 (self.__delete_contact_from_group_cb, group, contact),
-                (self.__common_errback,))
+                (self.__commonq_errback,))
         dc.group_guid = group.id
         dc.contact_guid = contact.id
         dc()
+
+    # End of public API
+    def _check_pending_invitations(self):
+        cp = scenario.CheckPendingInviteScenario(self._sharing,
+                 (self.__update_memberships,),
+                 (self.__common_errback,))
+        cp()
+
+    def __update_memberships(self, memberships):
+        for member in memberships:
+            if isinstance(member, sharing.PassportMember):
+                network = profile.NetworkID.MSN
+            elif isinstance(member, sharing.EmailMember):
+                network = profile.NetworkID.EXTERNAL
+
+            contacts = self.contacts.search_by_account(member.Account)
+            
+            contact = None
+            for c in contacts:
+                if c.network_id == network:
+                    contact = c
+                    break
+            
+            if contact is None:
+                # Pending contact
+                msg = member.Annotations.get('MSN.IM.InviteMessage', '')
+                p = PendingContact(member.Account.encode("utf-8"), network,
+                                   member.DisplayName.encode("utf-8"), 
+                                   msg.encode("utf-8"))
+                self._pending_contacts.add(p)
+            else:
+                for role in member.Roles:
+                    if role == "Allow":
+                        membership = profile.Membership.ALLOW
+                    elif role == "Block":
+                        membership = profile.Membership.BLOCK
+                    elif role == "Reverse":
+                        membership = profile.Membership.REVERSE
+                    elif role == "Pending":
+                        membership = profile.Membership.PENDING
+                    else:
+                        raise NotImplementedError("Unknown Membership Type : " + membership)
+                    contact._add_membership(membership)
 
     # Callbacks
     def __initial_sync_callback(self, address_book, memberships):
@@ -349,32 +453,15 @@ class AddressBook(gobject.GObject):
                     self._profile = c
                 else:
                     self.contacts.add(c)
-
-        for member in memberships:
-            if member.Type != "Passport":
-                 #FIXME: maybe we want to avoid filtering
-                 continue
             
-            contact = self.contacts\
-                    .search_by_account(member.Account)[0]
-            
-            if contact is None:
-                continue
-
-            for role in member.Roles:
-                if role == "Allow":
-                    membership = profile.Membership.ALLOW
-                elif role == "Block":
-                    membership = profile.Membership.BLOCK
-                elif role == "Reverse":
-                    membership = profile.Membership.REVERSE
-                elif role == "Pending":
-                    membership = profile.Membership.PENDING
-                else:
-                    raise NotImplementedError("Unknown Membership Type : " + membership)
-
-                contact._add_membership(membership)
+        self.__update_memberships(memberships)
         self._state = AddressBookState.SYNCHRONIZED
+
+    def __accept_contact_invitation_cb(self, contact_guid, address_book_delta):
+        self.__add_messenger_contact_cb(self, contact_guid, address_book_delta)
+
+    def __decline_contact_invitation_cb(self):
+        pass
 
     def __add_messenger_contact_cb(self, contact_guid, address_book_delta):
         contacts = address_book_delta.contacts
@@ -397,7 +484,6 @@ class AddressBook(gobject.GObject):
                                             contact.DisplayName)
                 if display_name == "":
                     display_name = external_email.Email
-
 
                 c = profile.Contact(contact.Id,
                                     profile.NetworkID.EXTERNAL,
@@ -509,11 +595,19 @@ if __name__ == '__main__':
                 print "Group : %s (%s)" % (guid, group.name)
 
             for contact in address_book.contacts:
-                print "Contact : %s (%s) %s %s" % (contact.account, 
-                                                   contact.display_name, 
-                                                   contact.network_id,
-                                                   contact.memberships)
+                print "Contact : %s (%s) %s" % \
+                    (contact.account, 
+                     contact.display_name, 
+                     contact.network_id)
 
+            for pending in address_book.pending_contacts:
+                print "Pending contact : %s" % pending
+
+            #address_book._check_pending_invitations()
+            #address_book.accept_contact_invitation(address_book.pending_contacts.pop())
+            #print address_book.pending_contacts.pop()
+            #address_book.accept_contact_invitation(address_book.pending_contacts.pop())
+            
             #address_book.add_group("callback test6")
             #address_book.delete_group(address_book.groups.values()[0])
             #address_book.rename_group(address_book.groups.values()[0], "new group name")
@@ -523,6 +617,7 @@ if __name__ == '__main__':
             #                                       address_book.contacts[0])
             #address_book.block_contact(address_book.contacts.search_by_account('pymsn.rewrite@yahoo.com')[0])
             #address_book.unblock_contact(address_book.contacts[0])
+            #address_book.block_contact(address_book.contacts[0])
             #address_book.delete_contact(address_book.contacts[2])
             #address_book.add_messenger_contact("tryggve2@gmail.com")
 
