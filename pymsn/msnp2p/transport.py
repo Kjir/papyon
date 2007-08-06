@@ -20,12 +20,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import pymsn.util.StringIO as StringIO
+from pymsn.switchboard_manager as SwitchboardClient
+from pymsn.msnp.message as MessageAcknowledgement
 
 import struct
 import random
 from copy import copy
 
-__all__ = ['TLPHeader']
+__all__ = ['MessageBlob', 'SwitchboardP2PTransport']
 
 def _generate_id():
     """
@@ -101,6 +103,7 @@ class MessageChunk(object):
     def __init__(self, header, body):
         self.header = header
         self.body = body
+        self.application_id = 0
 
     def __str__(self):
         return str(self.header) + str(self.body)
@@ -183,7 +186,8 @@ class MessageBlob(object):
         header.chunk_size = len(data)
         header.dw1 = _chunk_id()
 
-        return MessageChunk(header, data)
+        chunk = MessageChunk(header, data)
+        chunk.application_id = self.application_id
 
     def append_chunk(self, chunk):
         assert self.data is not None, "Trying to write to a Read Only blob"
@@ -217,10 +221,11 @@ class BaseP2PTransport(gobject.GObject):
                 (object,)),
             }
     
-    def __init__(self, client, name):
+    def __init__(self, client, name, peer):
         gobject.GObject.__init__(self)
         self._client = client
         self._name = name
+        self._peer = peer
         self._reset()
 
     @property
@@ -228,8 +233,8 @@ class BaseP2PTransport(gobject.GObject):
         return self._name
     
     @property
-    def peers(self):
-        raise NotImplementedError
+    def peer(self):
+        return self._peer
     
     @property
     def rating(self):
@@ -322,7 +327,37 @@ class BaseP2PTransport(gobject.GObject):
 
 gobject.type_register(BaseP2PTransport) 
 
-class SwitchboardP2PTransport(BaseP2PTransport):
-    def __init__(self, client):
-        BaseP2PTransport.__init__(self, client, "switchboard")
+class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
+    def __init__(self, client, peer):
+        BaseP2PTransport.__init__(self, client, "switchboard", peer)
+        SwitchboardClient.__init__(Self, client, peer)
+
+    @staticmethod
+    def _can_handle_message(message, switchboard_client=None):
+        content_type = message.content_type[0]
+        return content_type == 'application/x-msnmsgrp2p'
+
+    @property
+    def rating(self):
+        return 0
+    
+    @property
+    def max_chunk_size(self):
+        return 1250 # length of the chunk including the header but not the footer
+
+    def _send_chunk(self, chunk):
+        headers = {'P2P-Dest', self.peer.account}
+        content_type = 'application/x-msnmsgrp2p'
+        body = str(chunk) + struct.pack('>L', chunk.application_id)
+        self._send_message(content_type, body, headers, MessageAcknowledgement.MSNC)
+
+    def _on_message_received(self, message):
+        chunk = MessageChunk.parse(message.body[:-4])
+        chunk.application_id = struct.unpack('>L', message.body[-4:])[0]
+        self._on_chunk_received(chunk)
+
+    def _on_message_sent(self, message):
+        chunk = MessageChunk.parse(message.body[:-4])
+        chunk.application_id = struct.unpack('>L', message.body[-4:])[0]
+        self._on_chunk_sent(chunk)
 
