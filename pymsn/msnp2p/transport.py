@@ -29,18 +29,22 @@ from copy import copy
 
 __all__ = ['MessageBlob', 'SwitchboardP2PTransport']
 
-def _generate_id():
+MAX_INT32 = 2147483647
+
+def _generate_id(max=MAX_INT32):
     """
     Returns a random ID.
 
         @return: a random integer between 1000 and sys.maxint
         @rtype: integer
     """
-    return random.randint(1000, sys.maxint)
+    return random.randint(1000, max)
 
-_previous_chunk_id = random.randint(1000, 2 ** 31 - 1)
+_previous_chunk_id = _generate_id(MAX_INT32 - 1)
 def _chunk_id():
     _previous_chunk_id += 1
+    if _previous_chunk_id == MAX_INT32:
+        _previous_chunk_id = 1
     return _previous_chunk_id
 
 class TLPHeader(object):

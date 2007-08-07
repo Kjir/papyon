@@ -93,8 +93,11 @@ class HTTPMessage(object):
 
     def __str__(self):
         result = []
+        body = str(self.body)
         for name in self.headers:
-            result.append(": ".join((name, self.headers[name])))
+            result.append(": ".join((name, str(self.headers[name]))))
+        #if "Content-Length" not in self.headers:
+        #    result.append("Content-Length: %d" % len(body))
         result.append("")
         result.append(self.body)
         return "\r\n".join(result)

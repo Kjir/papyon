@@ -48,6 +48,11 @@ class SLPMessage(HTTPMessage):
             self.add_header("Call-ID", call_id)
         self.add_header("Max-Forwards", str(max_forwards))
 
+    def __str__(self):
+        self.add_header("Content-Type", self.body.content_type)
+        self.add_header("Content-Length", len(str(self.body)))
+        return HTTPMessage.__str__(self)
+
     @staticmethod
     def parse(raw_message):
         if raw_message.find("MSNSLP/1.0") < 0:
@@ -85,6 +90,7 @@ class SLPResponseMessage(SLPMessage):
 class SLPMessageBody(HTTPMessage):
     def __init__(self, content_type, data=""):
         HTTPMessage.__init__(self)
+        self.content_type = content_type
         self.parse(data)
 
     def parse(self, data):
@@ -96,21 +102,3 @@ class SLPMessageBody(HTTPMessage):
 
     def __str__(self):
         return = HTTPMessage.__str__(self) + "\x00"
-
-
-class SLPSession(object):
-    def __init__(self, client, euf_guid, application_id):
-        self._client = client
-        self._euf_guid = euf_guid
-        self._application_id = application_id
-    
-    def invite(self, peer):
-        pass
-
-    def close(self):
-        pass
-
-    def acknowledge(self):
-        pass
-
-    
