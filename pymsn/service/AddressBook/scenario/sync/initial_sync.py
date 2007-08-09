@@ -17,11 +17,12 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from pymsn.service.AddressBook.scenario.base import BaseScenario
+from pymsn.service.AddressBook import *
 
 __all__ = ['InitialSyncScenario']
 
 class InitialSyncScenario(BaseScenario):
-    def __init__(self, address_book, membership, callback, errback):
+    def __init__(self, address_book, membership, callback, errback, account=''):
         """Synchronizes the membership content when logging in.
 
             @param membership: the address book service
@@ -35,14 +36,17 @@ class InitialSyncScenario(BaseScenario):
         self.__membership_response = None
         self.__ab_response = None
 
+        # FIXME : get the real account for 'Me'
+        self.__account = account
+
     def execute(self):
+        self.__address_book.FindAll((self.__ab_findall_callback,),
+                                    (self.__ab_findall_errback,),
+                                    self._scenario, False)
         self.__membership.FindMembership((self.__membership_findall_callback,),
                                          (self.__membership_findall_errback,),
                                          self._scenario, ['Messenger'],
                                          False)
-        self.__address_book.FindAll((self.__ab_findall_callback,),
-                                    (self.__ab_findall_errback,),
-                                    self._scenario, False)
 
     def __membership_findall_callback(self, result):
         self.__membership_response = result
@@ -53,13 +57,6 @@ class InitialSyncScenario(BaseScenario):
             self.__membership_response = None
             self.__ab_response = None
 
-    # FIXME : use ab.Add to create the addressbook on the server if needed
-
-    def __membership_findall_errback(self, reason):
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(reason, *args) 
-
     def __ab_findall_callback(self, result):
         self.__ab_response = result
         if self.__membership_response is not None:
@@ -69,7 +66,30 @@ class InitialSyncScenario(BaseScenario):
             self.__membership_response = None
             self.__ab_response = None
 
-    def __ab_findall_errback(self, reason):
+    def __membership_findall_errback(self, error_code):
+        self.__sync_errback(error_code)
+
+    def __ab_findall_errback(self, error_code):
+        self.__sync_errback(error_code)
+
+    def __sync_errback(self, error_code):
+        errcode = AddressBookError.UNKNOWN
+        if error_code == 'ABDoesNotExist':
+            self.__ab.ABAdd((self.__ab_add_callback,),
+                            (self.__ab_add_errback,),
+                            self._scenario,
+                            self._account)
+            return
         errback = self._errback[0]
         args = self._errback[1:]
-        errback(reason, *args) 
+        errback(errcode, *args) 
+
+    def __ab_add_callback(self, *args):
+        self.execute()
+
+    def __ab_add_errback(self, error_code):
+        errcode = AddressBookError.UNKNOWN
+        errback = self._errback[0]
+        args = self._errback[1:]
+        errback(errcode, *args) 
+

@@ -195,7 +195,7 @@ class AB(SOAPService):
                             callback, errback)
 
     def _HandleABAddResponse(self, callback, errback, response, user_data):
-        pass
+        return None
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def FindAll(self, callback, errback, scenario, deltas_only):
@@ -419,6 +419,10 @@ class AB(SOAPService):
                            callback, errback,
                            http_headers)
 
+    def _HandleSOAPFault(self, request_id, callback, errback,
+            soap_response, user_data):
+        error_code = soap_response.fault.find("./detail/ab:errorcode").text
+        errback[0](error_code, *errback[1:])
 
 if __name__ == '__main__':
     import sys

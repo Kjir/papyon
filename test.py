@@ -33,7 +33,8 @@ class ClientEvents(pymsn.event.ClientEventInterface):
         elif state == pymsn.event.ClientState.OPEN:
             self._client.profile.display_name = "Kimbix"
             self._client.profile.presence = pymsn.Presence.ONLINE
-            self._client.profile.personal_message = "Testing pymsn, and freeing the pandas!"
+            self._client.profile.current_media = ("I listen to", "Nothing")
+            #self._client.profile.personal_message = "Testing pymsn, and freeing the pandas!"
             gobject.timeout_add(5000, self._client.start_conversation)
 
     def on_client_error(self, error_type, error):

@@ -20,6 +20,9 @@
 
 from pymsn.service.SOAPUtils import XMLTYPE
 from pymsn.service.SingleSignOn import *
+from pymsn.service.SOAPService import SOAPService
+
+import email.message as email
 
 __all__ = ['RSI']
 
@@ -29,33 +32,39 @@ class RSI(SOAPService):
         self._tokens = {}
         SOAPService.__init__(self, "RSI", proxies)
 
-    @RequireSecurityTokens(LiveService.MESSENGER_CLEAR)
+    @RequireSecurityTokens(LiveService.MESSENGER)
     def GetMetadata(self, callback, errback):
         self.__soap_request(self._service.GetMetadata, (), 
                             callback, errback)
 
     def _HandleGetMetadataResponse(self, callback, errback, response, user_data):
-        pass
+        callback[0](response.text, *callback[1:])
 
-    @RequireSecurityTokens(LiveService.MESSENGER_CLEAR)
+    @RequireSecurityTokens(LiveService.MESSENGER)
     def GetMessage(self, callback, errback, message_id, mark_as_read):
         self.__soap_request(self._service.GetMessage, 
-                            (message_id, XMLTYPE.bool.encode(mark_as_read)) 
+                            (message_id, XMLTYPE.bool.encode(mark_as_read)), 
                             callback, errback)
 
     def _HandleGetMessageResponse(self, callback, errback, response, user_data):
-        pass
+        m = email.message_from_string(response.text)
+        if m.get_content_type().split('/')[1] == 'vnd.ms-msnipg':
+            # FIXME : process the IPG data 
+            # http://www.amsn-project.net/forums/viewtopic.php?p=21744
+            # set a mobile sender flag
+            return
+        callback[0](m.get_payload().decode('base64'), *callback[1:])
 
-    @RequireSecurityTokens(LiveService.MESSENGER_CLEAR)
-    def DeleteMessages(self, callback, errback, message_id):
-        self.__soap_request(self._service.DeleteMessages, (message_id),
+    @RequireSecurityTokens(LiveService.MESSENGER)
+    def DeleteMessages(self, callback, errback, message_ids):
+        self.__soap_request(self._service.DeleteMessages, (message_ids),
                             callback, errback)
     
     def _HandleDeleteMessagesResponse(self, callback, errback, response, user_data):
-        pass
+        callback[0](*callback[1:])
 
     def __soap_request(self, method, args, callback, errback):
-        token = str(self._tokens[LiveService.MESSENGER_CLEAR])
+        token = str(self._tokens[LiveService.MESSENGER])
 
         http_headers = method.transport_headers()
         soap_action = method.soap_action()
@@ -67,4 +76,12 @@ class RSI(SOAPService):
         self._send_request(method_name, self._service.url, 
                            soap_header, soap_body, soap_action, 
                            callback, errback, http_headers)
+
+    def _HandleSOAPFault(self, request_id, callback, errback,
+            soap_response, user_data):
+        errback[0](None, *errback[1:])
+
+
+
+
         

@@ -16,37 +16,32 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-from pymsn.service.AddressBook.scenario.base import BaseScenario
-from pymsn.service.AddressBook import *
+from pymsn.service.OfflineIM.scenario.base import BaseScenario
 
-__all__ = ['GroupDeleteScenario']
+__all__ = ['SendMessageScenario']
 
-class GroupDeleteScenario(BaseScenario):
-    def __init__(self, ab, callback, errback, group_guid=''):
-        """Deletes a group from the address book.
+class SendMessageScenario(BaseScenario):
+    def __init__(self, oim, callback, errback):
+        """Accepts an invitation.
 
-            @param ab: the address book service
+            @param oim: the oim service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
-            @param group_guid: the guid of the group to delete"""
-        BaseScenario.__init__(self, 'GroupSave', callback, errback)
-        self.__ab = ab
-
-        self.group_guid = group_guid
+        """
+        BaseScenario.__init__(self, callback, errback)
+        self.__oim = oim
 
     def execute(self):
-        self.__ab.GroupDelete((self.__group_delete_callback,),
-                              (self.__group_delete_errback,),
-                              self._scenario, self.group_guid)
-
-    def __group_delete_callback(self):
+        # self.__oim.Store2((self.__store2_callback,),
+        #                   (self.__store2_errback,))
+        pass
+            
+    def __store2_callback(self):
         callback = self._callback
         callback[0](*callback[1:])
 
-    def __group_delete_errback(self, error_code):
-        errcode = AddressBookError.UNKNOWN
-        if error_code == 'GroupDoesNotExist':
-            errcode = AddressBookError.GROUP_DOES_NOT_EXIST
+    def __store2_errback(self, error_code):
+        errcode = OfflineMessagesBoxError.UNKNOWN
         errback = self._errback[0]
         args = self._errback[1:]
         errback(errcode, *args)

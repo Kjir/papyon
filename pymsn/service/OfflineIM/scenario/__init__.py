@@ -17,33 +17,12 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-from common import *
+name = "scenario"
+description = ""
 
-def transport_headers():
-    """Returns a dictionary, containing transport (http) headers
-    to use for the request"""
+import base
 
-    return {}
-
-def soap_action():
-    """Returns the SOAPAction value to pass to the transport
-    or None if no SOAPAction needs to be specified"""
-
-    return "http://www.hotmail.msn.com/ws/2004/09/oim/rsi/DeleteMessages"
-
-def soap_body(message_ids):
-    """Returns the SOAP xml body"""
-
-    ids = ""
-    for message_id in message_ids:
-        ids += "<messageId>%s</messageId>" %  message_id
-
-    return """
-      <DeleteMessages xmlns="http://www.hotmail.msn.com/ws/2004/09/oim/rsi">
-          <messageIds>
-              %s
-          </messageIds>
-      </DeleteMessages>""" % ids
-
-def process_response(soap_response):
-    return None
+from sync_headers import *
+from fetch_messages import *
+from send_message import *
+from delete_messages import *

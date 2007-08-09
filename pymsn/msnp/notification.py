@@ -209,6 +209,21 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._client.profile._server_property_changed("personal-message",
                 personal_message)
 
+    def set_current_media(self, current_media):
+        """Sets the new current media
+
+            @param current_media: the new current media
+            @type current_media: (track, artist) tuple"""
+        cm = '<Data>'\
+                '<PSM></PSM>'\
+                '<CurrentMedia>\\0Music\\01\\0{0} - {1}\\0%s\\0%s\\0\\0</CurrentMedia>'\
+                '<MachineGuid>{CAFEBABE-DEAD-BEEF-BAAD-FEEDDEADC0DE}</MachineGuid>'\
+            '</Data>' % (xml_utils.escape(current_media[0]), 
+                         xml_utils.escape(current_media[1]))
+        self._transport.send_command_ex('UUX', payload=cm)
+        self._client.profile._server_property_changed("current-media",
+                current_media)
+
     def signoff(self):
         """Logout from the server"""
         self._transport.send_command_ex('OUT')
@@ -480,6 +495,13 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             logger.warning("Contact (netword_id=%d) %s not found" % \
                     (netword_id, account))
         for contact in contacts:
+            cm = et.fromstring(command.payload).find("./CurrentMedia")
+            if cm is not None and cm.text is not None:
+                parts = cm.text.split('\\0')
+                if parts[1] == 'Music' and parts[2] == '1':
+                    cm = (parts[4].encode("utf-8"), parts[5].encode("utf-8"))
+                    contact._server_property_changed("current-media", cm)
+                    continue
             pm = et.fromstring(command.payload).find("./PSM")
             if pm is not None and pm.text is not None:
                 pm = pm.text.encode("utf-8")

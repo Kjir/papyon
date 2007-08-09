@@ -17,6 +17,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from pymsn.service.AddressBook.scenario.base import BaseScenario
+from pymsn.service.AddressBook import *
 
 __all__ = ['GroupAddScenario']
 
@@ -42,7 +43,10 @@ class GroupAddScenario(BaseScenario):
         callback = self._callback
         callback[0](group_guid, *callback[1:])
 
-    def __group_add_errback(self, reason):
+    def __group_add_errback(self, error_code):
+        errcode = AddressBookError.UNKNOWN
+        if error_code == 'GroupAlreadyExists':
+            errcode = AddressBookError.GROUP_ALREADY_EXISTS
         errback = self._errback[0]
         args = self._errback[1:]
-        errback(reason, *args)
+        errback(errcode, *args)

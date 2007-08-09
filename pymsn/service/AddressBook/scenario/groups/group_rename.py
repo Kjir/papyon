@@ -17,6 +17,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from pymsn.service.AddressBook.scenario.base import BaseScenario
+from pymsn.service.AddressBook import *
 
 __all__ = ['GroupRenameScenario']
 
@@ -45,7 +46,10 @@ class GroupRenameScenario(BaseScenario):
         callback = self._callback
         callback[0](*callback[1])
 
-    def __group_rename_errback(self, reason):
+    def __group_rename_errback(self, error_code):
+        errcode = AddressBookError.UNKNOWN
+        if error_code == 'GroupAlreadyExists':
+            errcode = AddressBookError.GROUP_ALREADY_EXIST
         errback = self._errback[0]
         args = self._errback[1:]
-        errback(reason, *args)
+        errback(errcode, *args)

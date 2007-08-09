@@ -23,6 +23,7 @@ import xml.sax.saxutils as xml
 def soap_header(security_token):
     """Returns the SOAP xml header"""
 
+    print security_token
     t,p = security_token.split(';')
 
     return """

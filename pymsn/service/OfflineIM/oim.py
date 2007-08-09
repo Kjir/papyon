@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+3# -*- coding: utf-8 -*-
 #
 # pymsn - a python client library for Msn
 #
@@ -18,6 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from pymsn.service.SOAPService import SOAPService
 from pymsn.msnp.notification import ProtocolConstant
 from pymsn.service.SingleSignOn import *
 
@@ -36,8 +37,7 @@ class OIM(SOAPService):
         token = str(self._tokens[LiveService.MESSENGER_CLEAR])
         fname = "=?utf-8?B?%s=" % friendly_name.encode('base64')
 
-        # TODO : encode message_content in the right mail format
-        content = message_content 
+        content = self.__build_mail_data(None, None, message_content)
 
         self.__soap_request(self._service.Store,
                             (from_member_name, fname, 
@@ -61,8 +61,7 @@ class OIM(SOAPService):
         token = str(self._tokens[LiveService.MESSENGER_CLEAR])
         fname = "=?utf-8?B?%s=" % friendly_name.encode('base64')
 
-        # TODO : encode message_content in the right mail format
-        content = message_content 
+        content = self.__build_mail_data(None, None, message_content)
 
         self.__soap_request(self._service.Store2,
                             (from_member_name, fname, 
@@ -79,6 +78,17 @@ class OIM(SOAPService):
 
     def _HandleStore2Response(self, callback, errback, response, user_data):
         pass
+
+    def __build_mail_data(self, run_id, sequence_number, content):
+        mail_data = 'MIME-Version: 1.0\n'
+        # FIXME : the text/plain could be something else if the content is an IPG
+        mail_data += 'Content-Type: text/plain; charset=UTF-8\n'
+        mail_data += 'Content-Transfer-Encoding: base64\n'
+        mail_data += 'X-OIM-Message-Type: OfflineMessage\n'
+        mail_data += 'X-OIM-Run-Id: {%s}\n' % run_id
+        mail_data += 'X-OIM-Sequence-Num: %s\n\n' % sequence_number
+        mail_data += content.encode('base64')
+        return mail_data
     
     def __soap_request(self, method, header_args, body_args, 
                        callback, errback):
@@ -92,3 +102,7 @@ class OIM(SOAPService):
         self._send_request(method_name, self._service.url, 
                            soap_header, soap_body, soap_action, 
                            callback, errback, http_headers)
+
+    def _HandleSOAPFault(self, request_id, callback, errback,
+            soap_response, user_data):
+        errback[0](None, *errback[1:])

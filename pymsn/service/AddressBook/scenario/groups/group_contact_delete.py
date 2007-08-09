@@ -45,7 +45,10 @@ class GroupContactDeleteScenario(BaseScenario):
         callback = self._callback
         callback[0](*callback[1:])
 
-    def __group_contact_delete_errback(self, reason):
+    def __group_contact_delete_errback(self, error_code):
+        errcode = AddressBookError.UNKNOWN
+        if error_code == 'ContactDoesNotExist':
+            errcode = AddressBookError.CONTACT_NOT_IN_GROUP
         errback = self._errback[0]
         args = self._errback[1:]
-        errback(reason, *args)
+        errback(errcode, *args)

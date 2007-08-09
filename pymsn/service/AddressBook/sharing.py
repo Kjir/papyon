@@ -175,6 +175,11 @@ class Sharing(SOAPService):
                 callback, errback,
                 http_headers)
 
+    def _HandleSOAPFault(self, request_id, callback, errback,
+            soap_response, user_data):
+        error_code = soap_response.fault.find("./detail/ab:errorcode").text
+        errback[0](error_code, *errback[1:])
+
 if __name__ == '__main__':
     import sys
     import getpass

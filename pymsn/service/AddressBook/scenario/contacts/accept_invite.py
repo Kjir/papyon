@@ -20,6 +20,7 @@ from pymsn.service.AddressBook.scenario.base import BaseScenario
 from pymsn.profile import NetworkID
 
 from pymsn.service.AddressBook.scenario import *
+from pymsn.service.AddressBook import *
 
 __all__ = ['AcceptInviteScenario']
 
@@ -68,14 +69,19 @@ class AcceptInviteScenario(BaseScenario):
                                     self.state, self.account)
             
     def __add_contact_callback(self, contact_guid):
-        self._ab.FindAll((self.__find_all_callback, contact_guid),
-                         (self.__find_all_errback, contact_guid),
-                         self._scenario, True)
+        self.__ab.FindAll((self.__find_all_callback, contact_guid),
+                          (self.__find_all_errback, contact_guid),
+                          self._scenario, True)
 
-    def __add_contact_errback(self):
+    def __add_contact_errback(self, error_code):
+        errcode = AddressBookError.UNKNOWN
+        if error_code == 'ContactAlreadyExists':
+            errcode = AddressBookError.CONTACT_ALREADY_EXISTS
+        elif error_code == 'InvalidPassportUser':
+            errcode = AddressBookError.INVALID_CONTACT_ADDRESS
         errback = self._errback[0]
         args = self._errback[1:]
-        errback(reason, *args)
+        errback(errcode, *args)
 
     def __delete_member_callback(self):
         self.__sharing.AddMember((self.__add_member_callback,),

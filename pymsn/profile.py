@@ -175,6 +175,11 @@ class User(gobject.GObject):
                 "",
                 gobject.PARAM_READABLE),
 
+            "current-media": (gobject.TYPE_PYOBJECT,
+                "Current media",
+                "The current media that the user wants to display",
+                gobject.PARAM_READABLE),
+
             "profile": (gobject.TYPE_STRING,
                 "Profile",
                 "the text/x-msmsgsprofile sent by the server",
@@ -205,6 +210,7 @@ class User(gobject.GObject):
         self._presence = Presence.OFFLINE
         self._privacy = Privacy.BLOCK
         self._personal_message = ""
+        self._current_media = None
 
         self.client_id = ClientCapabilities(7)
 
@@ -251,6 +257,17 @@ class User(gobject.GObject):
     def __get_personal_message(self):
         return self._personal_message
     personal_message = property(__get_personal_message, __set_personal_message)
+
+    def __set_current_media(self, current_media):
+        if current_media == self._current_media:
+            return
+        elif current_media is None:
+            self._ns_client.set_personal_message(self._personal_message)
+        else:
+            self._ns_client.set_current_media(current_media)
+    def __get_current_media(self):
+        return self._current_media
+    current_media = property(__get_current_media, __set_current_media)
 
     def _server_property_changed(self, name, value):
         attr_name = "_" + name.lower().replace("-", "_")
@@ -308,6 +325,11 @@ class Contact(gobject.GObject):
                 "",
                 gobject.PARAM_READABLE),
 
+            "current-media": (gobject.TYPE_PYOBJECT,
+                "Current media",
+                "The current media that the user wants to display",
+                gobject.PARAM_READABLE),
+
             "presence": (gobject.TYPE_STRING,
                 "Presence",
                 "The presence to show to others",
@@ -344,6 +366,7 @@ class Contact(gobject.GObject):
         self._display_name = display_name
         self._presence = Presence.OFFLINE
         self._personal_message = ""
+        self._current_media = None
         self._groups = set()
 
         self._memberships = memberships
@@ -385,6 +408,11 @@ class Contact(gobject.GObject):
     def personal_message(self):
         """Contact personal message"""
         return self._personal_message
+
+    @property
+    def current_media(self):
+        """Contact current media"""
+        return self._current_media
 
     @property
     def groups(self):

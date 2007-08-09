@@ -141,9 +141,9 @@ class SOAPResponse(object):
         try:
             tree = self._parse(soap_data)
             self.tree = _SOAPElement(tree, self.NS_SHORTHANDS)
-            self.header = self.tree.find("soap:Header")
-            self.body = self.tree.find("soap:Body")
-            self.fault = self.tree.find("soap:Fault")
+            self.header = self.tree.find("./soap:Header")
+            self.body = self.tree.find("./soap:Body")
+            self.fault = self.body.find("./soap:Fault")
         except:
             self.tree = None
             self.header = None
@@ -167,7 +167,8 @@ class SOAPResponse(object):
         return self.fault is not None
 
     def is_valid(self):
-        return self.tree is not None and self.header is not None
+        return ((self.header is not None) or (self.fault is not None)) \
+            and self.tree is not None
 
     def _parse(self, data):
         events = ("start", "end", "start-ns", "end-ns")

@@ -18,6 +18,7 @@
 #
 
 from pymsn.service.AddressBook.scenario.base import BaseScenario
+from pymsn.service.AddressBook import *
 from pymsn.service.description.AB.constants import ContactEmailType
 from pymsn.profile import NetworkID
 
@@ -58,16 +59,18 @@ class ExternalContactAddScenario(BaseScenario):
                          (self.__find_all_errback, contact_guid),
                          self._scenario, True)
 
-    def __contact_add_errback(self, reason):
+    def __contact_add_errback(self, error_code):
+        errcode = AddressBookError.UNKNOWN
         errback = self._errback[0]
         args = self._errback[1:]
-        errback(reason, *args)
+        errback(errcode, *args)
 
     def __find_all_callback(self, delta, contact_guid):
         callback = self._callback
         callback[0](contact_guid, delta, *callback[1:])
 
-    def __find_all_errback(self, reason):
+    def __find_all_errback(self, error_code):
+        errcode = AddressBookError.UNKNOWN
         errback = self._errback[0]
         args = self._errback[1:]
-        errback(reason, *args)
+        errback(errcode, *args)

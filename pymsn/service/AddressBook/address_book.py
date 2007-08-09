@@ -23,12 +23,14 @@ import ab
 import sharing
 import scenario
 
+import pymsn
 import pymsn.profile as profile
 from pymsn.service.description.AB.constants import *
 
 import gobject
 
-__all__ = ['AddressBookState', 'AddressBook']
+__all__ = ['AddressBookState', 'AddressBook', 'AddressBookError', \
+               'PendingContact']
 
 class AddressBookStorage(set):
     def __init__(self, initial_set=()):
@@ -88,6 +90,16 @@ class AddressBookStorage(set):
             result[value].add(contact)
         return result
 
+class AddressBookError(object):
+    UNKNOWN = 0
+
+    CONTACT_ALREADY_EXISTS  = 1
+    CONTACT_DOES_NOT_EXIST  = 2
+    INVALID_CONTACT_ADDRESS = 3
+
+    GROUP_ALREADY_EXISTS = 4
+    GROUP_DOES_NOT_EXIST = 5
+    CONTACT_NOT_IN_GROUP = 6
 
 class AddressBookState(object):
     """Addressbook synchronization state.
@@ -100,7 +112,7 @@ class AddressBookState(object):
     SYNCHRONIZING = 1
     """The addressbook is being synchronized"""
     SYNCHRONIZED = 2
-    """The addressbook is already synchornized"""
+    """The addressbook is already synchronized"""
 
 class PendingContact(object):
     
@@ -201,16 +213,6 @@ class AddressBook(gobject.GObject):
         self.contacts = AddressBookStorage()
         self._profile = None
 
-    def sync(self):
-        if self._state != AddressBookState.NOT_SYNCHRONIZED:
-            return
-        self._state = AddressBookState.SYNCHRONIZING
-        
-        initial_sync = scenario.InitialSyncScenario(self._ab, self._sharing,
-                (self.__initial_sync_callback,),
-                (self.__common_errback,))
-        initial_sync()
-
     # Properties
     def __get_state(self):
         return self.__state
@@ -232,6 +234,16 @@ class AddressBook(gobject.GObject):
     @property
     def profile(self):
         return self._profile
+
+    def sync(self):
+        if self._state != AddressBookState.NOT_SYNCHRONIZED:
+            return
+        self._state = AddressBookState.SYNCHRONIZING
+        
+        initial_sync = scenario.InitialSyncScenario(self._ab, self._sharing,
+                (self.__initial_sync_callback,),
+                (self.__common_errback,))
+        initial_sync()
 
     # Public API
     def accept_contact_invitation(self, pending_contact, add_to_contact_list=True):
@@ -341,40 +353,88 @@ class AddressBook(gobject.GObject):
     def delete_contact_from_group(self, group, contact):
         dc = scenario.GroupContactDeleteScenario(self._ab,
                 (self.__delete_contact_from_group_cb, group, contact),
-                (self.__commonq_errback,))
+                (self.__common_errback,))
         dc.group_guid = group.id
         dc.contact_guid = contact.id
         dc()
-
     # End of public API
+
     def _check_pending_invitations(self):
         cp = scenario.CheckPendingInviteScenario(self._sharing,
                  (self.__update_memberships,),
                  (self.__common_errback,))
         cp()
 
+    def __build_contact(self, contact):
+        external_email = None
+        for email in contact.Emails:
+            if email.Type == ContactEmailType.EXTERNAL:
+                external_email = email
+                break
+
+        if not contact.IsMessengerUser and external_email is not None:
+            display_name = \
+                contact.Annotations.get(ContactAnnotations.NICKNAME,
+                                        contact.DisplayName)
+            if display_name == "":
+                display_name = external_email.Email
+
+            c = profile.Contact(contact.Id,
+                                profile.NetworkID.EXTERNAL,
+                                external_email.Email.encode("utf-8"),
+                                display_name.encode("utf-8"),
+                                profile.Membership.FORWARD)
+                
+            for group_id in contact.Groups:
+                c._add_group_ownership(self.groups[group_id])
+            
+            return c
+
+        elif (not contact.IsMessengerUser and contact.Type != "Me") or \
+                contact.PassportName == "":
+            # FIXME : mobile phone and mail contacts here
+            return None
+        else:
+            display_name = contact.DisplayName
+            if display_name == "":
+                display_name = contact.QuickName
+            if display_name == "":
+                display_name = contact.PassportName
+
+            c = profile.Contact(contact.Id,
+                                profile.NetworkID.MSN,
+                                contact.PassportName.encode("utf-8"),
+                                display_name.encode("utf-8"),
+                                profile.Membership.FORWARD)
+            c._server_contact_attribute_changed("im_contact",
+                                                contact.IsMessengerUser)
+            
+            for group_id in contact.Groups:
+                c._add_group_ownership(self.groups[group_id])
+                
+            return c
+        return None
+            
     def __update_memberships(self, memberships):
         for member in memberships:
             if isinstance(member, sharing.PassportMember):
                 network = profile.NetworkID.MSN
             elif isinstance(member, sharing.EmailMember):
                 network = profile.NetworkID.EXTERNAL
+            else:
+                continue
 
-            contacts = self.contacts.search_by_account(member.Account)
-            
-            contact = None
-            for c in contacts:
-                if c.network_id == network:
-                    contact = c
-                    break
+            contact = self.contacts.search_by_account(member.Account).\
+                search_by_network_id(network)[0]
             
             if contact is None:
-                # Pending contact
-                msg = member.Annotations.get('MSN.IM.InviteMessage', '')
-                p = PendingContact(member.Account.encode("utf-8"), network,
-                                   member.DisplayName.encode("utf-8"), 
-                                   msg.encode("utf-8"))
-                self._pending_contacts.add(p)
+                if 'Pending' in member.Roles:
+                    # Pending contact
+                    msg = member.Annotations.get('MSN.IM.InviteMessage', '')
+                    p = PendingContact(member.Account.encode("utf-8"), network,
+                                       member.DisplayName.encode("utf-8"), 
+                                       msg.encode("utf-8"))
+                    self._pending_contacts.add(p)
             else:
                 for role in member.Roles:
                     if role == "Allow":
@@ -399,61 +459,16 @@ class AddressBook(gobject.GObject):
             self.groups[group.Id] = profile.Group(group.Id, group.Name)
 
         for contact in contacts:
-            external_email = None
-            is_external = False
-            for email in contact.Emails:
-                if email.Type == ContactEmailType.EXTERNAL:
-                    external_email = email
-                    is_external = True
-                    break
-
-            if not contact.IsMessengerUser and is_external:
-                display_name = \
-                    contact.Annotations.get(ContactAnnotations.NICKNAME,
-                                            contact.DisplayName)
-                if display_name == "":
-                    display_name = external_email.Email
-
-
-                c = profile.Contact(contact.Id,
-                                    profile.NetworkID.EXTERNAL,
-                                    external_email.Email.encode("utf-8"),
-                                    display_name.encode("utf-8"),
-                                    profile.Membership.FORWARD)
-                                    
-                for group_id in contact.Groups:
-                    c._add_group_ownership(self.groups[group_id])
-
-                self.contacts.add(c)
-
-            elif (not contact.IsMessengerUser and contact.Type != "Me") or \
-                    contact.PassportName == "":
-                # FIXME : mobile phone and mail contacts here
+            c = self.__build_contact(contact)
+        
+            if c is None:
                 continue
 
+            if contact.Type == "Me":
+                self._profile = c
             else:
-                display_name = \
-                    contact.Annotations.get(ContactAnnotations.NICKNAME,
-                                            contact.DisplayName)
-                if display_name == "":
-                    display_name = contact.QuickName
+                self.contacts.add(c)
 
-                c = profile.Contact(contact.Id,
-                        profile.NetworkID.MSN,
-                        contact.PassportName.encode("utf-8"),
-                        display_name.encode("utf-8"),
-                        profile.Membership.FORWARD)
-                c._server_contact_attribute_changed("im_contact",
-                                                    contact.IsMessengerUser)
-            
-                for group_id in contact.Groups:
-                    c._add_group_ownership(self.groups[group_id])
-                    
-                if contact.Type == "Me":
-                    self._profile = c
-                else:
-                    self.contacts.add(c)
-            
         self.__update_memberships(memberships)
         self._state = AddressBookState.SYNCHRONIZED
 
@@ -465,69 +480,16 @@ class AddressBook(gobject.GObject):
 
     def __add_messenger_contact_cb(self, contact_guid, address_book_delta):
         contacts = address_book_delta.contacts
-        
         for contact in contacts:
             if contact.Id != contact_guid:
                 continue
 
-            external_email = None
-            is_external = False
-            for email in contact.Emails:
-                if email.Type == ContactEmailType.EXTERNAL:
-                    external_email = email
-                    is_external = True
-                    break
-
-            if not contact.IsMessengerUser and is_external:
-                display_name = \
-                    contact.Annotations.get(ContactAnnotations.NICKNAME,
-                                            contact.DisplayName)
-                if display_name == "":
-                    display_name = external_email.Email
-
-                c = profile.Contact(contact.Id,
-                                    profile.NetworkID.EXTERNAL,
-                                    external_email.Email.encode("utf-8"),
-                                    display_name.encode("utf-8"),
-                                    profile.Membership.FORWARD)
-                                    
-                for group_id in contact.Groups:
-                    c._add_group_ownership(self.groups[group_id])
-
-                self.contacts.add(c)
-                self.emit('messenger-contact-added', c)
-
-            elif (not contact.IsMessengerUser and contact.Type != "Me") or \
-                    contact.PassportName == "":
-                # FIXME : mobile phone and mail contacts here
+            c = self.__build_contact(contact)
+            if c is None:
                 continue
-        
-            else:
-                display_name = \
-                    contact.Annotations.get(ContactAnnotations.NICKNAME,
-                                            contact.DisplayName)
-                if display_name == "":
-                    display_name = contact.QuickName
-
-                c = profile.Contact(contact.Id,
-                                    profile.NetworkID.MSN,
-                                    contact.PassportName,
-                                    display_name,
-                                    profile.Membership.FORWARD)
-                c._server_contact_attribute_changed("im_contact",
-                                                    contact.IsMessengerUser)
             
-                for group_id in contact.Groups:
-                    c._add_group_ownership(self.groups[group_id])
-
-                self.contacts.add(c)
-                self.emit('messenger-contact-added', c)
-
-#     def __add_email_contact_cb(self, contact_guid):
-#         self.emit('email-contact-added')
-
-#     def __add_mobile_contact_cb(self, contact_guid):
-#         self.emit('mobile-contact-added')
+            self.contacts.add(c)
+            self.emit('messenger-contact-added', c)
 
     def __delete_contact_cb(self, contact):
         self.contacts.discard(contact)
@@ -559,10 +521,25 @@ class AddressBook(gobject.GObject):
     def __common_callback(self, signal, *args):
         self.emit(signal, *args)
 
-    def __common_errback(self, *args):
-        pass
+    def __common_errback(self, error_code, *args):
+        print "The addressbook service got the error (%s)" % error_code
 
 gobject.type_register(AddressBook)
+
+def get_proxies():
+    import urllib
+    proxies = urllib.getproxies()
+    result = {}
+    if 'https' not in proxies and \
+            'http' in proxies:
+        url = proxies['http'].replace("http://", "https://")
+        result['https'] = pymsn.Proxy(url)
+    for type, url in proxies.items():
+        if type == 'no': continue
+        if type == 'https' and url.startswith('http://'):
+            url = url.replace('http://', 'https://', 1)
+        result[type] = pymsn.Proxy(url)
+    return result
 
 if __name__ == '__main__':
     import sys
@@ -607,23 +584,30 @@ if __name__ == '__main__':
             #address_book.accept_contact_invitation(address_book.pending_contacts.pop())
             #print address_book.pending_contacts.pop()
             #address_book.accept_contact_invitation(address_book.pending_contacts.pop())
-            
+            #address_book.add_group("ouch2")
             #address_book.add_group("callback test6")
-            #address_book.delete_group(address_book.groups.values()[0])
-            #address_book.rename_group(address_book.groups.values()[0], "new group name")
+            #group = address_book.groups.values()[0]
+            #address_book.delete_group(group)
+            #address_book.delete_group(group)
+            #address_book.rename_group(address_book.groups.values()[0], "ouch")
             #address_book.add_contact_to_group(address_book.groups.values()[1],
             #                                  address_book.contacts[0])
+            #contact = address_book.contacts[0]
             #address_book.delete_contact_from_group(address_book.groups.values()[0],
-            #                                       address_book.contacts[0])
+            #                                       contact)
+            #address_book.delete_contact_from_group(address_book.groups.values()[0],
+            #                                       contact)
             #address_book.block_contact(address_book.contacts.search_by_account('pymsn.rewrite@yahoo.com')[0])
             #address_book.unblock_contact(address_book.contacts[0])
             #address_book.block_contact(address_book.contacts[0])
-            #address_book.delete_contact(address_book.contacts[2])
+            #contact = address_book.contacts[2]
+            #address_book.delete_contact(contact)
+            #address_book.delete_contact(contact)
             #address_book.add_messenger_contact("tryggve2@gmail.com")
 
             #for i in range(5):
             #    address_book.delete_contact(address_book.contacts[i])
-            #address_book.add_messenger_contact("toto@yahoo.com")
+            #address_book.add_messenger_contact("johanssn.prieur@gmail.com")
 
     def messenger_contact_added(address_book, contact):
         print "Added contact : %s (%s) %s %s" % (contact.account, 
@@ -631,8 +615,8 @@ if __name__ == '__main__':
                                                  contact.network_id,
                                                  contact.memberships)
 
-    sso = SingleSignOn(account, password)
-    address_book = AddressBook(sso)
+    sso = SingleSignOn(account, password, proxies=get_proxies())
+    address_book = AddressBook(sso, proxies=get_proxies())
     address_book.connect("notify::state", address_book_state_changed)
     address_book.connect("messenger-contact-added", messenger_contact_added)
     address_book.sync()

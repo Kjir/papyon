@@ -17,33 +17,16 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-from common import *
+__all__ = ['BaseScenario']
 
-def transport_headers():
-    """Returns a dictionary, containing transport (http) headers
-    to use for the request"""
+class BaseScenario(object):
+    def __init__(self, callback, errback):
+        self._callback = callback
+        self._errback = errback
 
-    return {}
+    def execute(self):
+        pass
 
-def soap_action():
-    """Returns the SOAPAction value to pass to the transport
-    or None if no SOAPAction needs to be specified"""
+    def __call__(self):
+        return self.execute()
 
-    return "http://www.hotmail.msn.com/ws/2004/09/oim/rsi/DeleteMessages"
-
-def soap_body(message_ids):
-    """Returns the SOAP xml body"""
-
-    ids = ""
-    for message_id in message_ids:
-        ids += "<messageId>%s</messageId>" %  message_id
-
-    return """
-      <DeleteMessages xmlns="http://www.hotmail.msn.com/ws/2004/09/oim/rsi">
-          <messageIds>
-              %s
-          </messageIds>
-      </DeleteMessages>""" % ids
-
-def process_response(soap_response):
-    return None
