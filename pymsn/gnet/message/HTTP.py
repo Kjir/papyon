@@ -99,7 +99,7 @@ class HTTPMessage(object):
         #if "Content-Length" not in self.headers:
         #    result.append("Content-Length: %d" % len(body))
         result.append("")
-        result.append(self.body)
+        result.append(str(self.body))
         return "\r\n".join(result)
 
 

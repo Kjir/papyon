@@ -21,8 +21,10 @@
 from pymsn.msnp2p.constants import *
 from pymsn.msnp2p.SLP import *
 from pymsn.msnp2p.transport import *
+import pymsn.profile
 
 import random
+import base64
 
 __all__ = ['MSNObjectTransferSession']
 
@@ -52,9 +54,40 @@ def _generate_guid():
     return "{%s-%s-%s-%s-%s}" % (data1, data2, data3, data4, data5)
 
 
-class SessionInvite(object):
-    def __init__(self, client, slp_message):
-        pass
+class P2PSessionInvite(object):
+    def __init__(self, client, session, slp_request):
+        self._session = session
+        self._request = slp_request
+
+        contacts = client.address_book.contacts.\
+                search_by_network_id(pymsn.profile.NetworkID.MSN).\
+                search_by_account(slp_request.frm)
+        if len(contacts) == 0:
+            contact = pymsn.profile.Contact(id=0,
+                    network_id=pymsn.profile.NetworkID.MSN,
+                    account=account,
+                    display_name=account)
+        else:
+            contact = contacts[0]
+        self.frm = contact
+        self.to = client.profile
+
+    def accept(self):
+        self._respond(200)
+
+    def reject(self):
+        self._respond(603)
+
+    def _respond(self, status_code):
+        response = SLPResponseMessage(status_code,
+                to = self.frm.account,
+                frm = self.to.account,
+                branch = self._request.branch,
+                cseq = self._request.cseq + 1,
+                branch = self._request.branch,
+                call_id = self._request.call_id)
+        self._session._send_p2p_data(response)
+
 
 class P2PSession(object):
     def __init__(self, client, peer, euf_guid="", application_id=0):
@@ -86,6 +119,7 @@ class P2PSession(object):
         body.add_header('Context', str(context))
 
         message = SLPRequestMessage('INVITE',
+                "MSNMSGR:" + self._peer.account,
                 to = self._peer.account,
                 frm = self._client.profile.account,
                 branch = _generate_guid(),
@@ -125,7 +159,12 @@ class P2PSession(object):
         pass
 
 
-class MSNObjectTransferSession(object):
-    def __init__(self, client, application_id):
-        SLPSession.__init__(self, client,
-                constants.EufGuid.MSNOBJECT, application_id)
+class MSNObjectTransferSession(P2PSession):
+    def __init__(self, client, peer, application_id):
+        P2PSession.__init__(self, client, peer,
+                EufGuid.MSN_OBJECT, application_id)
+
+    def invite(self, msn_object):
+        context = base64.b64encode(msn_object + "\x00")
+        return P2PSession.invite(self, context)
+

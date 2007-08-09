@@ -325,6 +325,12 @@ class Contact(gobject.GObject):
                 0, 0xFFFFFFFF, 0,
                 gobject.PARAM_READABLE),
 
+            "msn-object": (gobject.TYPE_STRING,
+                "MSN Object",
+                "MSN Object attached to the contact, this generally represent "
+                "its display picture",
+                "",
+                gobject.PARAM_READABLE),
             }
 
     def __init__(self, id, network_id, account, display_name,
@@ -342,6 +348,7 @@ class Contact(gobject.GObject):
 
         self._memberships = memberships
         self._client_capabilities = ClientCapabilities()
+        self._msn_object = ""
         self._attributes = {'im_contact' : False}
 
     @property
@@ -393,6 +400,11 @@ class Contact(gobject.GObject):
     def client_capabilities(self):
         """Contact client capabilities"""
         return self._client_capabilities
+    
+    @property
+    def msn_object(self):
+        """Contact MSN Object"""
+        return self._msn_object
 
     @property
     def domain(self):

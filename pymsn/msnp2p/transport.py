@@ -2,7 +2,6 @@
 #
 # pymsn - a python client library for Msn
 #
-# Copyright (C) 2007 Ole André Vadla Ravnås <oleavr@gmail.com>
 # Copyright (C) 2007 Ali Sabil <asabil@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -20,10 +19,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import pymsn.util.StringIO as StringIO
-from pymsn.switchboard_manager as SwitchboardClient
-from pymsn.msnp.message as MessageAcknowledgement
+from pymsn.switchboard_manager import SwitchboardClient
+from pymsn.msnp.message import MessageAcknowledgement
 
 import struct
+import gobject
 import random
 from copy import copy
 
@@ -42,6 +42,7 @@ def _generate_id(max=MAX_INT32):
 
 _previous_chunk_id = _generate_id(MAX_INT32 - 1)
 def _chunk_id():
+    global _previous_chunk_id
     _previous_chunk_id += 1
     if _previous_chunk_id == MAX_INT32:
         _previous_chunk_id = 1
@@ -51,11 +52,12 @@ class TLPHeader(object):
     SIZE = 48
 
     def __init__(self, *header):
+        header = list(header)
         header[len(header):] = [0] * (9 - len(header))
 
         self.session_id = header[0]
         self.blob_id = header[1]
-        self.blob_offset = headers[2]
+        self.blob_offset = header[2]
         self.blob_size = header[3]
         self.chunk_size = header[4]
         self.flags = header[5]
@@ -79,7 +81,7 @@ class TLPHeader(object):
         header = struct.unpack("<LLQQLLLLQ", header_data[:48])
         session_id = header[0]
         blob_id = header[1]
-        blob_offset = headers[2]
+        blob_offset = header[2]
         blob_size = header[3]
         chunk_size = header[4]
         flags = header[5]
@@ -124,7 +126,7 @@ class MessageChunk(object):
         if self.header.flags & TLPFlag.EACH:
             return True
         current_size = self.header.chunk_size + self.header.blob_offset
-        if current_size >= self.header.blob_size:
+        if current_size == self.header.blob_size:
             return True
         return False
 
@@ -140,7 +142,7 @@ class MessageBlob(object):
             session_id=None, blob_id=None):
         if data is not None:
             if isinstance(data, str):
-                data = StringIO(data)
+                data = StringIO.StringIO(data)
 
             if total_size is None:
                 self.data.seek(0, 2) # relative to the end
@@ -152,11 +154,14 @@ class MessageBlob(object):
         self.data = data
         self.total_size = total_size
         self.application_id = application_id
-        self.session_id = session_id or _generate_id()
+        if session_id is None:
+            session_id = _generate_id()
+        self.session_id = session_id
         self.blob_id = blob_id or _generate_id()
 
     def __del__(self):
-        self.data.close()
+        if self.data is not None:
+            self.data.close()
 
     def __getattr__(self, name):
         return getattr(self.data, name)
@@ -176,8 +181,8 @@ class MessageBlob(object):
     def get_chunk(self, max_size):
         blob_offset = self.transferred
 
-        if self.data is None:
-            data = self.data.read(size - TLPHeader.SIZE)
+        if self.data is not None:
+            data = self.data.read(max_size - TLPHeader.SIZE)
             assert len(data) > 0, "Trying to read more data than available"
         else:
             data = ""
@@ -192,6 +197,7 @@ class MessageBlob(object):
 
         chunk = MessageChunk(header, data)
         chunk.application_id = self.application_id
+        return chunk
 
     def append_chunk(self, chunk):
         assert self.data is not None, "Trying to write to a Read Only blob"
@@ -205,9 +211,9 @@ class ControlBlob(MessageBlob):
         MessageBlob.__init__(self, 0, None)
         header = TLPHeader(session_id, self.blob_id, 0, 0, 0,
                 flags, dw1, dw2, qw1)
-        self.chunk = MessageChunk(header, None)
+        self.chunk = MessageChunk(header, "")
 
-    def get_chunk(self):
+    def get_chunk(self, max_size):
         return self.chunk
     
     def is_control_blob(self):
@@ -233,7 +239,7 @@ class BaseP2PTransport(gobject.GObject):
         self._reset()
 
     @property
-    def name(self)
+    def name(self):
         return self._name
     
     @property
@@ -313,11 +319,8 @@ class BaseP2PTransport(gobject.GObject):
         self._send_chunk(chunk)
 
     def _send_ack(self, received_chunk):
-        flags = chunk.header.flags
+        flags = received_chunk.header.flags
 
-        if not chunk.require_ack():
-            return
-        
         flags = TLPFlag.ACK
         if received_chunk.header.flags & TLPFlag.RAK:
             flags |= TLPFlag.RAK
@@ -334,7 +337,7 @@ gobject.type_register(BaseP2PTransport)
 class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
     def __init__(self, client, peer):
         BaseP2PTransport.__init__(self, client, "switchboard", peer)
-        SwitchboardClient.__init__(Self, client, peer)
+        SwitchboardClient.__init__(self, client, (peer,))
 
     @staticmethod
     def _can_handle_message(message, switchboard_client=None):
@@ -350,7 +353,7 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
         return 1250 # length of the chunk including the header but not the footer
 
     def _send_chunk(self, chunk):
-        headers = {'P2P-Dest', self.peer.account}
+        headers = {'P2P-Dest': self.peer.account}
         content_type = 'application/x-msnmsgrp2p'
         body = str(chunk) + struct.pack('>L', chunk.application_id)
         self._send_message(content_type, body, headers, MessageAcknowledgement.MSNC)

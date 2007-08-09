@@ -449,6 +449,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             contact._server_property_changed("presence", presence)
             contact._server_property_changed("display-name", display_name)
             contact._server_property_changed("client-capabilities", capabilities)
+            if len(command.arguments) == 6:
+                msn_object = urllib.unquote(command.arguments[5])
+                contact._server_property_changed("msn-object", msn_object)
 
     # --------- Display name and co ------------------------------------------
     def _handle_PRP(self, command):

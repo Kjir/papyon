@@ -84,7 +84,7 @@ class Message(HTTPMessage):
             tlp_flags = struct.unpack("<L", self.body[28:32])[0]
             body = self.body[48:-4]
 
-            message += debug.hexify_string(tlp_header).replace("\r\n", "\n\t")
+            message += "\t" + debug.hexify_string(tlp_header).replace("\r\n", "\n\t")
 
             if tlp_flags == 0:
                 message += "\n\t" + debug.escape_string(body).\

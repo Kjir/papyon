@@ -232,6 +232,8 @@ class SwitchboardManager(gobject.GObject):
             except:
                 pass
         elif state == msnp.ProtocolState.CLOSED:
+            if switchboard not in self._switchboards:
+                return
             del self._switchboards[switchboard]
 
     def __sb_message_received(self, switchboard, message):
