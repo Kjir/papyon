@@ -56,11 +56,11 @@ def compress_xml(xml_string):
     return xml_string
 
 soap_template = """<?xml version='1.0' encoding='utf-8'?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-    <soap:Header xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+    <soap:Header>
         %s
     </soap:Header>
-    <soap:Body xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+    <soap:Body>
         %s
     </soap:Body>
 </soap:Envelope>"""
@@ -203,7 +203,8 @@ class SOAPService(object):
             http_headers["SOAPAction"] = str(soap_action)
         http_headers["Content-Type"] = "text/xml; charset=utf-8"
         http_headers["Cache-Control"] = "no-cache"
-        http_headers["Accept"] = "text/*"
+        if "Accept" not in http_headers:
+            http_headers["Accept"] = "text/*"
         http_headers["Proxy-Connection"] = "Keep-Alive"
         http_headers["Connection"] = "Keep-Alive"
 

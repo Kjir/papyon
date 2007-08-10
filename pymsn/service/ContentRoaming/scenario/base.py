@@ -17,10 +17,23 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-name = "SchematizedStore"
-description = "MSN Storage service"
+__all__ = ['BaseScenario']
 
-url = "https://storage.msn.com/storageservice/SchematizedStore.asmx"
+class BaseScenario(object):
+    def __init__(self, partner_scenario, callback, errback):
+        self._scenario = partner_scenario
+        self._callback = callback
+        self._errback = errback
 
-import GetProfile
-import UpdateProfile
+    def __set_scenario(self, scenario):
+        self._scenario = scenario
+    def __get_scenario(self):
+        return self._scenario
+    scenario = property(__get_scenario, __set_scenario)
+
+    def execute(self):
+        pass
+
+    def __call__(self):
+        return self.execute()
+

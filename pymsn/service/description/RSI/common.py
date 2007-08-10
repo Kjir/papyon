@@ -24,7 +24,13 @@ def soap_header(security_token):
     """Returns the SOAP xml header"""
 
     print security_token
-    t,p = security_token.split(';')
+    security_token = security_token.split('&', 1)
+    t = security_token[0]
+    if len(security_token) == 1:
+        p = ""
+    else:
+        p = security_token[1]
+        
 
     return """
       <PassportCookie xmlns="http://www.hotmail.msn.com/ws/2004/09/oim/rsi">

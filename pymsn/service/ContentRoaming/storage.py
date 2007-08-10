@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-# pymsn - a python client library for Msn
-#
 # Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -54,22 +52,14 @@ class Storage(SOAPService):
                  callback, errback)
 
     def _HandleGetProfileResponse(self, callback, errback, response, user_date):
-        location = response.find("./st:ExpressionProfile/st:Photo/st:DocumentStreams/st:DocumentStream/st:PreAuthURLPartner").text
-        location2 = response.find("./st:ExpressionProfile/st:Photo/st:DocumentStreams/st:DocumentStream/st:PreAuthURL").text
-        #print location2
-        #print location
-        url = location + str(self._tokens[LiveService.CONTACTS])
-        self.get_display_picture(url, None, None)
-
-    def _dp_callback(self, *args):
-        print '###############'
-
-    def _dp_errback(self, *args):
-        print '{{{{{{{{{{{{{{{{'
+        callback[0](profile_id, display_name, personal_msg, *callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
-    def UpdateProfile(self, callback, errback):
-        pass
+    def UpdateProfile(self, callback, errback, scenario, profile_rid,
+                      display_name, personal_status, flags):
+        self.__soap_request(self._service.UpdateProfile, scenario,
+                            (profile_rid, display_name, personal_status, flags),
+                            callback, errback)
 
     def _HandleUpdateProfileResponse(self, callback, errback, response, user_date):
         pass
@@ -117,21 +107,21 @@ class Storage(SOAPService):
                            soap_header, soap_body, soap_action, 
                            callback, errback, http_headers)
 
-    def get_display_picture(self, url, callback, errback):
-        scheme, host, port, resource = url_split(url)
-        print "scheme=%s;host=%s;port=%s;resource=%s" % (scheme, host, port, resource)
-        http_headers = {}
-        http_headers["Accept"] = "*/*"
-        http_headers["Proxy-Connection"] = "Keep-Alive"
-        http_headers["Connection"] = "Keep-Alive"
+#     def get_display_picture(self, url, callback, errback):
+#         scheme, host, port, resource = url_split(url)
+#         print "scheme=%s;host=%s;port=%s;resource=%s" % (scheme, host, port, resource)
+#         http_headers = {}
+#         http_headers["Accept"] = "*/*"
+#         http_headers["Proxy-Connection"] = "Keep-Alive"
+#         http_headers["Connection"] = "Keep-Alive"
         
-        proxy = self._proxies.get(scheme, None)
-        transport = ProtocolFactory(scheme, host, 80, proxy=proxy)
-        transport.connect("response-received", self._dp_callback)
-        transport.connect("request-sent", self._request_handler)
-        transport.connect("error", self._dp_errback)
+#         proxy = self._proxies.get(scheme, None)
+#         transport = ProtocolFactory(scheme, host, 80, proxy=proxy)
+#         transport.connect("response-received", self._dp_callback)
+#         transport.connect("request-sent", self._request_handler)
+#         transport.connect("error", self._dp_errback)
 
-        transport.request(resource, http_headers, method='GET')
+#         transport.request(resource, http_headers, method='GET')
 
 def get_proxies():
     import urllib
@@ -190,9 +180,12 @@ if __name__ == '__main__':
                 pass
 
             storage = Storage(sso)
-            storage.GetProfile(call, err, 'Initial', '2686986376622003804',
+            storage.GetProfile(call, err, 'Initial', '2686986376622003804', # kimbix
                                True, False, True, False, True, False, 
-                               True, False, True, True, False)
+                               True, False, False, False, False)
+#             storage.UpdateProfile(call, err, 'RoamingIdentityChanged', '254A17DF8EDE565C!114',
+#                                   'BLabla', 'new pmsg!', 0)
+            
 
     sso = SingleSignOn(account, password)
     address_book = AddressBook(sso)

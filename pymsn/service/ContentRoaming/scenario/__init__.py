@@ -17,10 +17,10 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-name = "SchematizedStore"
-description = "MSN Storage service"
+name = "scenario"
+description = ""
 
-url = "https://storage.msn.com/storageservice/SchematizedStore.asmx"
+import base
 
-import GetProfile
-import UpdateProfile
+from get_profile import *
+from update_profile import *
