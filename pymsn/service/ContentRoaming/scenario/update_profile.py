@@ -41,8 +41,9 @@ class UpdateProfileScenario(BaseScenario):
     def execute(self):
         self.__storage.UpdateProfile((self.__update_profile_callback,),
                                      (self.__update_profile_errback,),
-                                     self.__scenario, self.profile_id,
-                                     self.display_name, self.personal_message)
+                                     self._scenario, self.profile_id,
+                                     self.display_name, self.personal_message, 
+                                     0)
 
     def __update_profile_callback(self):
         callback = self._callback

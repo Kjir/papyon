@@ -25,6 +25,7 @@ class ContactType(object):
     REGULAR = "Regular"
     LIVE_PENDING = "LivePending"
     LIVE_ACCEPTED = "LiveAccepted"
+    LIVE_DROPPED = "LiveDropped"
     YAHOO = "Messenger2"
 
 class ContactAnnotations(object):

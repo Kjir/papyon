@@ -21,3 +21,7 @@
 """Windows Live Services clients.
 Contains a set of clients to connect and interact with Windows Live services.
 """
+
+# import AddressBook
+# import OfflineIM
+# import ContentRoaming

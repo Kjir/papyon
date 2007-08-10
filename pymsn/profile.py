@@ -253,7 +253,8 @@ class User(gobject.GObject):
     def __set_personal_message(self, personal_message):
         if personal_message == self._personal_message:
             return
-        self._ns_client.set_personal_message(personal_message)
+        self._ns_client.set_personal_message(personal_message,
+                                             self._current_media)
     def __get_personal_message(self):
         return self._personal_message
     personal_message = property(__get_personal_message, __set_personal_message)
@@ -261,10 +262,8 @@ class User(gobject.GObject):
     def __set_current_media(self, current_media):
         if current_media == self._current_media:
             return
-        elif current_media is None:
-            self._ns_client.set_personal_message(self._personal_message)
-        else:
-            self._ns_client.set_current_media(current_media)
+        self._ns_client.set_personal_message(self._personal_message,
+                                             current_media)
     def __get_current_media(self):
         return self._current_media
     current_media = property(__get_current_media, __set_current_media)
@@ -355,11 +354,12 @@ class Contact(gobject.GObject):
                 gobject.PARAM_READABLE),
             }
 
-    def __init__(self, id, network_id, account, display_name,
+    def __init__(self, id, network_id, account, display_name, cid,
             memberships=Membership.UNKNOWN):
         """Initializer"""
         gobject.GObject.__init__(self)
         self._id = id
+        self._cid = cid
         self._network_id = network_id
         self._account = account
 
@@ -383,6 +383,11 @@ class Contact(gobject.GObject):
     def attributes(self):
         """Contact attributes"""
         return self._attributes.copy()
+
+    @property
+    def cid(self):
+        """Contact ID"""
+        return self._cid
 
     @property
     def network_id(self):

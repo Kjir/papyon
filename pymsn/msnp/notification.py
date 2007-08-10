@@ -194,34 +194,28 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._transport.send_command_ex('PRP',
                 ('MFN', urllib.quote(display_name)))
 
-    def set_personal_message(self, personal_message=''):
+    def set_personal_message(self, personal_message='', current_media=None):
         """Sets the new personal message
 
             @param personal_message: the new personal message
             @type personal_message: string"""
+        cm = ''
+        if current_media is not None:
+            cm ='\\0Music\\01\\0{0} - {1}\\0%s\\0%s\\0\\0' % \
+                (xml_utils.escape(current_media[0]), 
+                 xml_utils.escape(current_media[1]))
+
         message = xml_utils.escape(personal_message)
         pm = '<Data>'\
                 '<PSM>%s</PSM>'\
-                '<CurrentMedia></CurrentMedia>'\
+                '<CurrentMedia>%s</CurrentMedia>'\
                 '<MachineGuid>{CAFEBABE-DEAD-BEEF-BAAD-FEEDDEADC0DE}</MachineGuid>'\
-            '</Data>' % message
+            '</Data>' % (message, cm)
         self._transport.send_command_ex('UUX', payload=pm)
         self._client.profile._server_property_changed("personal-message",
                 personal_message)
-
-    def set_current_media(self, current_media):
-        """Sets the new current media
-
-            @param current_media: the new current media
-            @type current_media: (track, artist) tuple"""
-        cm = '<Data>'\
-                '<PSM></PSM>'\
-                '<CurrentMedia>\\0Music\\01\\0{0} - {1}\\0%s\\0%s\\0\\0</CurrentMedia>'\
-                '<MachineGuid>{CAFEBABE-DEAD-BEEF-BAAD-FEEDDEADC0DE}</MachineGuid>'\
-            '</Data>' % (xml_utils.escape(current_media[0]), 
-                         xml_utils.escape(current_media[1]))
-        self._transport.send_command_ex('UUX', payload=cm)
-        self._client.profile._server_property_changed("current-media",
+        if current_media is not None:
+            self._client.profile._server_property_changed("current-media",
                 current_media)
 
     def signoff(self):
@@ -232,66 +226,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def request_switchboard(self, callback, *callback_args):
         self.__switchboard_callbacks.append((callback, callback_args))
         self._transport.send_command_ex('XFR', ('SB',))
-
-    def add_contact(self, account, network_id=profile.NetworkID.MSN):
-        """Add a contact to the contact list.
-
-            @param account: the contact identifier
-            @type account: string
-
-            @param network_id: the contact network
-            @type network_id: integer
-            @see L{pymsn.profile.NetworkID}"""
-        contact = self._address_book.contacts.search_by_account(account).\
-                search_by_network_id(network_id)[0]
-        
-        if contact is None:
-            self._address_book.add_contact(account)
-        else:
-            self.add_contact_to_membership(contact.account, contact.network_id,
-                    profile.Membership.FORWARD)
-
-    def remove_contact(self, contact):
-        """Remove a contact from the contact list.
-
-            @param contact: the contact to remove
-            @type contact: L{pymsn.profile.Contact}"""
-        self.remove_contact_from_membership(contact.account,
-                contact.network_id, profile.Membership.FORWARD)
-
-    def allow_contact(self, contact):
-        """Add a contact to the allow list.
-
-            @param contact: the contact to allow
-            @type contact: L{pymsn.profile.Contact}"""
-        if contact.is_member(profile.Membership.ALLOW):
-            return
-        elif contact.is_member(profile.Membership.BLOCK):
-            self.remove_contact_from_membership(contact.account,
-                    contact.network_id, profile.Membership.BLOCK)
-
-        self.add_contact_to_membership(contact.account, contact.network_id,
-                profile.Membership.ALLOW)
-
-        if contact.network_id != profile.NetworkID.MOBILE:
-            account, domain = contact.account.split('@', 1)
-            payload = '<ml l="2"><d n="%s"><c n="%s"/></d></ml>'% \
-                    (domain, account)
-            self._transport.send_command_ex("FQY", payload=payload)
-
-    def block_contact(self, contact):
-        """Add a contact to the block list.
-
-            @param contact: the contact to allow
-            @type contact: L{pymsn.profile.Contact}"""
-        if contact.is_member(profile.Membership.BLOCK):
-            return
-        elif contact.is_member(profile.Membership.ALLOW):
-            self.remove_contact_from_membership(contact.account,
-                    contact.network_id, profile.Membership.ALLOW)
-
-        self.add_contact_to_membership(contact.account, contact.network_id,
-                profile.Membership.BLOCK)
 
     def add_contact_to_membership(self, account,
             network_id=profile.NetworkID.MSN,
@@ -409,6 +343,15 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 self._address_book.connect("notify::state",
                         self._address_book_state_changed_cb)
 
+                self._address_book.connect("messenger-contact-added",
+                        self._address_book_contact_added_cb)
+                self._address_book.connect("contact-deleted",
+                        self._address_book_contact_deleted_cb)
+                self._address_book.connect("contact-blocked",
+                        self._address_book_contact_blocked_cb)
+                self._address_book.connect("contact-unblocked",
+                        self._address_book_contact_unblocked_cb)
+
             elif command.arguments[0] == "TWN":
                 raise NotImplementedError, "Missing Implementation, please fix"
 
@@ -511,7 +454,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     # --------- Contact List -------------------------------------------------
     def _handle_ADL(self, command):
         if command.transaction_id == 0: # incoming ADL from the server
-            raise NotImplementedError, "We need to handle async ADL commands"
+            self._address_book._check_pending_invitations()
         if command.arguments[0] == "OK":
             if self._state != ProtocolState.OPEN: # Initial ADL
                 self._state = ProtocolState.OPEN
@@ -619,3 +562,39 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             self._transport.send_command_ex("ADL", payload=payload)
         self._state = ProtocolState.SYNCHRONIZED
 
+    def _address_book_contact_added_cb(self, address_book, contact):
+        self.add_contact_to_membership(contact.account, contact.network_id,
+                                       profile.Membership.ALLOW)
+        
+        self.add_contact_to_membership(contact.account, contact.network_id,
+                                       profile.Membership.FORWARD)
+        
+        if contact.network_id != profile.NetworkID.MOBILE:
+            account, domain = contact.account.split('@', 1)
+            payload = '<ml l="2"><d n="%s"><c n="%s"/></d></ml>'% \
+                    (domain, account)
+            self._transport.send_command_ex("FQY", payload=payload)
+
+    def _address_book_contact_deleted_cb(self, address_book, contact):
+        self.remove_contact_from_membership(contact.account, contact.network_id,
+                                            profile.Membership.ALLOW)
+        
+        self.add_contact_to_membership(contact.account, contact.network_id,
+                                       profile.Membership.BLOCK)
+
+        self.remove_contact_from_membership(contact.account, contact.network_id,
+                                            profile.Membership.FORWARD)
+
+    def _address_book_contact_blocked_cb(self, address_book, contact):
+        self.remove_contact_from_membership(contact.account, contact.network_id,
+                                            profile.Membership.ALLOW)
+
+        self.add_contact_to_membership(contact.account, contact.network_id,
+                                       profile.Membership.BLOCK)
+
+    def _address_book_contact_unblocked_cb(self, address_book, contact):
+        self.remove_contact_from_membership(contact.account, contact.network_id,
+                                            profile.Membership.BLOCK)
+
+        self.add_contact_to_membership(contact.account, contact.network_id,
+                                       profile.Membership.ALLOW)

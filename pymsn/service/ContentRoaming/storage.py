@@ -24,6 +24,20 @@ from pymsn.gnet.protocol import ProtocolFactory
 
 __all__ = ['Storage']
 
+# Get the DP
+# - GetProfile
+# - GetDocument on the photo RID
+# - HTTP request
+
+# Change the Display Name and Personal Message
+# - UpdateProfile
+
+# Change the DP
+# - DeleteRelationship /UserTiles between the CID and the photo RID
+# - DeleteRelationship between Expression profile and the photo RID
+# - CreateDocument between CID and the new photo, get the new RID
+# - CreateRelationship between the Expression profile and the photo RID
+
 class Storage(SOAPService):
 
     def __init__(self, sso, proxies=None):
@@ -52,7 +66,13 @@ class Storage(SOAPService):
                  callback, errback)
 
     def _HandleGetProfileResponse(self, callback, errback, response, user_date):
-        callback[0](profile_id, display_name, personal_msg, *callback[1:])
+        profile_rid = response.findtext('./st:ResourceID')        
+        
+        profile = response.find('./st:ExpressionProfile')
+        display_name = profile.findtext('./st:DisplayName')
+        personal_msg = profile.findtext('./st:PersonalStatus')
+        
+        callback[0](profile_rid, display_name, personal_msg, *callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def UpdateProfile(self, callback, errback, scenario, profile_rid,
@@ -62,7 +82,7 @@ class Storage(SOAPService):
                             callback, errback)
 
     def _HandleUpdateProfileResponse(self, callback, errback, response, user_date):
-        pass
+        callback[0](*callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def CreateRelationships(self, callback, errback):
@@ -122,78 +142,3 @@ class Storage(SOAPService):
 #         transport.connect("error", self._dp_errback)
 
 #         transport.request(resource, http_headers, method='GET')
-
-def get_proxies():
-    import urllib
-    proxies = urllib.getproxies()
-    result = {}
-    if 'https' not in proxies and \
-            'http' in proxies:
-        url = proxies['http'].replace("http://", "https://")
-        result['https'] = pymsn.Proxy(url)
-    for type, url in proxies.items():
-        if type == 'no': continue
-        if type == 'https' and url.startswith('http://'):
-            url = url.replace('http://', 'https://', 1)
-        result[type] = pymsn.Proxy(url)
-    return result
-
-if __name__ == '__main__':
-    import sys
-    import getpass
-    import signal
-    import gobject
-    import logging
-    from pymsn.service.SingleSignOn import *
-    from pymsn.service.AddressBook import *
-
-    logging.basicConfig(level=logging.DEBUG)
-
-    if "--http" in sys.argv:
-        http_mode = True
-        sys.argv.remove('--http')
-    else:
-        http_mode = False
-
-    if len(sys.argv) < 2:
-        account = raw_input('Account: ')
-    else:
-        account = sys.argv[1]
-
-    if len(sys.argv) < 3:
-        password = getpass.getpass('Password: ')
-    else:
-        password = sys.argv[2]
-
-    mainloop = gobject.MainLoop(is_running=True)
-    
-    signal.signal(signal.SIGTERM,
-            lambda *args: gobject.idle_add(mainloop.quit()))
-    
-    def address_book_state_changed(address_book, pspec, sso):
-        if address_book.state == AddressBookState.SYNCHRONIZED:
-
-            def call(*arg):
-                pass
-
-            def err(*arg):
-                pass
-
-            storage = Storage(sso)
-            storage.GetProfile(call, err, 'Initial', '2686986376622003804', # kimbix
-                               True, False, True, False, True, False, 
-                               True, False, False, False, False)
-#             storage.UpdateProfile(call, err, 'RoamingIdentityChanged', '254A17DF8EDE565C!114',
-#                                   'BLabla', 'new pmsg!', 0)
-            
-
-    sso = SingleSignOn(account, password)
-    address_book = AddressBook(sso)
-    address_book.connect("notify::state", address_book_state_changed, sso)
-    address_book.sync()
-
-    while mainloop.is_running():
-        try:
-            mainloop.run()
-        except KeyboardInterrupt:
-            mainloop.quit()

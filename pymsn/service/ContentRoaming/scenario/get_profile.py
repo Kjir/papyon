@@ -38,7 +38,7 @@ class GetProfileScenario(BaseScenario):
     def execute(self):
         self.__storage.GetProfile((self.__get_profile_callback,),
                                   (self.__get_profile_errback,),
-                                  self.__scenario, self.cid,
+                                  self._scenario, self.cid,
                                   True, False, False, False, True, False, 
                                   True, False, False, False, False)
 
@@ -46,7 +46,7 @@ class GetProfileScenario(BaseScenario):
         callback = self._callback
         callback[0](profile_rid, display_name, personal_msg, *callback[1:])
 
-    def __get_profile_errback(self, error_code)
+    def __get_profile_errback(self, error_code):
         errcode = ContentRoamingError.UNKNOWN
         errback = self._errback[0]
         args = self._errback[1:]

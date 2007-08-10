@@ -383,6 +383,7 @@ class AddressBook(gobject.GObject):
                                 profile.NetworkID.EXTERNAL,
                                 external_email.Email.encode("utf-8"),
                                 display_name.encode("utf-8"),
+                                contact.CID,
                                 profile.Membership.FORWARD)
                 
             for group_id in contact.Groups:
@@ -405,6 +406,7 @@ class AddressBook(gobject.GObject):
                                 profile.NetworkID.MSN,
                                 contact.PassportName.encode("utf-8"),
                                 display_name.encode("utf-8"),
+                                contact.CID,
                                 profile.Membership.FORWARD)
             c._server_contact_attribute_changed("im_contact",
                                                 contact.IsMessengerUser)
