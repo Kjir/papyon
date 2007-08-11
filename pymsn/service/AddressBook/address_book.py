@@ -78,7 +78,7 @@ class AddressBookStorage(set):
         for contact in self:
             if groups <= contact.groups:
                 result.append(contact)
-        return AddressBookStorage(groups)
+        return AddressBookStorage(result)
 
     def search_by(self, field, value):
         result = []
