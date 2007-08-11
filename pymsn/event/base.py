@@ -24,12 +24,8 @@ __all__ = ["BaseEventInterface"]
 
 class BaseEventInterface(object):
     def __init__(self, client):
-        self.__client = weakref.ref(client)
+        self._client = weakref.proxy(client)
         client.register_events_handler(self)
-
-    @property
-    def _client(self):
-        return self.__client()
 
     def _dispatch_event(self, event_name, *params):
         try:
