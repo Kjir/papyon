@@ -18,20 +18,18 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-#import sys
 import weakref
 
 __all__ = ["BaseEventInterface"]
 
 class BaseEventInterface(object):
     def __init__(self, client):
-        self._client = weakref.ref(client)()
-        self._client.register_events_handler(self)
+        self.__client = weakref.ref(client)
+        client.register_events_handler(self)
 
-    #@property
-    #def _client(self):
-    #    frame = sys._getframe(3)
-    #    return frame.f_locals['self']
+    @property
+    def _client(self):
+        return self.__client()
 
     def _dispatch_event(self, event_name, *params):
         try:

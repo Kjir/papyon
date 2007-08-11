@@ -20,8 +20,6 @@
 
 """Event dispatcher with event registration system"""
 
-from pymsn.util.weak import WeakSet
-
 __all__ = ['EventsDispatcher']
 
 class EventsDispatcher(object):
