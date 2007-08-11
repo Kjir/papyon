@@ -72,6 +72,14 @@ class AddressBookStorage(set):
                 # might exist in multiple networks
         return AddressBookStorage(result)
 
+    def search_by_groups(self, *groups):
+        result = []
+        groups = set(groups)
+        for contact in self:
+            if groups <= contact.groups:
+                result.append(contact)
+        return AddressBookStorage(groups)
+
     def search_by(self, field, value):
         result = []
         for contact in self:
