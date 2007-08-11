@@ -25,6 +25,7 @@ contact."""
 
 import msnp
 from switchboard_manager import SwitchboardClient
+from pymsn.event import EventsDispatcher
 
 import logging
 import gobject
@@ -34,10 +35,10 @@ __all__ = ['Conversation','TextFormat']
 
 logger = logging.getLogger('conversation')
 
-class Conversation(SwitchboardClient):
+class Conversation(SwitchboardClient, EventsDispatcher):
     def __init__(self, client, contacts):
         SwitchboardClient.__init__(self, client, contacts)
-        self._events_handlers = set()
+        EventsDispatcher.__init__(self)
     
     @staticmethod
     def _can_handle_message(message, switchboard_client=None):
@@ -86,18 +87,6 @@ class Conversation(SwitchboardClient):
     def leave(self):
         """Leave the conversation."""
         self._leave()
-
-    ### Callbacks
-    def register_events_handler(self, events_handler):
-        """
-        events_handler:
-            an instance with methods as code of callbacks.
-        """
-        self._events_handlers.add(events_handler)
-
-    def _dispatch(self, name, *args):
-        for event_handler in self._events_handlers:
-            event_handler._dispatch_event(name, *args)
 
     def _on_contact_joined(self, contact):
         self._dispatch("on_conversation_user_joined", contact)

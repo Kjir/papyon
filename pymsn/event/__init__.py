@@ -22,6 +22,8 @@
 Defines the interfaces that the client can implement to benefit from the
 client event notifications."""
 
+from dispatcher import *
+
 from client import *
 from conversation import *
 from contact import *

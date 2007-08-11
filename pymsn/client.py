@@ -33,6 +33,7 @@ import pymsn.service.AddressBook as AddressBook
 
 from switchboard_manager import SwitchboardManager
 from conversation import Conversation
+from pymsn.event import EventsDispatcher
 
 import logging
 
@@ -40,7 +41,7 @@ __all__ = ['Client']
 
 logger = logging.getLogger('client')
 
-class Client(object):
+class Client(EventsDispatcher):
     """This class provides way to connect to the notification server as well
     as methods to manage the contact list, and the personnal settings.
 
@@ -57,6 +58,8 @@ class Client(object):
 
             @param proxies: proxies that we can use to connect
             @type proxies: {type: string => L{gnet.proxy.ProxyInfos}}"""
+        EventsDispatcher.__init__(self)
+
         self.__state = ClientState.CLOSED
         self._proxies = proxies
         self._transport_class = transport_class
@@ -74,7 +77,6 @@ class Client(object):
         self.profile = None
         self.address_book = None
 
-        self._events_handlers = set()
         self.__setup_callbacks()
 
     def __setup_callbacks(self):
@@ -141,21 +143,6 @@ class Client(object):
             return
         self._protocol.signoff()
         self.__state = ClientState.CLOSED
-
-    ### Callbacks
-    def register_events_handler(self, events_handler):
-        """
-        events_handler:
-            an instance with methods as code of callbacks.
-        """
-        self._events_handlers.add(events_handler)
-
-    def _dispatch(self, name, *args):
-        count = 0
-        for event_handler in self._events_handlers:
-            if event_handler._dispatch_event(name, *args):
-                count += 1
-        return count
 
     # - - Transport
     def _on_connect_success(self, transp):
