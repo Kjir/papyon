@@ -153,7 +153,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         BaseProtocol.__init__(self, client, transport, proxies)
         gobject.GObject.__init__(self)
         self.__state = ProtocolState.CLOSED
-        self._address_book = None
         self._protocol_version = 0
 
     # Properties ------------------------------------------------------------
@@ -328,28 +327,22 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
         # we need to authenticate with a passport server
         elif command.arguments[1] == "S":
-            account = self._client.profile.account
-            password = self._client.profile.password
-
             if command.arguments[0] == "SSO":
-                sso = SSO.SingleSignOn(account, password, self._proxies)
-                sso.RequestMultipleSecurityTokens(
-                        (self._sso_cb, command.arguments[3]),
-                        None,
-                        SSO.LiveService.MESSENGER_CLEAR)
-                self._address_book = AddressBook.AddressBook(sso, self._proxies)
+                self._client._sso.RequestMultipleSecurityTokens(
+                    (self._sso_cb, command.arguments[3]),
+                    None,
+                    SSO.LiveService.MESSENGER_CLEAR)
                 
-                self._client.address_book = self._address_book #FIXME: ugly ugly !
-                self._address_book.connect("notify::state",
-                        self._address_book_state_changed_cb)
+                self._client.address_book.connect("notify::state",
+                    self._address_book_state_changed_cb)
 
-                self._address_book.connect("messenger-contact-added",
+                self._client.address_book.connect("messenger-contact-added",
                         self._address_book_contact_added_cb)
-                self._address_book.connect("contact-deleted",
+                self._client.address_book.connect("contact-deleted",
                         self._address_book_contact_deleted_cb)
-                self._address_book.connect("contact-blocked",
+                self._client.address_book.connect("contact-blocked",
                         self._address_book_contact_blocked_cb)
-                self._address_book.connect("contact-unblocked",
+                self._client.address_book.connect("contact-unblocked",
                         self._address_book_contact_unblocked_cb)
 
             elif command.arguments[0] == "TWN":
@@ -377,7 +370,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         network_id = int(command.arguments[1])
         account = command.arguments[0]
 
-        contacts = self._address_book.contacts.\
+        contacts = self._client.address_book.contacts.\
                 search_by_network_id(network_id).\
                 search_by_account(account)
 
@@ -393,7 +386,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         network_id = int(command.arguments[2])
         account = command.arguments[1]
 
-        contacts = self._address_book.contacts.\
+        contacts = self._client.address_book.contacts.\
                 search_by_network_id(network_id).\
                 search_by_account(account)
         
@@ -430,7 +423,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         network_id = int(command.arguments[1])
         account = command.arguments[0] 
 
-        contacts = self._address_book.contacts.\
+        contacts = self._client.address_book.contacts.\
                 search_by_network_id(network_id).\
                 search_by_account(account)
 
@@ -454,7 +447,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     # --------- Contact List -------------------------------------------------
     def _handle_ADL(self, command):
         if command.transaction_id == 0: # incoming ADL from the server
-            self._address_book._check_pending_invitations()
+            self._client.address_book._check_pending_invitations()
         if command.arguments[0] == "OK":
             if self._state != ProtocolState.OPEN: # Initial ADL
                 self._state = ProtocolState.OPEN
@@ -475,7 +468,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 self._transport.send_command_ex("BLP",
                         (self._client.profile.privacy,))
                 self._state = ProtocolState.SYNCHRONIZING
-                self._address_book.sync()
+                self._client.address_book.sync()
         elif msg.content_type[0] in \
                 ('text/x-msmsgsinitialemailnotification', \
                  'text/x-msmsgsemailnotification'):

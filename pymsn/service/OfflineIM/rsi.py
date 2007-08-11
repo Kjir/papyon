@@ -32,7 +32,7 @@ class RSI(SOAPService):
         self._tokens = {}
         SOAPService.__init__(self, "RSI", proxies)
 
-    @RequireSecurityTokens(LiveService.MESSENGER)
+    @RequireSecurityTokens(LiveService.MESSENGER_CLEAR)
     def GetMetadata(self, callback, errback):
         self.__soap_request(self._service.GetMetadata, (), 
                             callback, errback)
@@ -40,7 +40,7 @@ class RSI(SOAPService):
     def _HandleGetMetadataResponse(self, callback, errback, response, user_data):
         callback[0](response.text, *callback[1:])
 
-    @RequireSecurityTokens(LiveService.MESSENGER)
+    @RequireSecurityTokens(LiveService.MESSENGER_CLEAR)
     def GetMessage(self, callback, errback, message_id, mark_as_read):
         self.__soap_request(self._service.GetMessage, 
                             (message_id, XMLTYPE.bool.encode(mark_as_read)), 
@@ -55,7 +55,7 @@ class RSI(SOAPService):
             return
         callback[0](m.get_payload().decode('base64'), *callback[1:])
 
-    @RequireSecurityTokens(LiveService.MESSENGER)
+    @RequireSecurityTokens(LiveService.MESSENGER_CLEAR)
     def DeleteMessages(self, callback, errback, message_ids):
         self.__soap_request(self._service.DeleteMessages, (message_ids),
                             callback, errback)
@@ -64,7 +64,7 @@ class RSI(SOAPService):
         callback[0](*callback[1:])
 
     def __soap_request(self, method, args, callback, errback):
-        token = str(self._tokens[LiveService.MESSENGER])
+        token = str(self._tokens[LiveService.MESSENGER_CLEAR])
 
         http_headers = method.transport_headers()
         soap_action = method.soap_action()

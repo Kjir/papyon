@@ -28,6 +28,9 @@ from event import ClientState, ClientErrorType
 
 import profile
 import msnp
+import pymsn.service.SingleSignOn as SSO
+import pymsn.service.AddressBook as AddressBook
+
 from switchboard_manager import SwitchboardManager
 from conversation import Conversation
 
@@ -60,13 +63,16 @@ class Client(object):
         self._proxies = proxies
         self._transport = transport_class(server, ServerType.NOTIFICATION,
                 self._proxies)
+
         self._protocol = msnp.NotificationProtocol(self, self._transport,
                 self._proxies)
+
         self._switchboard_manager = SwitchboardManager(self)
         self._switchboard_manager.register_handler_class(Conversation)
 
+        self._sso = None
         self.profile = None
-        self.address_book = None # FIXME: update when the addressbook get updated
+        self.address_book = None
 
         self._events_handlers = set()
         self.__setup_callbacks()
@@ -81,6 +87,31 @@ class Client(object):
 
         self._switchboard_manager.connect("handler-created",
                 self._on_switchboard_handler_created)
+
+    def __setup_addressbook_callbacks(self):
+        self.address_book.connect("new-pending-contact",
+                                  self._on_addressbook_event)
+
+        self.address_book.connect("messenger-contact-added", 
+                                 self._on_addressbook_event)
+        self.address_book.connect("contact-deleted", 
+                                 self._on_addressbook_event)
+
+        self.address_book.connect("contact-blocked", 
+                                 self._on_addressbook_event)
+        self.address_book.connect("contact-unblocked", 
+                                 self._on_addressbook_event)
+
+        self.address_book.connect("group-added", 
+                                 self._on_addressbook_event)
+        self.address_book.connect("group-deleted", 
+                                 self._on_addressbook_event)
+        self.address_book.connect("group-renamed", 
+                                 self._on_addressbook_event)
+        self.address_book.connect("group-contact-added", 
+                                 self._on_addressbook_event)
+        self.address_book.connect("group-contact-deleted", 
+                                 self._on_addressbook_event)
 
     def _get_state(self):
         return self.__state
@@ -128,6 +159,12 @@ class Client(object):
 
     # - - Transport
     def _on_connect_success(self, transp):
+        self._sso = SSO.SingleSignOn(self.profile.account, 
+                                     self.profile.password,
+                                     self._proxies)
+        self.address_book = AddressBook.AddressBook(self._sso, self._proxies)
+        self.__setup_addressbook_callbacks()
+
         self._state = ClientState.CONNECTED
 
     def _on_connect_failure(self, transp, reason):
@@ -164,7 +201,7 @@ class Client(object):
                 #        self._on_contact_property_changed)
                 contact.connect("notify::client-capabilities",
                         self._on_contact_property_changed)
-    
+
     # - - Contact
     def _on_contact_property_changed(self, contact, pspec):
         method_name = "on_contact_%s_changed" % pspec.name.replace("-", "_")
@@ -178,3 +215,8 @@ class Client(object):
         else:
             logger.warning("Unknown Switchboard Handler class %s" % handler_class)
 
+    # - - Address book
+    def _on_addressbook_event(self, address_book, pspec, args):
+        method_name = "on_addressbook_%s" % pspec.name.replace("-", "_")
+        self._dispatch(method_name, *args)
+            

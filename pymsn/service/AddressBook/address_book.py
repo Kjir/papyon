@@ -157,15 +157,19 @@ class PendingContact(object):
 class AddressBook(gobject.GObject):
     
     __gsignals__ = {
+            "new-pending-contact" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+
             "messenger-contact-added" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
-            "email-contact-added"     : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                (object,)),
-            "mobile-contact-added"    : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                (object,)),
+#             "email-contact-added"     : (gobject.SIGNAL_RUN_FIRST,
+#                 gobject.TYPE_NONE,
+#                 (object,)),
+#             "mobile-contact-added"    : (gobject.SIGNAL_RUN_FIRST,
+#                 gobject.TYPE_NONE,
+#                 (object,)),
 
             "contact-deleted"         : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE, 
@@ -445,6 +449,7 @@ class AddressBook(gobject.GObject):
                                        member.DisplayName.encode("utf-8"), 
                                        msg.encode("utf-8"))
                     self._pending_contacts.add(p)
+                    self.emit("new-pending-contact", p)
             else:
                 for role in member.Roles:
                     if role == "Allow":

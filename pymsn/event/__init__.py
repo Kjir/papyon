@@ -26,4 +26,5 @@ from client import *
 from conversation import *
 from contact import *
 from contact_list import *
+from address_book import *
 from invite import *
