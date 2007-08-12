@@ -88,7 +88,6 @@ class P2PSessionInvite(object):
                 call_id = self._request.call_id)
         self._session._send_p2p_data(response)
 
-
 class P2PSession(object):
     def __init__(self, client, peer, euf_guid="", application_id=0):
         """Initializer"""
@@ -102,15 +101,13 @@ class P2PSession(object):
         self._session_id = None
 
         #FIXME: implement the transport manager and get rid of this
-        self._transport = None
+        self._transport = SwitchboardP2PTransport(self._client, self._peer)
 
     def invite(self, context):
         if self._call_id is None:
             self._call_id = _generate_guid()
         if self._session_id is None:
             self._session_id = _generate_id()
-
-        self._transport = SwitchboardP2PTransport(self._client, self._peer)
 
         body = SLPMessageBody(SLPContentType.SESSION_REQUEST)
         body.add_header('EUF-GUID', self._euf_guid)
@@ -155,7 +152,10 @@ class P2PSession(object):
                 data, total_size, session_id)
         self._transport.send(blob)
 
-    def _on_invite_response(self, response):
+    def _on_chunk_received(self, transport, chunk):
+        pass
+
+    def _on_blob_received(self, transport, blob):
         pass
 
 
@@ -164,7 +164,7 @@ class MSNObjectTransferSession(P2PSession):
         P2PSession.__init__(self, client, peer,
                 EufGuid.MSN_OBJECT, application_id)
 
-    def invite(self, msn_object):
+    def request(self, msn_object):
         context = base64.b64encode(msn_object + "\x00")
         return P2PSession.invite(self, context)
 

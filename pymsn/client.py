@@ -93,37 +93,33 @@ class Client(EventsDispatcher):
                 self._on_switchboard_handler_created)
 
     def __setup_addressbook_callbacks(self):
-        self.address_book.connect("new-pending-contact",
-                                  self._on_addressbook_event)
+        def connect_signal(name):
+            self.address_book.connect(name, self._on_addressbook_event, name)
 
-        self.address_book.connect("messenger-contact-added", 
-                                 self._on_addressbook_event)
-        self.address_book.connect("contact-deleted", 
-                                 self._on_addressbook_event)
+        connect_signal("new-pending-contact")
 
-        self.address_book.connect("contact-blocked", 
-                                 self._on_addressbook_event)
-        self.address_book.connect("contact-unblocked", 
-                                 self._on_addressbook_event)
+        connect_signal("messenger-contact-added")
+        connect_signal("contact-deleted")
 
-        self.address_book.connect("group-added", 
-                                 self._on_addressbook_event)
-        self.address_book.connect("group-deleted", 
-                                 self._on_addressbook_event)
-        self.address_book.connect("group-renamed", 
-                                 self._on_addressbook_event)
-        self.address_book.connect("group-contact-added", 
-                                 self._on_addressbook_event)
-        self.address_book.connect("group-contact-deleted", 
-                                 self._on_addressbook_event)
+        connect_signal("contact-blocked")
+        connect_signal("contact-unblocked")
+
+        connect_signal("group-added")
+        connect_signal("group-deleted")
+        connect_signal("group-renamed")
+        connect_signal("group-contact-added")
+        connect_signal("group-contact-deleted")
 
     def __setup_oim_box_callbacks(self):
         self.oim_box.connect("notify::state", 
                              self._on_oim_box_state_changed)
 
-        self.oim_box.connect("messages-fetched", self._on_oim_box_event)
-        self.oim_box.connect("message-sent", self._on_oim_box_event)
-        self.oim_box.connect("messages-deleted", self._on_oim_box_event)
+        def connect_signal(name):
+            self.oim_box.connect(name, self._on_oim_box_event, name)
+
+        connect_signal("messages-fetched")
+        connect_signal("message-sent")
+        connect_signal("messages-deleted")
 
     def _get_state(self):
         return self.__state
@@ -217,18 +213,17 @@ class Client(EventsDispatcher):
             logger.warning("Unknown Switchboard Handler class %s" % handler_class)
 
     # - - Address book
-    def _on_addressbook_event(self, address_book, pspec, args):
-        method_name = "on_addressbook_%s" % pspec.name.replace("-", "_")
-        self._dispatch(method_name, *args)
+    def _on_addressbook_event(self, address_book, *args):
+        method_name = "on_addressbook_%s" % args[-1].replace("-", "_")
+        self._dispatch(method_name, *args[:-1])
             
     # - - Offline messages
-    def _on_oim_box_state_changed(self, oim_box, param):
+    def _on_oim_box_state_changed(self, oim_box, pspec):
         state = oim_box.state
         if state == OIM.OfflineMessagesBoxState.SYNCHRONIZED:
             pass
             #oim_box.fetch_messages()
 
-    def _on_oim_box_event(self, oim_box, pspec, args):
-        method_name = "on_oim_box_%s" % pspec.name.replace("-", "_")
-        print method_name
-        self._dispatch(method_name, *args)
+    def _on_oim_box_event(self, oim_box, *args):
+        method_name = "on_oim_box_%s" % args[-1].replace("-", "_")
+        self._dispatch(method_name, args[:-1])
