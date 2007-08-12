@@ -44,7 +44,7 @@ class GroupRenameScenario(BaseScenario):
 
     def __group_rename_callback(self):
         callback = self._callback
-        callback[0](*callback[1])
+        callback[0](*callback[1:])
 
     def __group_rename_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN

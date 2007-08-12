@@ -445,7 +445,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             if self._state != ProtocolState.OPEN: # Initial ADL
                 self._state = ProtocolState.OPEN
             else: # contact Added
-                raise NotImplementedError("ADL contact add response")
+                pass
 
     # --------- Messages -----------------------------------------------------
     def _handle_MSG(self, command):

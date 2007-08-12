@@ -55,10 +55,11 @@ class DeclineInviteScenario(BaseScenario):
                                  self._scenario, 'Block', self._type(), 
                                  self.state, self.account)
 
-    def __delete_member_errback(self):
+    def __delete_member_errback(self, error_code):
+        errcode = AddressBookError.UNKNOWN
         errback = self._errback[0]
         args = self._errback[1:]
-        errback(reason, *args)
+        errback(errcode, *args)
     
     def __add_member_block_callback(self):
         self.__sharing.AddMember((self.__add_member_reverse_callback,),
@@ -66,7 +67,8 @@ class DeclineInviteScenario(BaseScenario):
                                  self._scenario, 'Reverse', self._type(), 
                                  self.state, self.account)
 
-    def __add_member_block_errback(self):
+    def __add_member_block_errback(self, error_code):
+        errcode = AddressBookError.UNKNOWN
         errback = self._errback[0]
         args = self._errback[1:]
         errback(reason, *args)
@@ -75,7 +77,8 @@ class DeclineInviteScenario(BaseScenario):
         callback = self._callback
         callback[0](*callback[1])
 
-    def __add_member_reverse_errback(self):
+    def __add_member_reverse_errback(self, error_code):
+        errcode = AddressBookError.UNKNOWN
         errback = self._errback[0]
         args = self._errback[1:]
-        errback(reason, *args)
+        errback(errcode, *args)

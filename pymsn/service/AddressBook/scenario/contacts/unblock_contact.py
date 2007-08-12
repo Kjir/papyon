@@ -56,16 +56,18 @@ class UnblockContactScenario(BaseScenario):
                                  self._scenario, 'Allow', self._type(), 
                                  self.state, self.account)
 
-    def __delete_member_errback(self):
+    def __delete_member_errback(self, error_code):
+        errcode = AddressBookError.UNKNOWN
         errback = self._errback[0]
         args = self._errback[1:]
-        errback(reason, *args)
+        errback(errcode, *args)
     
     def __add_member_callback(self):
         callback = self._callback
         callback[0](*callback[1:])
 
-    def __add_member_errback(self):
+    def __add_member_errback(self, error_code):
+        errcode = AddressBookError.UNKNOWN
         errback = self._errback[0]
         args = self._errback[1:]
-        errback(reason, *args)
+        errback(errcode, *args)

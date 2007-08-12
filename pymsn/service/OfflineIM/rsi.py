@@ -22,7 +22,7 @@ from pymsn.service.SOAPUtils import XMLTYPE
 from pymsn.service.SingleSignOn import *
 from pymsn.service.SOAPService import SOAPService
 
-import email.message as email
+# import email.message as email
 
 __all__ = ['RSI']
 
@@ -47,13 +47,14 @@ class RSI(SOAPService):
                             callback, errback)
 
     def _HandleGetMessageResponse(self, callback, errback, response, user_data):
-        m = email.message_from_string(response.text)
-        if m.get_content_type().split('/')[1] == 'vnd.ms-msnipg':
+        # m = email.message_from_string(response.text)
+        # if m.get_content_type().split('/')[1] == 'vnd.ms-msnipg':
             # FIXME : process the IPG data 
             # http://www.amsn-project.net/forums/viewtopic.php?p=21744
             # set a mobile sender flag
-            return
-        callback[0](m.get_payload().decode('base64'), *callback[1:])
+        #    return
+        # callback[0](m.get_payload().decode('base64'), *callback[1:])
+        callback[0]("", *callback[1:])
 
     @RequireSecurityTokens(LiveService.MESSENGER_CLEAR)
     def DeleteMessages(self, callback, errback, message_ids):

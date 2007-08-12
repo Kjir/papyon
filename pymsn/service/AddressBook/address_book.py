@@ -532,7 +532,7 @@ class AddressBook(gobject.GObject):
         self.emit('group-deleted', group)
 
     def __rename_group_cb(self, group, group_name):
-        group.name = group_name
+        group._name = group_name
         self.emit('group-renamed', group)
 
     def __add_contact_to_group_cb(self, group, contact):
@@ -541,7 +541,7 @@ class AddressBook(gobject.GObject):
 
     def __delete_contact_from_group_cb(self, group, contact):
         contact._delete_group_ownership(group)
-        self.emit('group-contact-delete', group, contact)
+        self.emit('group-contact-deleted', group, contact)
 
     def __common_callback(self, signal, *args):
         self.emit(signal, *args)

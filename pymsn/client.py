@@ -161,7 +161,7 @@ class Client(EventsDispatcher):
                                      self._proxies)
         self.address_book = AB.AddressBook(self._sso, self._proxies)
         self.__setup_addressbook_callbacks()
-        self.oim_box = OIM.OfflineMessagesBox(self._sso)
+        self.oim_box = OIM.OfflineMessagesBox(self._sso, self._proxies)
         self.__setup_oim_box_callbacks()
 
         self._state = ClientState.CONNECTED
@@ -232,4 +232,3 @@ class Client(EventsDispatcher):
         method_name = "on_oim_box_%s" % pspec.name.replace("-", "_")
         print method_name
         self._dispatch(method_name, *args)
-            
