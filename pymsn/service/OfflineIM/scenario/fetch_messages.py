@@ -21,7 +21,7 @@ from pymsn.service.OfflineIM.scenario.base import BaseScenario
 __all__ = ['FetchMessagesScenario']
 
 class FetchMessagesScenario(BaseScenario):
-    def __init__(self, rsi, callback, errback, global_callback, message_ids):
+    def __init__(self, rsi, callback, errback, global_callback, message_ids=[]):
         """Accepts an invitation.
 
             @param rsi: the rsi service
@@ -36,7 +36,7 @@ class FetchMessagesScenario(BaseScenario):
         self.message_ids = message_ids
 
     def execute(self):
-        for message_id in message_ids:
+        for message_id in self.message_ids:
             self.__rsi.GetMessage((self.__get_message_callback, message_id),
                                   (self.__get_message_errback,),
                                   message_id, False)

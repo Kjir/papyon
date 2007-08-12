@@ -29,7 +29,8 @@ from event import ClientState, ClientErrorType
 import profile
 import msnp
 import pymsn.service.SingleSignOn as SSO
-import pymsn.service.AddressBook as AddressBook
+import pymsn.service.AddressBook as AB
+import pymsn.service.OfflineIM as OIM
 
 from switchboard_manager import SwitchboardManager
 from conversation import Conversation
@@ -77,6 +78,7 @@ class Client(EventsDispatcher):
         self.profile = None
         self.address_book = None
 
+        self.oim_box = None
         self.__setup_callbacks()
 
     def __setup_callbacks(self):
@@ -115,6 +117,14 @@ class Client(EventsDispatcher):
         self.address_book.connect("group-contact-deleted", 
                                  self._on_addressbook_event)
 
+    def __setup_oim_box_callbacks(self):
+        self.oim_box.connect("notify::state", 
+                             self._on_oim_box_state_changed)
+
+        self.oim_box.connect("messages-fetched", self._on_oim_box_event)
+        self.oim_box.connect("message-sent", self._on_oim_box_event)
+        self.oim_box.connect("messages-deleted", self._on_oim_box_event)
+
     def _get_state(self):
         return self.__state
     def _set_state(self, state):
@@ -149,8 +159,10 @@ class Client(EventsDispatcher):
         self._sso = SSO.SingleSignOn(self.profile.account, 
                                      self.profile.password,
                                      self._proxies)
-        self.address_book = AddressBook.AddressBook(self._sso, self._proxies)
+        self.address_book = AB.AddressBook(self._sso, self._proxies)
         self.__setup_addressbook_callbacks()
+        self.oim_box = OIM.OfflineMessagesBox(self._sso)
+        self.__setup_oim_box_callbacks()
 
         self._state = ClientState.CONNECTED
 
@@ -184,6 +196,8 @@ class Client(EventsDispatcher):
                         self._on_contact_property_changed)
                 contact.connect("notify::personal-message",
                         self._on_contact_property_changed)
+                contact.connect("notify::current-media",
+                        self._on_contact_property_changed)
                 #contact.connect("notify::display-picture",
                 #        self._on_contact_property_changed)
                 contact.connect("notify::client-capabilities",
@@ -205,5 +219,17 @@ class Client(EventsDispatcher):
     # - - Address book
     def _on_addressbook_event(self, address_book, pspec, args):
         method_name = "on_addressbook_%s" % pspec.name.replace("-", "_")
+        self._dispatch(method_name, *args)
+            
+    # - - Offline messages
+    def _on_oim_box_state_changed(self, oim_box, param):
+        state = oim_box.state
+        if state == OIM.OfflineMessagesBoxState.SYNCHRONIZED:
+            pass
+            #oim_box.fetch_messages()
+
+    def _on_oim_box_event(self, oim_box, pspec, args):
+        method_name = "on_oim_box_%s" % pspec.name.replace("-", "_")
+        print method_name
         self._dispatch(method_name, *args)
             

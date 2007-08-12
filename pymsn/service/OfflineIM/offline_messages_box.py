@@ -25,10 +25,13 @@ from pymsn.service.SOAPUtils import *
 import pymsn.util.ElementTree as ElementTree
 import pymsn.util.StringIO as StringIO
 import gobject
+
 import logging
 
 __all__ = ['OfflineMessagesBoxState', 'OfflineMessagesBox', \
                'OfflineMessagesError', 'OfflineMessage']
+
+logger = logging.getLogger('Service')
 
 class _MetadataElement(object):
     def __init__(self, element):
@@ -75,9 +78,10 @@ class _MetadataElement(object):
 
 class Metadata(object):
     def __init__(self, metadata):
+        tree = self._parse(metadata)
+        self.tree = _MetadataElement(tree)
         try:
-            tree = self.parse(metadata)
-            self.tree = _MetadataElement(tree)
+            pass
         except:
             self.tree = None
             logger.warning("Metadata: Invalid metadata")
@@ -99,10 +103,7 @@ class Metadata(object):
 
     def _parse(self, data):
         data = StringIO.StringIO(data)
-        context = ElementTree.iterparse(data)
-        data.close()
-        return context.root
-
+        return ElementTree.parse(data)
 
 class OfflineMessagesBoxState(object):
     """Offline messages box synchronization state.
@@ -135,21 +136,18 @@ class OfflineMessage(object):
             self._date = date
         self._is_mobile = is_mobile
 
-    @property
     def __get_id(self):
         return self.__id
     def __set_id(self, id):
         self.__id = id
     _id = property(__get_id, __set_id)
 
-    @property
     def __get_number(self):
         return self.__number
     def __set_number(self, number):
         self.__number = number
     _number = property(__get_number, __set_number)
 
-    @property
     def __get_text(self):
         return self.__text
     def __set_text(self, text):
@@ -177,8 +175,6 @@ class OfflineMessage(object):
         return self.__number > msg._number
 
 class OfflineMessagesBox(gobject.GObject):
-
-    # FIXME : think about useful signals
 
     __gsignals__ = {
             "messages-fetched" : (gobject.SIGNAL_RUN_FIRST,
@@ -244,7 +240,7 @@ class OfflineMessagesBox(gobject.GObject):
 
     def __parse_metadata(self, xml_data):
         metadata = Metadata(xml_data)
-        for m in metadata.findall('./MD/M'):
+        for m in metadata.findall('./M'):
             id = m.findtext('./I')
             sender = m.findtext('./E')
 
@@ -254,9 +250,9 @@ class OfflineMessagesBox(gobject.GObject):
             date = m.find('./RT')
             if date is not None:
                 date = date.text
-                
+
             message = OfflineMessage(id, sender, date, name)
-            self.__messages[message._id()] = message
+            self.__messages[message._id] = message
 
         self._state = OfflineMessagesBoxState.SYNCHRONIZED
 

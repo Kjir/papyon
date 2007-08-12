@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2007  Ali Sabil <ali.sabil@gmail.com>
-# Copyright (C) 2007  Ole André Vadla Ravnås <oleavr@gmail.com>
+# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -32,27 +31,27 @@ class AddressBookEventInterface(BaseEventInterface):
     def on_addressbook_messenger_contact_added(self, contact):
         pass
 
-    def on_addressbook_messenger_contact_deleted(self, contact):
+    def on_addressbook_contact_deleted(self, contact):
         pass
 
-    def on_addressbook_messenger_contact_blocked(self, contact):
+    def on_addressbook_contact_blocked(self, contact):
         pass
 
-    def on_addressbook_messenger_contact_unblocked(self, contact):
+    def on_addressbook_contact_unblocked(self, contact):
         pass
 
-    def on_addressbook_messenger_group_added(self, group):
+    def on_addressbook_group_added(self, group):
         pass
 
-    def on_addressbook_messenger_group_deleted(self, group):
+    def on_addressbook_group_deleted(self, group):
         pass
 
-    def on_addressbook_messenger_group_renamed(self, group):
+    def on_addressbook_group_renamed(self, group):
         pass
 
-    def on_addressbook_messenger_group_contact_added(self, group, contact):
+    def on_addressbook_group_contact_added(self, group, contact):
         pass
 
-    def on_addressbook_messenger_group_contact_deleted(self, group, contact):
+    def on_addressbook_group_contact_deleted(self, group, contact):
         pass
 

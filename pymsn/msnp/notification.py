@@ -24,6 +24,7 @@
 Implements the protocol used to communicate with the Notification Server."""
 
 from base import BaseProtocol, ProtocolState
+from pymsn.gnet.message.HTTP import HTTPMessage
 from message import IncomingMessage
 import pymsn.util.ElementTree as et
 import pymsn.profile as profile
@@ -113,14 +114,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         @see L{base.ProtocolState}"""
     __gsignals__ = {
             "mail-received" : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                (object,)),
-
-            "oim-received" : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                (object,)),
-
-            "oim-deleted" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
 
@@ -476,9 +469,12 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         elif msg.content_type[0] in \
                 ('text/x-msmsgsinitialmdatanotification', \
                  'text/x-msmsgsoimnotification'):
-            self.emit("oim-received", msg)
+            if self._client.oim_box is not None:
+                m = HTTPMessage()
+                m.parse(msg.body)
+                self._client.oim_box.sync(m.get_header("Mail-Data"))
         elif msg.content_type[0] == 'text/x-msmsgsactivemailnotification':
-            self.emit("oim-deleted", msg)
+            pass
 
     # --------- Invitation ---------------------------------------------------
     def _handle_RNG(self,command):
