@@ -80,6 +80,16 @@ class AddressBookStorage(set):
                 result.append(contact)
         return AddressBookStorage(result)
 
+    def group_by_group(self):
+        result = {}
+        for contact in self:
+            groups = contact.groups
+            for group in groups:
+                if group not in result:
+                    result[group] = set()
+                result[group].add(contact)
+        return result
+
     def search_by(self, field, value):
         result = []
         for contact in self:
