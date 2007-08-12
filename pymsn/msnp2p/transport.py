@@ -25,11 +25,14 @@ from pymsn.msnp.message import MessageAcknowledgement
 import struct
 import gobject
 import random
+import logging
 from copy import copy
 
 __all__ = ['MessageBlob', 'SwitchboardP2PTransport']
 
 MAX_INT32 = 2147483647
+
+logger = logging.getLogger('msnp2p:transport')
 
 def _generate_id(max=MAX_INT32):
     """
@@ -157,7 +160,7 @@ class MessageBlob(object):
         if session_id is None:
             session_id = _generate_id()
         self.session_id = session_id
-        self.blob_id = blob_id or _generate_id()
+        self.id = blob_id or _generate_id()
 
     def __del__(self):
         if self.data is not None:
@@ -189,7 +192,7 @@ class MessageBlob(object):
         
         header = TLPHeader()
         header.session_id = self.session_id
-        header.blob_id = self.blob_id
+        header.blob_id = self.id
         header.blob_offset = blob_offset
         header.blob_size = self.total_size
         header.chunk_size = len(data)
@@ -201,7 +204,8 @@ class MessageBlob(object):
 
     def append_chunk(self, chunk):
         assert self.data is not None, "Trying to write to a Read Only blob"
-        assert self.blob_id == chunk.header.blob_id, "Trying to append a chunk to the wrong blob"
+        assert self.session_id == chunk.header.session_id, "Trying to append a chunk to the wrong blob"
+        assert self.id == chunk.header.blob_id, "Trying to append a chunk to the wrong blob"
         self.data.seek(chunk.header.blob_offset, 0)
         self.data.write(chunk.body)
 
@@ -209,7 +213,7 @@ class MessageBlob(object):
 class ControlBlob(MessageBlob):
     def __init__(self, session_id, flags, dw1=0, dw2=0, qw1=0):
         MessageBlob.__init__(self, 0, None)
-        header = TLPHeader(session_id, self.blob_id, 0, 0, 0,
+        header = TLPHeader(session_id, self.id, 0, 0, 0,
                 flags, dw1, dw2, qw1)
         self.chunk = MessageChunk(header, "")
 
@@ -229,6 +233,10 @@ class BaseP2PTransport(gobject.GObject):
             "chunk-sent": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
+
+            "blob-received": (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,))
             }
     
     def __init__(self, client, name, peer):
@@ -261,11 +269,19 @@ class BaseP2PTransport(gobject.GObject):
             self._data_blob_queue.append(blob)
         self._process_send_queues()
 
+    def register_writable_blob(self, blob):
+        if blob.session_id in self._writable_blobs:
+            logger.warning("registering already registered blob "\
+                    "with session_id=" str(session_id))
+            return
+        self._writable_blobs[blob.session_id] = blob
+
     def _send_chunk(self, chunk):
         raise NotImplementedError
 
     # Helper methods
     def _reset(self):
+        self._writable_blobs = {}
         self._control_blob_queue = []
         self._data_blob_queue = []
         self._pending_ack = {} # blob_id : [blob_offset1, blob_offset2 ...]
@@ -294,6 +310,20 @@ class BaseP2PTransport(gobject.GObject):
 
         if not chunk.is_control_chunk():
             self.emit("chunk-received", chunk)
+            session_id = chunk.header.session_id
+            if session_id == 0:
+                return
+
+            if session_id in self._writable_blobs:
+                blob = self._writable_blobs[session_id]
+
+                if chunk.header.blob_offset == 0:
+                    blob.id = chunk.header.blob_id
+
+                blob.append_chunk(chunk)
+                if blob.is_complete():
+                    self.emit("blob-received", blob)
+                    del self._writable_blobs[session_id]
 
         self._process_send_queues()
 
