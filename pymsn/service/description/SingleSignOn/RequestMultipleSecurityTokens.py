@@ -22,7 +22,7 @@ import xml.sax.saxutils as xml
 
 class LiveService(object):
     CONTACTS = ("contacts.msn.com", "?fs=1&id=24000&kv=7&rn=93S9SWWw&tw=0&ver=2.1.6000.1")
-    MESSENGER = ("messenger.com", "?id=507")
+    MESSENGER = ("messenger.msn.com", "?id=507")
     MESSENGER_CLEAR = ("messengerclear.live.com", "MBI_KEY_OLD")
     MESSENGER_SECURE = ("messengersecure.live.com", "MBI_SSL")
     SPACES = ("spaces.live.com", "MBI")

@@ -20,46 +20,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-__all__ = ['XMLTYPE', 'XMLNS']
-
-from xml.utils import iso8601
-
-class XMLTYPE(object):
-
-    class bool(object):
-        @staticmethod
-        def encode(boolean):
-            if boolean:
-                return "true"
-            return "false"
-
-        @staticmethod
-        def decode(boolean_str):
-            false_set = ("false", "f", "no", "n", "0", "")
-            if str(boolean_str).strip().lower() not in false_set:
-                return True
-            return False
-
-    class int(object):
-        @staticmethod
-        def encode(integer):
-            return str(integer)
-
-        @staticmethod
-        def decode(integer_str):
-            try:
-                return int(integer_str)
-            except ValueError:
-                return 0
-
-    class datetime(object):
-        @staticmethod
-        def encode(date_int):
-            return iso8601.tostring(date_int)
-
-        @staticmethod
-        def decode(date_str):
-            return iso8601.parse(date_str.strip())
+__all__ = ['XMLNS']
 
 class XMLNS(object):
 

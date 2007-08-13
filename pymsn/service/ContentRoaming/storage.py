@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from pymsn.service.SOAPService import SOAPService, url_split
-from pymsn.service.SOAPUtils import XMLTYPE
+from pymsn.util.ElementTree import XMLTYPE
 from pymsn.service.SingleSignOn import *
 
 from pymsn.gnet.protocol import ProtocolFactory
@@ -37,6 +37,7 @@ __all__ = ['Storage']
 # - DeleteRelationship between Expression profile and the photo RID
 # - CreateDocument between CID and the new photo, get the new RID
 # - CreateRelationship between the Expression profile and the photo RID
+# - Update profile with different Flag?
 
 class Storage(SOAPService):
 
@@ -68,11 +69,25 @@ class Storage(SOAPService):
     def _HandleGetProfileResponse(self, callback, errback, response, user_date):
         profile_rid = response.findtext('./st:ResourceID')        
         
-        profile = response.find('./st:ExpressionProfile')
-        display_name = profile.findtext('./st:DisplayName')
-        personal_msg = profile.findtext('./st:PersonalStatus')
+        expression_profile = response.find('./st:ExpressionProfile')
+        expression_profile_rid = expression_profile.find('./st:ResourceID')
+
+        display_name = expression_profile.findtext('./st:DisplayName')
+        personal_msg = expression_profile.findtext('./st:PersonalStatus')
+
+        photo = expression_profile.find('./st:Photo')
+        if photo is not None:
+            photo_rid = photo.findtext('./st:ResourceID')
+            document_stream = photo.find('./st:DocumentStreams/st:DocumentStream')
+            photo_mime_type = document_stream.findtext('./st:MimeType')
+            photo_data_size = document_stream.findtext('./st:DataSize', "int")
+            photo_url = None
+        else:
+            photo_rid = photo_mime_type = photo_data_size = photo_url = None
         
-        callback[0](profile_rid, display_name, personal_msg, *callback[1:])
+        callback[0](profile_rid, expression_profile_rid, display_name, personal_msg,
+                    photo_rid, photo_mime_type, photo_data_size, photo_url,
+                    *callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def UpdateProfile(self, callback, errback, scenario, profile_rid,

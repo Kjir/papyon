@@ -65,64 +65,7 @@ soap_template = """<?xml version='1.0' encoding='utf-8'?>
     </soap:Body>
 </soap:Envelope>"""
 
-class _SOAPElement(object):
-    def __init__(self, element, ns_shorthands):
-        self.element = element
-        self.ns_shorthands = ns_shorthands.copy()
-
-    def __getattr__(self, name):
-        return getattr(self.element, name)
-
-    def __getitem__(self, name):
-        path = self._process_path(path)
-        return self.element[name]
-
-    def __iter__(self):
-        for node in self.element:
-            yield _SOAPElement(node, self.ns_shorthands)
-
-    def __contains__(self, node):
-        return node in self.element
-
-    def __repr__(self):
-        return "<SOAPElement name=\"%s\">" % (self.element.tag,)
-
-    def _process_path(self, path):
-        for sh, ns in self.ns_shorthands.iteritems():
-            path = path.replace("/%s:" % sh, "/{%s}" % ns)
-            if path.startswith("%s:" % sh):
-                path = path.replace("%s:" % sh, "{%s}" % ns, 1)
-        return path
-
-    def find(self, path):
-        path = self._process_path(path)
-        
-        node = self.element.find(path)
-        if node is None:
-            return None
-        return _SOAPElement(node, self.ns_shorthands)
-
-    def findall(self, path):
-        path = self._process_path(path)
-        
-        result = []
-        nodes = self.element.findall(path)
-        for node in nodes:
-            result.append(_SOAPElement(node, self.ns_shorthands))
-        return result
-
-    def findtext(self, path, type=None):
-        result = self.find(path)
-        if result is None:
-            return ""
-        result = result.text
-        
-        if type is None:
-            return result
-        return getattr(XMLTYPE, type).decode(result)
-
-
-class SOAPResponse(object):
+class SOAPResponse(ElementTree.XMLResponse):
     NS_SHORTHANDS = {'soap' : XMLNS.SOAP.ENVELOPE,
             "xmlenc" : XMLNS.ENCRYPTION.BASE,
             "wsse" : XMLNS.WS.SECEXT,
@@ -138,9 +81,8 @@ class SOAPResponse(object):
             "rsi" : XMLNS.MICROSOFT.LIVE.RSI }
 
     def __init__(self, soap_data):
+        ElementTree.XMLResponse.__init__(self, soap_data, self.NS_SHORTHANDS)
         try:
-            tree = self._parse(soap_data)
-            self.tree = _SOAPElement(tree, self.NS_SHORTHANDS)
             self.header = self.tree.find("./soap:Header")
             self.body = self.tree.find("./soap:Body")
             self.fault = self.body.find("./soap:Fault")
@@ -150,18 +92,6 @@ class SOAPResponse(object):
             self.body = None
             self.fault = None
             logger.warning("SOAPResponse: Invalid xml+soap data")
-
-    def __getitem__(self, name):
-        return self.tree[name]
-
-    def find(self, path):
-        return self.tree.find(path)
-
-    def findall(self, path):
-        return self.tree.findall(path)
-    
-    def findtext(self, path, type=None):
-        return self.tree.findtext(path, type)
 
     def is_fault(self):
         return self.fault is not None
@@ -184,7 +114,6 @@ class SOAPResponse(object):
                 elem.set("(xmlns)", tuple(ns))
         data.close()
         return context.root
-
 
 class SOAPService(object):
 

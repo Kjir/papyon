@@ -33,71 +33,12 @@ __all__ = ['OfflineMessagesBoxState', 'OfflineMessagesBox', \
 
 logger = logging.getLogger('Service')
 
-class _MetadataElement(object):
-    def __init__(self, element):
-        self.element = element
-        
-    def __getattr__(self, name):
-        return getattr(self.element, name)
-
-    def __getitem__(self, name):
-        return self.element[name]
-
-    def __iter__(self):
-        for node in self.element:
-            yield _MetadataElement(node)
-
-    def __contains__(self, node):
-        return node in self.element
-    
-    def __repr__(self):
-        return "<MetadataElement name=\"%s\">" % (self.element.tag,)
-
-    def find(self, path):
-        node = self.element.find(path)
-        if node is None:
-            return None
-        return _MetadataElement(node)
-
-    def findall(self, path):
-        result = []
-        nodes = self.element.findall(path)
-        for node in nodes:
-            result.append(_MetadataElement(node))
-        return result
-
-    def findtext(self, path, type=None):
-        result = self.find(path)
-        if result is None:
-            return ""
-        result = result.text
-        
-        if type is None:
-            return result
-        return getattr(XMLTYPE, type).decode(result)
-
-class Metadata(object):
+class Metadata(ElementTree.XMLResponse):
     def __init__(self, metadata):
-        tree = self._parse(metadata)
-        self.tree = _MetadataElement(tree)
-        try:
-            pass
-        except:
-            self.tree = None
+        ElementTree.XMLResponse.__init__(self, metadata)
+        if self.tree is None:
             logger.warning("Metadata: Invalid metadata")
             
-    def __getitem__(self, name):
-        return self.tree[name]
-
-    def find(self, path):
-        return self.tree.find(path)
-
-    def findall(self, path):
-        return self.tree.findall(path)
-    
-    def findtext(self, path, type=None):
-        return self.tree.findtext(path, type)
-
     def is_valid(self):
         return self.tree is not None
 

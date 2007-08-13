@@ -45,21 +45,33 @@ class ContentRoamingState(object):
 class ContentRoaming(gobject.GObject):
 
     __gproperties__ = {
-        "state"            :  (gobject.TYPE_INT,
-                               "State",
-                               "The state of the addressbook.",
-                               0, 2, ContentRoamingState.NOT_SYNCHRONIZED,
-                               gobject.PARAM_READABLE),
-
+        "state"            : (gobject.TYPE_INT,
+                              "State",
+                              "The state of the addressbook.",
+                              0, 2, ContentRoamingState.NOT_SYNCHRONIZED,
+                              gobject.PARAM_READABLE),
+        
         "display-name"     : (gobject.TYPE_STRING,
                               "Display name",
-                              "The user's display name",
+                              "The user's display name on storage",
                               "",
                               gobject.PARAM_READABLE),
         
         "personal-message" : (gobject.TYPE_STRING,
                               "Personal message",
-                              "The user's personal message",
+                              "The user's personal message on storage",
+                              "",
+                              gobject.PARAM_READABLE)
+
+        "personal-message" : (gobject.TYPE_STRING,
+                              "Personal message",
+                              "The user's personal message on storage",
+                              "",
+                              gobject.PARAM_READABLE)
+
+        "display-picture"  : (gobject.TYPE_STRING,
+                              "Display picture",
+                              "The user's display picture on storage",
                               "",
                               gobject.PARAM_READABLE)
         }
@@ -71,11 +83,15 @@ class ContentRoaming(gobject.GObject):
         self._storage = storage.Storage(sso, proxies)
         self._ab = ab
 
-        self._profile_id = None
-
         self.__state = ContentRoamingState.NOT_SYNCHRONIZED
+
         self.__display_name = ''
         self.__personal_message = ''
+        self.__display_picture = ''
+
+        self._profile_id = None
+        self._expression_profile_id = None
+        self._display_picture_id = None
 
     # Properties
     def __get_state(self):
@@ -94,6 +110,10 @@ class ContentRoaming(gobject.GObject):
     def personal_message(self):
         return self.__personal_message
 
+    @property
+    def display_picture(self):
+        return self.__display_picture
+
     def sync(self):
         if self._state != ContentRoamingState.NOT_SYNCHRONIZED:
             return
@@ -106,7 +126,8 @@ class ContentRoaming(gobject.GObject):
         gp()
 
     # Public API
-    def store(self, display_name=None, personal_message=None):
+    def store(self, display_name=None, personal_message=None, 
+              display_picture=None):
         if display_name is None:
             display_name = self.__display_name
         if personal_message is None:
