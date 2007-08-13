@@ -97,11 +97,11 @@ class Command(object):
 
     OUTGOING_PAYLOAD = (
             'QRY', 'SDC', 'PGD', 'ADL', 'RML', 'UUN',
-            'UUM', 'UUX', 'MSG')
+            'UUM', 'UUX', 'MSG', 'FQY')
 
     INCOMING_PAYLOAD = (
             'GCF', 'MSG', 'UBN', 'UBM', 'UBX', 'IPG',
-            'NOT', 'ADL',
+            'NOT', 'ADL', 'FQY',
             
             '241')
 

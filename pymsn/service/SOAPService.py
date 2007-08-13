@@ -97,7 +97,9 @@ class SOAPResponse(ElementTree.XMLResponse):
         return self.fault is not None
 
     def is_valid(self):
-        return ((self.header is not None) or (self.fault is not None)) \
+        return ((self.header is not None) or \
+                (self.fault is not None) or \
+                (self.body is not None)) \
             and self.tree is not None
 
     def _parse(self, data):

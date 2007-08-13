@@ -44,7 +44,7 @@ class FetchMessagesScenario(BaseScenario):
     def __get_message_callback(self, message, id):
         callback = self._callback
         callback[0](id, message, *callback[1:])
-        del self._message_ids[id]
+        self.message_ids.remove(id)
         if self.message_ids == []:
             global_callback = self.__global_callback
             global_callback[0](*global_callback[1:])
