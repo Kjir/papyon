@@ -18,7 +18,7 @@
 #
 
 from pymsn.service.AddressBook.scenario.base import BaseScenario
-from pymsn.service.AddressBook import *
+from pymsn.service.AddressBook.constants import *
 from pymsn.service.description.AB.constants import ContactEmailType
 from pymsn.profile import NetworkID
 

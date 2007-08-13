@@ -25,12 +25,12 @@ import scenario
 
 import pymsn
 import pymsn.profile as profile
+from pymsn.service.AddressBook.constants import *
 from pymsn.service.description.AB.constants import *
 
 import gobject
 
-__all__ = ['AddressBookState', 'AddressBook', 'AddressBookError', \
-               'PendingContact']
+__all__ = ['AddressBook', 'AddressBookState', 'PendingContact']
 
 class AddressBookStorage(set):
     def __init__(self, initial_set=()):
@@ -107,30 +107,6 @@ class AddressBookStorage(set):
                 result[value] = AddressBookStorage()
             result[value].add(contact)
         return result
-
-class AddressBookError(object):
-    UNKNOWN = 0
-
-    CONTACT_ALREADY_EXISTS  = 1
-    CONTACT_DOES_NOT_EXIST  = 2
-    INVALID_CONTACT_ADDRESS = 3
-
-    GROUP_ALREADY_EXISTS = 4
-    GROUP_DOES_NOT_EXIST = 5
-    CONTACT_NOT_IN_GROUP = 6
-
-class AddressBookState(object):
-    """Addressbook synchronization state.
-
-    An adressbook is said to be synchronized when it
-    matches the addressbook stored on the server."""
-
-    NOT_SYNCHRONIZED = 0
-    """The addressbook is not synchronized yet"""
-    SYNCHRONIZING = 1
-    """The addressbook is being synchronized"""
-    SYNCHRONIZED = 2
-    """The addressbook is already synchronized"""
 
 class PendingContact(object):
     

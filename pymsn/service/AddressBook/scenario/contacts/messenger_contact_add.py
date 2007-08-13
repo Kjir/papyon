@@ -18,7 +18,7 @@
 #
 
 from pymsn.service.AddressBook.scenario.base import BaseScenario
-from pymsn.service.AddressBook import *
+from pymsn.service.AddressBook.constants import *
 
 __all__ = ['MessengerContactAddScenario']
 
