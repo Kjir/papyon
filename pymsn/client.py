@@ -217,12 +217,14 @@ class Client(EventsDispatcher):
         method_name = "on_addressbook_%s" % args[-1].replace("-", "_")
         self._dispatch(method_name, *args[:-1])
             
+    def _on_addressbook_error(self, address_book, error_code):
+        self._dispatch("on_client_error", ClientErrorType.ADDRESSBOOK, error_code)
+
     # - - Offline messages
     def _on_oim_box_state_changed(self, oim_box, pspec):
         state = oim_box.state
         if state == OIM.OfflineMessagesBoxState.SYNCHRONIZED:
-            pass
-            #oim_box.fetch_messages()
+            oim_box.fetch_messages()
 
     def _on_oim_box_event(self, oim_box, *args):
         method_name = "on_oim_box_%s" % args[-1].replace("-", "_")

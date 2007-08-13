@@ -31,7 +31,7 @@ class OIM(SOAPService):
         self.__lock_key = ""
         SOAPService.__init__(self, "OIM", proxies)
 
-    @RequireSecurityTokens(LiveService.MESSENGER_CLEAR)
+    @RequireSecurityTokens(LiveService.MESSENGER)
     def Store(self, callback, errback, from_member_name, friendly_name, 
               to_member_name, message_number, message_type, message_content):
         token = str(self._tokens[LiveService.MESSENGER_CLEAR])
@@ -55,7 +55,7 @@ class OIM(SOAPService):
     def _HandleStoreResponse(self, callback, errback, response, user_data):
         pass
 
-    @RequireSecurityTokens(LiveService.MESSENGER_CLEAR)
+    @RequireSecurityTokens(LiveService.MESSENGER)
     def Store2(self, callback, errback, from_member_name, friendly_name, 
                to_member_name, message_number, message_type, message_content):
         token = str(self._tokens[LiveService.MESSENGER_CLEAR])

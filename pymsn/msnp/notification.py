@@ -472,7 +472,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             if self._client.oim_box is not None:
                 m = HTTPMessage()
                 m.parse(msg.body)
-                self._client.oim_box.sync(m.get_header("Mail-Data"))
+                mail_data = m.get_header('Mail-Data').strip()
+                if mail_data == 'too-large':
+                    mail_data = None
+                self._client.oim_box.sync(mail_data)
         elif msg.content_type[0] == 'text/x-msmsgsactivemailnotification':
             pass
 

@@ -17,6 +17,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from pymsn.service.AddressBook.scenario.base import BaseScenario
+from pymsn.service.AddressBook import *
 from pymsn.profile import NetworkID
 
 __all__ = ['DeclineInviteScenario']

@@ -20,7 +20,7 @@
 name = "RSI"
 description = "Offline message service"
 
-url = "https://rsi.hotmail.com/rsi/rsi.amx"
+url = "https://rsi.hotmail.com/rsi/rsi.asmx"
 
 import GetMetadata
 import GetMessage

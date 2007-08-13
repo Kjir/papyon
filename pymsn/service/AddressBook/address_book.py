@@ -167,6 +167,10 @@ class PendingContact(object):
 class AddressBook(gobject.GObject):
     
     __gsignals__ = {
+            "error" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+
             "new-pending-contact" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -547,7 +551,7 @@ class AddressBook(gobject.GObject):
         self.emit(signal, *args)
 
     def __common_errback(self, error_code, *args):
-        print "The addressbook service got the error (%s)" % error_code
+        self.emit('error', error_code)
 
 gobject.type_register(AddressBook)
 
