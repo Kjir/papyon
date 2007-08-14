@@ -173,12 +173,14 @@ class Command(object):
             result += ' ' + str(self.transaction_id)
 
         if self.arguments is not None and len(self.arguments) > 0:
-            result += ' ' + ' '.join(self.arguments)
+            arguments = [str(arg) for arg in self.arguments]
+            result += ' ' + ' '.join(arguments)
 
         if self.payload is not None:
-            length = len(self.payload)
+            payload = str(self.payload)
+            length = len(payload)
             if length > 0:
-                result += ' ' + str(length) + '\r\n' + self.payload
+                result += ' ' + str(length) + '\r\n' + payload
                 return result
 
         return result + '\r\n'

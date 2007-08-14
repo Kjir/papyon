@@ -270,6 +270,19 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             payload = '<ml><d n="%s"><c n="%s" l="%d" t="%d"/></d></ml>' % \
                     (domain, contact, membership, network_id)
             self._transport.send_command_ex("RML", payload=payload)
+
+    def send_unmanaged_message(self, contact, message):
+        content_type = message.get_header('Content-Type')
+        if content_type == 'text/x-msnmsgr-datacast':
+            message_type = 3
+        elif content_type == 'text/x-msmsgscontrol':
+            message_type = 2
+        else:
+            message_type = 1
+        self._transport.send_command_ex('UUM',
+                (contact.account, contact.network_id, message_type),
+                payload=message)
+        
     # Handlers ---------------------------------------------------------------
     # --------- Connection ---------------------------------------------------
     def _handle_VER(self, command):

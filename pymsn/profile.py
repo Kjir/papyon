@@ -229,7 +229,7 @@ class User(gobject.GObject):
         return self._profile
 
     def __set_display_name(self, display_name):
-        if not display_name or display_name == self._display_name:
+        if not display_name:
             return
         self._ns_client.set_display_name(display_name)
     def __get_display_name(self):
