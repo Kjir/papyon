@@ -24,21 +24,6 @@ from pymsn.gnet.protocol import ProtocolFactory
 
 __all__ = ['Storage']
 
-# Get the DP
-# - GetProfile
-# - GetDocument on the photo RID
-# - HTTP request
-
-# Change the Display Name and Personal Message
-# - UpdateProfile
-
-# Change the DP
-# - DeleteRelationship /UserTiles between the CID and the photo RID
-# - DeleteRelationship between Expression profile and the photo RID
-# - CreateDocument between CID and the new photo, get the new RID
-# - CreateRelationship between the Expression profile and the photo RID
-# - Update profile with different Flag?
-
 class Storage(SOAPService):
 
     def __init__(self, sso, proxies=None):
@@ -100,32 +85,46 @@ class Storage(SOAPService):
         callback[0](*callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
-    def CreateRelationships(self, callback, errback):
-        pass
+    def CreateRelationships(self, callback, errback, scenario, 
+                            source_rid, target_rid):
+        self.__soap_request(self._service.CreateRelationships, scenario,
+                            (source_rid, target_rid),
+                            callback, errback)
 
     def _HandleCreateRelationshipsResponse(self, callback, errback, response, user_date):
-        pass
+        callback[0](*callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
-    def DeleteRelationships(self, callback, errback):
-        pass
+    def DeleteRelationships(self, callback, errback, scenario, 
+                            target_id, cid=None, source_id=None):
+        self.__soap_request(self._service.DeleteRelationships, scenario,
+                            (cid, source_id, target_id), callback, errback)
 
     def _HandleDeleteRelationshipsResponse(self, callback, errback, response, user_date):
-        pass
+        callback[0](*callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
-    def CreateDocument(self, callback, errback):
-        pass
+    def CreateDocument(self, callback, errback, scenario, cid, photo_name,
+                       photo_mime_type, photo_data):
+        self.__soap_request(self._service.CreateDocument, scenario,
+                            (cid, photo_name, photo_mime_type, photo_data),
+                            callback, errback)
 
     def _HandleCreateDocumentResponse(self, callback, errback, response, user_date):
-        pass
+        document_rid = response.text
+        callback[0](document_rid, *callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
-    def FindDocuments(self, callback, errback):
-        pass
+    def FindDocuments(self, callback, errback, scenario, cid):
+        self.__soap_request(self._service.FindDocuments, scenario,
+                            (cid,), callback, errback)
 
     def _HandleFindDocumentsResponse(self, callback, errback, response, user_date):
-        pass
+        document = response.find('./st:Document')
+
+        document_rid = response.findtext('./st:ResourceID')        
+        document_name = response.findtext('./st:Name')        
+        callback[0](document_rid, document_name, *callback[1:])
 
     def __soap_request(self, method, scenario, args, callback, errback):
         token = str(self._tokens[LiveService.CONTACTS])   
@@ -142,18 +141,20 @@ class Storage(SOAPService):
                            soap_header, soap_body, soap_action, 
                            callback, errback, http_headers)
 
-#     def get_display_picture(self, url, callback, errback):
-#         scheme, host, port, resource = url_split(url)
-#         print "scheme=%s;host=%s;port=%s;resource=%s" % (scheme, host, port, resource)
-#         http_headers = {}
-#         http_headers["Accept"] = "*/*"
-#         http_headers["Proxy-Connection"] = "Keep-Alive"
-#         http_headers["Connection"] = "Keep-Alive"
+    @RequireSecurityTokens(LiveService.CONTACTS)
+    def get_display_picture(self, url, callback, errback):
+        # TODO : compute URL with the token
+        scheme, host, port, resource = url_split(url)
+        print "scheme=%s;host=%s;port=%s;resource=%s" % (scheme, host, port, resource)
+        http_headers = {}
+        http_headers["Accept"] = "*/*"
+        http_headers["Proxy-Connection"] = "Keep-Alive"
+        http_headers["Connection"] = "Keep-Alive"
         
-#         proxy = self._proxies.get(scheme, None)
-#         transport = ProtocolFactory(scheme, host, 80, proxy=proxy)
-#         transport.connect("response-received", self._dp_callback)
-#         transport.connect("request-sent", self._request_handler)
-#         transport.connect("error", self._dp_errback)
+        proxy = self._proxies.get(scheme, None)
+        transport = ProtocolFactory(scheme, host, 80, proxy=proxy)
+        transport.connect("response-received", self._dp_callback)
+        transport.connect("request-sent", self._request_handler)
+        transport.connect("error", self._dp_errback)
 
-#         transport.request(resource, http_headers, method='GET')
+        transport.request(resource, http_headers, method='GET')

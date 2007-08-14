@@ -14,13 +14,23 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-#
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-name = "scenario"
-description = ""
+__all__ = ["ContentRoamingError", "ContentRoamingState"]
 
-import base
+class ContentRoamingError(object):
+    UNKNOWN = 0
 
-from get_stored_profile import *
-from store_profile import *
+class ContentRoamingState(object):
+    """Content roaming service synchronization state.
+
+    The service is said to be synchronized when it
+    matches the stuff stored on the server."""
+
+    NOT_SYNCHRONIZED = 0
+    """The service is not synchronized yet"""
+    SYNCHRONIZING = 1
+    """The service is being synchronized"""
+    SYNCHRONIZED = 2
+    """The service is already synchronized"""
+

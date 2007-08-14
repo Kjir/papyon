@@ -29,13 +29,13 @@ def soap_action():
     """Returns the SOAPAction value to pass to the transport
     or None if no SOAPAction needs to be specified"""
 
-    return "http://www.msn.com/webservices/storage/w10/FindDocument"
+    return "http://www.msn.com/webservices/storage/w10/CreateDocument"
 
-def soap_body(cid):
+def soap_body(cid, photo_name, photo_mime_type, photo_data):
     """Returns the SOAP xml body
     """
-    return """<FindDocuments xmlns="http://www.msn.com/webservices/storage/w10">
-            <objectHandle>
+    return """<CreateDocument xmlns="http://www.msn.com/webservices/storage/w10">
+            <parentHandle>
                 <RelationshipName>
                     /UserTiles
                 </RelationshipName>
@@ -47,39 +47,36 @@ def soap_body(cid):
                         MyCidStuff
                     </NameSpace>
                 </Alias>
-            </objectHandle>
-            <documentAttributes>
-                <ResourceID>
-                    true
-                </ResourceID>
+            </parentHandle>
+            <document xsi:type="Photo">
                 <Name>
-                    true
+                    %s
                 </Name>
-            </documentAttributes>
-            <documentFilter>
-                <FilterAttributes>
-                    None
-                </FilterAttributes>
-            </documentFilter>
-            <documentSort>
-                <SortBy>
-                    DateModified
-                </SortBy>
-            </documentSort>
-            <findContext>
-                <FindMethod>
-                    Default
-                </FindMethod>
-                <ChunkSize>
-                    25
-                </ChunkSize>
-            </findContext>
-        </FindDocuments>""" % cid
+                <DocumentStreams>
+                    <DocumentStream xsi:type="PhotoStream">
+                        <DocumentStreamType>
+                            UserTileStatic
+                        </DocumentStreamType>
+                        <MimeType>
+                            %s
+                        </MimeType>
+                        <Data>
+                            %s
+                        </Data>
+                        <DataSize>
+                            0
+                        </DataSize>
+                    </DocumentStream>
+                </DocumentStreams>
+            </document>
+            <relationshipName>
+                Messenger User Tile
+            </relationshipName>
+        </CreateDocument>""" % (cid, photo_name, photo_mime_type, photo_data) 
 
 def process_response(soap_response):
     body = soap_response.body
     try:
-        return body.find("./st:FindDocumentsResponse/st:FindDocumentsResult")
+        return body.find("./st:CreateDocumentResponse/st:CreateDocumentResult")
     except AttributeError:
         return None
-

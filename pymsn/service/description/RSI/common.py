@@ -23,12 +23,11 @@ import xml.sax.saxutils as xml
 def soap_header(security_token):
     """Returns the SOAP xml header"""
 
-    print security_token
-    t,p = security_token.split('&')
+    t, p = security_token.split('&')
 
     return """
       <PassportCookie xmlns="http://www.hotmail.msn.com/ws/2004/09/oim/rsi">
           <t>%s</t> 
           <p>%s</p>
-      </PassportCookie>""" % (xml.escape(t[2:len(t)]), 
-                              xml.escape(p[2:len(p)]))
+      </PassportCookie>""" % (xml.escape(t[2:]), 
+                              xml.escape(p[2:]))

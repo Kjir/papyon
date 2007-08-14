@@ -24,3 +24,9 @@ url = "https://storage.msn.com/storageservice/SchematizedStore.asmx"
 
 import GetProfile
 import UpdateProfile
+
+import DeleteRelationships
+import CreateRelationships
+
+import CreateDocument
+import FindDocuments

@@ -17,10 +17,21 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-name = "scenario"
-description = ""
+__all__ = ["OfflineMessagesBoxState", "OfflineMessagesError"]
 
-import base
+class OfflineMessagesBoxState(object):
+    """Offline messages box synchronization state.
 
-from get_stored_profile import *
-from store_profile import *
+    The box is said to be synchronized when it
+    owns the references to all the new messages on the server."""
+
+    NOT_SYNCHRONIZED = 0
+    """The box is not synchronized yet"""
+    SYNCHRONIZING = 1
+    """The box is being synchronized"""
+    SYNCHRONIZED = 2
+    """The box is already synchronized"""
+
+class OfflineMessagesError(object):
+    UNKNOWN = 0
+

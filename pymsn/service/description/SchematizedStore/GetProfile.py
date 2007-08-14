@@ -79,4 +79,3 @@ def process_response(soap_response):
         return body.find("./st:GetProfileResponse/st:GetProfileResult")
     except AttributeError:
         return None
-    return None

@@ -20,7 +20,9 @@
 import rsi
 import oim
 import scenario
+
 from pymsn.service.SOAPUtils import *
+from pymsn.service.OfflineIM.constants import *
 
 import pymsn.util.ElementTree as ElementTree
 import pymsn.util.StringIO as StringIO
@@ -28,73 +30,106 @@ import gobject
 
 import logging
 
-__all__ = ['OfflineMessagesBoxState', 'OfflineMessagesBox', \
-               'OfflineMessagesError', 'OfflineMessage']
+__all__ = ['OfflineMessagesBox', 'OfflineMessage']
 
 logger = logging.getLogger('Service')
 
-class Metadata(ElementTree.XMLResponse):
-    def __init__(self, metadata):
-        ElementTree.XMLResponse.__init__(self, metadata)
-        if self.tree is None:
-            logger.warning("Metadata: Invalid metadata")
-            
-    def is_valid(self):
-        return self.tree is not None
+class OfflineMessagesStorage(set):
+    def __init__(self, initial_set=()):
+        set.__init__(self, initial_set)
 
-    def _parse(self, data):
-        data = StringIO.StringIO(data)
-        return ElementTree.parse(data)
+    def __repr__(self):
+        return "OfflineMessagesBox : %d message(s)" % len(self)
 
-class OfflineMessagesBoxState(object):
-    """Offline messages box synchronization state.
+    def __getitem__(self, key):
+        i = 0
+        for contact in self:
+            if i == key:
+                return contact
+            i += 1
+        return None
 
-    The box is said to be synchronized when it
-    owns the references to all the new messages on the server."""
+    def __getattr__(self, name):
+        if name.startswith("search_by_"):
+            field = name[10:]
+            def search_by_func(criteria):
+                return self.search_by(field, criteria)
+            search_by_func.__name__ = name
+            return search_by_func
+        elif name.startswith("group_by_"):
+            field = name[9:]
+            def group_by_func():
+                return self.group_by(field)
+            group_by_func.__name__ = name
+            return group_by_func
+        else:
+            raise AttributeError, name
+        
+    def search_by_sender(self, sender):
+        result = []
+        for message in self:
+            if message.sender == sender:
+                result.append(message)
+        return OfflineMessagesStorage(result)
 
-    NOT_SYNCHRONIZED = 0
-    """The box is not synchronized yet"""
-    SYNCHRONIZING = 1
-    """The box is being synchronized"""
-    SYNCHRONIZED = 2
-    """The box is already synchronized"""
+    def search_by_groups(self, *groups):
+        result = []
+        groups = set(groups)
+        for contact in self:
+            if groups <= contact.groups:
+                result.append(contact)
+        return OfflineMessagesStorage(result)
 
-class OfflineMessagesError(object):
-    UNKNOWN = 0
+    def group_by_group(self):
+        result = {}
+        for contact in self:
+            groups = contact.groups
+            for group in groups:
+                if group not in result:
+                    result[group] = set()
+                result[group].add(contact)
+        return result
+
+    def search_by(self, field, value):
+        result = []
+        for contact in self:
+            if getattr(contact, field) == value:
+                result.append(contact)
+                # Do not break here, as the account
+                # might exist in multiple networks
+        return OfflineMessagesStorage(result)
+
+    def group_by(self, field):
+        result = {}
+        for contact in self:
+            value = getattr(contact, field)
+            if value not in result:
+                result[value] = OfflineMessagesStorage()
+            result[value].add(contact)
+        return result
+
 
 class OfflineMessage(object):
 
-    def __init__(self, id, sender, display_name='', date=None,
-                 text=None, number=-1, is_mobile=False):
-        self.__id = id
+    def __init__(self, id, sender, display_name='', date=None):
+        self._id = id
         self._sender = sender
-        self._text = text
-        self.__number = number
+        self._display_name = display_name
+
         if date is None:
             # FIXME : set the date attribute using the current date
             pass
         else:
             self._date = date
-        self._is_mobile = is_mobile
 
-    def __get_id(self):
-        return self.__id
-    def __set_id(self, id):
-        self.__id = id
-    _id = property(__get_id, __set_id)
+        self.__text = None
+        self.__run_id = ''
+        self.__seq_num = ''
+        self.__is_mobile = False
 
-    def __get_number(self):
-        return self.__number
-    def __set_number(self, number):
-        self.__number = number
-    _number = property(__get_number, __set_number)
-
-    def __get_text(self):
-        return self.__text
-    def __set_text(self, text):
-        self.__text = text
-    text = property(__get_text)
-    _text = property(__get_text, __set_text)
+    @property
+    def id(self):
+        return self._id
 
     @property
     def sender(self):
@@ -108,12 +143,52 @@ class OfflineMessage(object):
     def date(self):
         return self._date
 
-    @property
-    def is_mobile(self):
-        return self._is_mobile
+    def __get_text(self):
+        return self.__text
+    def __set_text(self, text):
+        self.__text = text
+    text = property(__get_text)
+    _text = property(__get_text, __set_text)
 
-    def __gt__(self, msg):
-        return self.__number > msg._number
+    def __get_run_id(self):
+        return self.__run_id
+    def __set_run_id(self, run_id):
+        self.__run_id = run_id
+    run_id = property(__get_run_id)
+    _run_id = property(__get_run_id, __set_run_id)
+
+    def __get_seq_num(self):
+        return self.__seq_num
+    def __set_seq_num(self, seq_num):
+        self.__seq_num = seq_num
+    seq_num = property(__get_seq_num)
+    _seq_num = property(__get_seq_num, __set_seq_num)
+
+    def __get_is_mobile(self):
+        return self.__is_mobile
+    def __set_is_mobile(self, is_mobile):
+        self.__is_mobile = is_mobile
+    is_mobile = property(__get_is_mobile)
+    _is_mobile = property(__get_is_mobile, __set_is_mobile)
+
+    def __str__(self):
+        return self.__text
+
+    def __repr__(self):
+        return str(self)
+
+class Metadata(ElementTree.XMLResponse):
+    def __init__(self, metadata):
+        ElementTree.XMLResponse.__init__(self, metadata)
+        if self.tree is None:
+            logger.warning("Metadata: Invalid metadata")
+            
+    def is_valid(self):
+        return self.tree is not None
+
+    def _parse(self, data):
+        data = StringIO.StringIO(data)
+        return ElementTree.parse(data)
 
 class OfflineMessagesBox(gobject.GObject):
 
@@ -202,7 +277,7 @@ class OfflineMessagesBox(gobject.GObject):
         fm = scenario.FetchMessagesScenario(self._rsi,
                  (self.__fetch_message_cb,),
                  (self.__common_errback,),
-                 (self.__common_callback, 'messages-fetched', self.messages))
+                 (self.__fetch_messages_cb,))
         fm.message_ids = self._messages.keys()
         fm()
 
@@ -221,8 +296,13 @@ class OfflineMessagesBox(gobject.GObject):
         dm()
 
     # Callbacks
-    def __fetch_message_cb(self, id, text):
+    def __fetch_message_cb(self, id, run_id, seq_num, text):
+        self._messages[id]._run_id = run_id
+        self._messages[id]._seq_num = seq_num
         self._messages[id]._text = text
+
+    def __fetch_messages_cb(self):
+        self.emit('messages-fetched', self.messages)
 
     def __delete_messages_cb(self):
         self._messages = []

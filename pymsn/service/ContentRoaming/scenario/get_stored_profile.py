@@ -18,12 +18,12 @@
 #
 from base import *
 
-from pymsn.service.ContentRoaming import *
+from pymsn.service.ContentRoaming.constants import *
 
-__all__ = ['GetProfileScenario']
+__all__ = ['GetStoredProfileScenario']
 
-class GetProfileScenario(BaseScenario):
-    def __init__(self, storage, callback, errback, cid=''):
+class GetStoredProfileScenario(BaseScenario):
+    def __init__(self, storage, callback, dp_callback, errback, cid=''):
         """Gets the roaming profile stored on the server
 
             @param storage: the storage service
@@ -32,6 +32,7 @@ class GetProfileScenario(BaseScenario):
         """
         BaseScenario.__init__(self, 'Initial', callback, errback)
         self.__storage = storage
+        self.__dp_callback = dp_callback
 
         self.cid = cid
 
@@ -40,14 +41,35 @@ class GetProfileScenario(BaseScenario):
                                   (self.__get_profile_errback,),
                                   self._scenario, self.cid,
                                   True, False, False, False, True, False, 
-                                  True, False, False, False, False)
+                                  True, False, True, True, True)
 
-    def __get_profile_callback(self, profile_rid, display_name, personal_msg):
+    def __get_profile_callback(self, profile_rid, expression_profile_rid, 
+                               display_name, personal_msg, photo_rid, 
+                               photo_mime_type, photo_data_size, photo_url):
         callback = self._callback
-        callback[0](profile_rid, display_name, personal_msg, *callback[1:])
+        callback[0](profile_rid, expression_profile_rid, display_name, 
+            personal_msg, photo_rid, *callback[1:])
+
+        if photo_rid is not None:
+            self.__storage.get_display_picture(url, 
+                               self.__get_display_picture_callback,
+                               self.__det_display_picture_errback)
 
     def __get_profile_errback(self, error_code):
         errcode = ContentRoamingError.UNKNOWN
         errback = self._errback[0]
         args = self._errback[1:]
         errback(errcode, *args)
+
+    def __get_display_picture_callback(self, http_response):
+        # TODO : process http_response to get the picture data
+        callback = self._dp_callback
+        callback[0](*callback[1:])
+
+    def __get_display_picture_errback(self, error_code):
+        # TODO : adapt this to the transport way of handling errors
+        errcode = ContentRoamingError.UNKNOWN
+        errback = self._errback[0]
+        args = self._errback[1:]
+        errback(errcode, *args)
+

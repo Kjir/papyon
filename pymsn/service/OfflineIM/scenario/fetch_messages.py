@@ -16,6 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
+from pymsn.service.OfflineIM.constants import *
 from pymsn.service.OfflineIM.scenario.base import BaseScenario
 
 __all__ = ['FetchMessagesScenario']
@@ -41,9 +42,9 @@ class FetchMessagesScenario(BaseScenario):
                                   (self.__get_message_errback,),
                                   message_id, False)
 
-    def __get_message_callback(self, message, id):
+    def __get_message_callback(self, run_id, seq_num, message, id):
         callback = self._callback
-        callback[0](id, message, *callback[1:])
+        callback[0](id, run_id, seq_num, message, *callback[1:])
         self.message_ids.remove(id)
         if self.message_ids == []:
             global_callback = self.__global_callback

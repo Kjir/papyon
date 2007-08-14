@@ -34,7 +34,7 @@ class OIM(SOAPService):
     @RequireSecurityTokens(LiveService.MESSENGER)
     def Store(self, callback, errback, from_member_name, friendly_name, 
               to_member_name, message_number, message_type, message_content):
-        token = str(self._tokens[LiveService.MESSENGER_CLEAR])
+        token = str(self._tokens[LiveService.MESSENGER])
         fname = "=?utf-8?B?%s=" % friendly_name.encode('base64')
 
         content = self.__build_mail_data(None, None, message_content)
@@ -58,7 +58,7 @@ class OIM(SOAPService):
     @RequireSecurityTokens(LiveService.MESSENGER)
     def Store2(self, callback, errback, from_member_name, friendly_name, 
                to_member_name, message_number, message_type, message_content):
-        token = str(self._tokens[LiveService.MESSENGER_CLEAR])
+        token = str(self._tokens[LiveService.MESSENGER])
         fname = "=?utf-8?B?%s=" % friendly_name.encode('base64')
 
         content = self.__build_mail_data(None, None, message_content)
