@@ -186,20 +186,23 @@ class Client(EventsDispatcher):
             im_contacts = [contact for contact in self.address_book.contacts \
                     if contact.attributes['im_contact']]
             for contact in im_contacts:
-                contact.connect("notify::presence",
-                        self._on_contact_property_changed)
-                contact.connect("notify::display-name",
-                        self._on_contact_property_changed)
-                contact.connect("notify::personal-message",
-                        self._on_contact_property_changed)
-                contact.connect("notify::current-media",
-                        self._on_contact_property_changed)
-                #contact.connect("notify::display-picture",
-                #        self._on_contact_property_changed)
-                contact.connect("notify::client-capabilities",
-                        self._on_contact_property_changed)
+                self._connect_contact_signals(contact)
 
     # - - Contact
+    def _connect_contact_signals(self, contact):
+        contact.connect("notify::presence",
+                self._on_contact_property_changed)
+        contact.connect("notify::display-name",
+                self._on_contact_property_changed)
+        contact.connect("notify::personal-message",
+                self._on_contact_property_changed)
+        contact.connect("notify::current-media",
+                self._on_contact_property_changed)
+        #contact.connect("notify::display-picture",
+        #        self._on_contact_property_changed)
+        contact.connect("notify::client-capabilities",
+                self._on_contact_property_changed)
+
     def _on_contact_property_changed(self, contact, pspec):
         method_name = "on_contact_%s_changed" % pspec.name.replace("-", "_")
         self._dispatch(method_name, contact)
@@ -214,8 +217,12 @@ class Client(EventsDispatcher):
 
     # - - Address book
     def _on_addressbook_event(self, address_book, *args):
-        method_name = "on_addressbook_%s" % args[-1].replace("-", "_")
-        self._dispatch(method_name, *args[:-1])
+        event_name = args[-1]
+        event_args = args[:-1]
+        if event_name == "messenger-contact-added":
+            self._connect_contact_signals(event_args[0])
+        method_name = "on_addressbook_%s" % event_name.replace("-", "_")
+        self._dispatch(method_name, *event_args)
             
     def _on_addressbook_error(self, address_book, error_code):
         self._dispatch("on_client_error", ClientErrorType.ADDRESSBOOK, error_code)
