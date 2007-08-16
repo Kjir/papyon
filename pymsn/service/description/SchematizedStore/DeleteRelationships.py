@@ -35,24 +35,24 @@ def soap_body(cid, source_rid, target_rid):
     """Returns the SOAP xml body
     """
     if cid is not None:
-        source_handle = """<sourceHandle>
-                               <RelationshipName>
-                                   /UserTiles
-                               </RelationshipName>
-                               <Alias>
-                                   <Name>
-                                       %s
-                                   </Name>
-                                   <NameSpace>
-                                       MyCidStuff
-                                   </NameSpace>
-                               </Alias>
-                           </sourceHandle>""" % cid
+        source_handle = """<RelationshipName>
+                               /UserTiles
+                           </RelationshipName>
+                           <Alias>
+                               <Name>
+                                   %s
+                               </Name>
+                               <NameSpace>
+                                   MyCidStuff
+                               </NameSpace>
+                           </Alias>""" % cid
     else:
         source_handle = "<ResourceID>%s</ResourceID>" % source_rid
 
     return """<DeleteRelationships xmlns="http://www.msn.com/webservices/storage/w10">
-            %s
+            <sourceHandle>            
+                %s
+            </sourceHandle>
             <targetHandles>
                 <ObjectHandle>
                     <ResourceID>

@@ -24,7 +24,7 @@ __all__ = ['StoreProfileScenario']
 
 class StoreProfileScenario(BaseScenario):
     def __init__(self, storage, callback, errback, 
-                 cid, profile_id, expression_profile_id,
+                 cid, profile_id, expression_profile_id, display_picture_id,
                  display_name='', personal_message='', display_picture=''):
         """Updates the roaming profile stored on the server
 
@@ -40,14 +40,19 @@ class StoreProfileScenario(BaseScenario):
         self.__expression_profile_id = expression_profile_id
         self.__display_picture_id = display_picture_id
 
+        print self.__cid
+        print self.__profile_id
+        print self.__expression_profile_id
+        print self.__display_picture_id
+
         self.display_name = display_name
         self.personal_message = personal_message
         self.display_picture = display_picture
 
     def execute(self):
         self.__storage.UpdateProfile((self.__update_profile_callback,),
-                                     (self.__update_profile_errback,),
-                                     self._scenario, self.profile_id,
+                                     (self.__store_profile_errback,),
+                                     self._scenario, self.__profile_id,
                                      self.display_name, self.personal_message, 
                                      0)
 
@@ -57,8 +62,8 @@ class StoreProfileScenario(BaseScenario):
                 (self.__delete_relationship_profile_callback,),
                 (self.__store_profile_errback,),
                 self._scenario,
-                self.__cid, None,
-                self.__display_picture_id)
+                self.__display_picture_id,
+                self.__cid, None)
         else:
             callback = self._callback
             callback[0](*callback[1:])
@@ -67,15 +72,17 @@ class StoreProfileScenario(BaseScenario):
         self.__storage.DeleteRelationships(
                 (self.__delete_relationship_expression_callback,),
                 (self.__store_profile_errback,),
-                self._scenario, None, self.__expression_profile_id,
-                self.__display_picture_id)
+                self._scenario, self.__display_picture_id,
+                None, self.__expression_profile_id)
 
     def __delete_relationship_expression_callback(self):
+        # FIXME : add support for dp name
         self.__storage.CreateDocument(
             (self.__create_document_callback,),
             (self.__store_profile_errback,),
             self._scenario, self.__cid,
-            "pymsn_roaming", "png", self.display_picture.encode('base64'))
+            "roaming", self.display_picture[0], 
+            self.display_picture[1].encode('base64'))
         
     def __create_document_callback(self, document_rid):
         self.__storage.CreateRelationships(

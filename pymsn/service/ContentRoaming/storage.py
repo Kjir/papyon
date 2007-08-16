@@ -55,7 +55,7 @@ class Storage(SOAPService):
         profile_rid = response.findtext('./st:ResourceID')        
         
         expression_profile = response.find('./st:ExpressionProfile')
-        expression_profile_rid = expression_profile.find('./st:ResourceID')
+        expression_profile_rid = expression_profile.findtext('./st:ResourceID')
 
         display_name = expression_profile.findtext('./st:DisplayName')
         personal_msg = expression_profile.findtext('./st:PersonalStatus')
@@ -66,7 +66,7 @@ class Storage(SOAPService):
             document_stream = photo.find('./st:DocumentStreams/st:DocumentStream')
             photo_mime_type = document_stream.findtext('./st:MimeType')
             photo_data_size = document_stream.findtext('./st:DataSize', "int")
-            photo_url = None
+            photo_url = document_stream.findtext('./st:PreAuthURL')
         else:
             photo_rid = photo_mime_type = photo_data_size = photo_url = None
         
@@ -142,19 +142,28 @@ class Storage(SOAPService):
                            callback, errback, http_headers)
 
     @RequireSecurityTokens(LiveService.CONTACTS)
-    def get_display_picture(self, url, callback, errback):
-        # TODO : compute URL with the token
-        scheme, host, port, resource = url_split(url)
-        print "scheme=%s;host=%s;port=%s;resource=%s" % (scheme, host, port, resource)
+    def get_display_picture(self, pre_auth_url, callback, errback):
+        token = str(self._tokens[LiveService.CONTACTS])
+
+        scheme = 'http'
+        host = 'byfiles.storage.msn.com'
+        port = 80
+        resource = '?'.join([pre_auth_url, token.split('&')[0]])
+
+        def request_callback(transport, http_response):
+            type = http_response.get_header('Content-Type')#.split('/')[1]
+            data = http_response.body
+            callback[0](type, data, *callback[1:])
+
         http_headers = {}
         http_headers["Accept"] = "*/*"
         http_headers["Proxy-Connection"] = "Keep-Alive"
         http_headers["Connection"] = "Keep-Alive"
         
         proxy = self._proxies.get(scheme, None)
-        transport = ProtocolFactory(scheme, host, 80, proxy=proxy)
-        transport.connect("response-received", self._dp_callback)
+        transport = ProtocolFactory(scheme, host, port, proxy=proxy)
+        transport.connect("response-received", request_callback)
         transport.connect("request-sent", self._request_handler)
-        transport.connect("error", self._dp_errback)
+        transport.connect("error", errback[0], *errback[1:])
 
         transport.request(resource, http_headers, method='GET')

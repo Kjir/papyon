@@ -40,8 +40,8 @@ class GetStoredProfileScenario(BaseScenario):
         self.__storage.GetProfile((self.__get_profile_callback,),
                                   (self.__get_profile_errback,),
                                   self._scenario, self.cid,
-                                  True, False, False, False, True, False, 
-                                  True, False, True, True, True)
+                                  True, True, True, True, True, True, 
+                                  True, True, True, True, True)
 
     def __get_profile_callback(self, profile_rid, expression_profile_rid, 
                                display_name, personal_msg, photo_rid, 
@@ -51,9 +51,9 @@ class GetStoredProfileScenario(BaseScenario):
             personal_msg, photo_rid, *callback[1:])
 
         if photo_rid is not None:
-            self.__storage.get_display_picture(url, 
-                               self.__get_display_picture_callback,
-                               self.__det_display_picture_errback)
+            self.__storage.get_display_picture(photo_url, 
+                               (self.__get_display_picture_callback,),
+                               (self.__get_display_picture_errback,))
 
     def __get_profile_errback(self, error_code):
         errcode = ContentRoamingError.UNKNOWN
@@ -61,10 +61,9 @@ class GetStoredProfileScenario(BaseScenario):
         args = self._errback[1:]
         errback(errcode, *args)
 
-    def __get_display_picture_callback(self, http_response):
-        # TODO : process http_response to get the picture data
-        callback = self._dp_callback
-        callback[0](*callback[1:])
+    def __get_display_picture_callback(self, type, data):
+        callback = self.__dp_callback
+        callback[0](type, data, *callback[1:])
 
     def __get_display_picture_errback(self, error_code):
         # TODO : adapt this to the transport way of handling errors
