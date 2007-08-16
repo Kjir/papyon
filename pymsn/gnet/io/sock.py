@@ -60,11 +60,6 @@ class SocketClient(GIOChannelClient):
         if self._status == IoStatus.CLOSED:
             return False
 
-        # Check for error/EOF
-        if cond & (gobject.IO_ERR | gobject.IO_HUP):
-            self.close()
-            return False
-
         if cond & (gobject.IO_IN | gobject.IO_PRI):
             buf = self._channel.read(2048)
             if buf == "":
@@ -85,5 +80,11 @@ class SocketClient(GIOChannelClient):
                     self._watch_remove_cond(gobject.IO_OUT)
             else:
                 self._watch_remove_cond(gobject.IO_OUT)
+        
+        # Check for error/EOF
+        if cond & (gobject.IO_ERR | gobject.IO_HUP):
+            self.close()
+            return False
+        
         return True
 gobject.type_register(SocketClient)

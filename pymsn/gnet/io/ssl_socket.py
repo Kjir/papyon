@@ -72,10 +72,6 @@ class SSLSocketClient(GIOChannelClient):
             else:
                 self._status = IoStatus.OPEN
         elif self._status == IoStatus.OPEN:
-            if cond & (gobject.IO_ERR | gobject.IO_HUP):
-                self.close()
-                return False
-            
             if cond & (gobject.IO_IN | gobject.IO_PRI):
                 try:
                     buf = self._transport.recv(2048)
@@ -108,6 +104,9 @@ class SSLSocketClient(GIOChannelClient):
                         self._watch_remove_cond(gobject.IO_OUT)
                 else:
                     self._watch_remove_cond(gobject.IO_OUT)
+            if cond & (gobject.IO_ERR | gobject.IO_HUP):
+                self.close()
+                return False
 
         return True
 
