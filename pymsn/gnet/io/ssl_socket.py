@@ -83,6 +83,10 @@ class SSLSocketClient(GIOChannelClient):
                     return False
                 self.emit("received", buf, len(buf))
 
+            if cond & (gobject.IO_ERR | gobject.IO_HUP):
+                self.close()
+                return False
+
             if cond & gobject.IO_OUT:
                 if len(self._outgoing_queue) > 0: # send next item
                     item = self._outgoing_queue[0]
@@ -104,9 +108,6 @@ class SSLSocketClient(GIOChannelClient):
                         self._watch_remove_cond(gobject.IO_OUT)
                 else:
                     self._watch_remove_cond(gobject.IO_OUT)
-            if cond & (gobject.IO_ERR | gobject.IO_HUP):
-                self.close()
-                return False
 
         return True
 

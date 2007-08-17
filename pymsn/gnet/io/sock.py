@@ -59,14 +59,22 @@ class SocketClient(GIOChannelClient):
     def _io_channel_handler(self, chan, cond):
         if self._status == IoStatus.CLOSED:
             return False
-
+        
         if cond & (gobject.IO_IN | gobject.IO_PRI):
-            buf = self._channel.read(2048)
+            try:
+                buf = self._channel.read(2048)
+            except gobject.GError:
+                buf = ""
             if buf == "":
                 self.close()
                 return False
             self.emit("received", buf, len(buf))
         
+        # Check for error/EOF
+        if cond & (gobject.IO_ERR | gobject.IO_HUP):
+            self.close()
+            return False
+
         if cond & gobject.IO_OUT:            
             if len(self._outgoing_queue) > 0: # send next item
                 item = self._outgoing_queue[0]
@@ -80,11 +88,6 @@ class SocketClient(GIOChannelClient):
                     self._watch_remove_cond(gobject.IO_OUT)
             else:
                 self._watch_remove_cond(gobject.IO_OUT)
-        
-        # Check for error/EOF
-        if cond & (gobject.IO_ERR | gobject.IO_HUP):
-            self.close()
-            return False
-        
+
         return True
 gobject.type_register(SocketClient)
