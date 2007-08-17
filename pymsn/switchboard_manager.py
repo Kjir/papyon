@@ -55,7 +55,7 @@ class SwitchboardClient(object):
 
     @property
     def _contacts(self):
-        return self.participants + set(self._invite_queue)
+        return self.participants | set(self._invite_queue)
 
     def _send_message(self,
             content_type, body, headers={}, ack=msnp.MessageAcknowledgement.HALF):
@@ -258,7 +258,7 @@ class SwitchboardManager(gobject.GObject):
                 if handler_switchboard is not None and \
                         handler_switchboard.state != msnp.ProtocolState.CLOSED:
                     continue
-                if handler.participants == switchboard_participants:
+                if handler._contacts == switchboard_participants:
                     handler._on_switchboard_update(switchboard)
             if handler._can_handle_message(message, handler):
                 handler._on_message_received(message)
