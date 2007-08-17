@@ -53,6 +53,10 @@ class SwitchboardClient(object):
     def _can_handle_message(message, switchboard_client=None):
         return False
 
+    @property
+    def _contacts(self):
+        return self.participants + set(self._invite_queue)
+
     def _send_message(self,
             content_type, body, headers={}, ack=msnp.MessageAcknowledgement.HALF):
         if self._switchboard is None or \
@@ -153,6 +157,8 @@ class SwitchboardClient(object):
 
     def __process_invite_queue(self):
         for contact in self._invite_queue:
+            if contact in self.participants:
+                continue
             self._switchboard.invite_user(contact)
 
     def __process_message_queue(self):
@@ -189,11 +195,18 @@ class SwitchboardManager(gobject.GObject):
         self._handlers_class.add(handler_class)
 
     def request_switchboard(self, handler):
-        #FIXME: check if a usable switchboard is already available 
-        #contacts = set(contacts)
-        #for switchboard in self._switchboards:
-        #    if set(switchboard.participants.values()) == contacts:
-
+        try:
+            # check if we already have a usable switchboard
+            contacts = handler._contacts
+            for switchboard in self._switchboards:
+                switchboard_contacts = set(switchboard.participants.values())
+                if switchboard_contacts == contacts:
+                    self._switchboards[switchboard].add(handler)
+                    handler._on_switchboard_update(switchboard)
+                    self._handlers_instance.add(handler)
+                    return
+        except AttributeError:
+            pass
         self._client._protocol.\
                 request_switchboard(self.__ns_request_response, handler)
 

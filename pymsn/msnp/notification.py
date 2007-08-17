@@ -435,7 +435,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
         if len(contacts) == 0:
             logger.warning("Contact (netword_id=%d) %s not found" % \
-                    (netword_id, account))
+                    (network_id, account))
         for contact in contacts:
             cm = et.fromstring(command.payload).find("./CurrentMedia")
             if cm is not None and cm.text is not None:
@@ -488,7 +488,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 mail_data = m.get_header('Mail-Data').strip()
                 if mail_data == 'too-large':
                     mail_data = None
-                self._client.oim_box.sync(mail_data)
+                #self._client.oim_box.sync(mail_data)
         elif msg.content_type[0] == 'text/x-msmsgsactivemailnotification':
             pass
 

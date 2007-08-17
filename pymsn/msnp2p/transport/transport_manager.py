@@ -42,6 +42,6 @@ class P2PTransportManager(gobject.GObject):
     def __init__(self, client):
         gobject.GObject.__init__(self)
 
-        self._transports = []
+        self._transports = {}
 
 gobject.type_register(P2PTransportManager) 
