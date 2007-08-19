@@ -237,10 +237,10 @@ class SwitchboardManager(gobject.GObject):
                 self._orphaned_switchboards.add(switchboard)
         
         for switchboard in self._pending_switchboards.keys():
-            handlers = self._switchboards[switchboard]
+            handlers = self._pending_switchboards[switchboard]
             handlers.discard(handler)
             if len(handlers) == 0:
-                del self._switchboards[switchboard]
+                del self._pending_switchboards[switchboard]
                 self._orphaned_switchboards.add(switchboard)
 
     def _ns_switchboard_request_response(self, session, handler):
