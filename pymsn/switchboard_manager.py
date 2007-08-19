@@ -318,6 +318,7 @@ class SwitchboardManager(gobject.GObject):
                     continue
                 handler = handler_class(self._client, ())
                 self._switchboards[switchboard] = set([handler]) #FIXME: WeakSet ?
+                self._orphaned_switchboards.discard(switchboard)
                 handler._switchboard = switchboard
                 self.emit("handler-created", handler_class, handler)
                 handler._on_message_received(message)
