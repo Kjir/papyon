@@ -72,7 +72,7 @@ class Client(EventsDispatcher):
                 self._proxies)
 
         self._switchboard_manager = SwitchboardManager(self)
-        self._switchboard_manager.register_handler_class(Conversation)
+        self._switchboard_manager.register_handler(Conversation)
 
         self._sso = None
         self.profile = None

@@ -88,9 +88,9 @@ class Client(pymsn.Client):
             return True
         else:
             for contact in contacts:
-                #if contact.account == "im_a_jabber_monkey@hotmail.com":
+                if contact.account == "im_a_jabber_monkey@hotmail.com":
                 #if contact.account == "tp-butterfly@hotmail.com":
-                if contact.account == "johann.prieur@gmail.com":
+                #if contact.account == "johann.prieur@gmail.com":
                     print "Inviting %s for a conversation" % contact.display_name
                     self.conv = pymsn.Conversation(self, [contact])
                     AnnoyingConversation(self.conv)

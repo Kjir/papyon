@@ -162,6 +162,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             @param message: the message to send
             @type message: L{message.OutgoingMessage}"""
         assert(self.state == ProtocolState.OPEN)
+        message.transaction_id = self._transport.transaction_id
         our_cb_args = (message, callback, cb_args)
         self._transport.send_command(message,
                 True, self.__on_message_sent, *our_cb_args)
