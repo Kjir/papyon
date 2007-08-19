@@ -182,7 +182,7 @@ class SwitchboardManager(gobject.GObject):
         self._handlers_class = WeakSet()
         self._orphaned_handlers = WeakSet()
         self._switchboards = {}
-        self._orphaned_switchboards = []
+        self._orphaned_switchboards = set()
         self._pending_switchboards = {}
         
         self._client._protocol.connect("switchboard-invitation-received",
@@ -206,11 +206,11 @@ class SwitchboardManager(gobject.GObject):
                 return
 
         # Check Orphaned switchboards
-        for i, switchboard in enumerate(self._orphaned_switchboards):
+        for switchboard in self._orphaned_switchboards:
             switchboard_participants = set(switchboard.participants.values())
             if handler_participants == switchboard_participants:
                 self._switchboards[switchboard] = set([handler]) #FIXME: WeakSet ?
-                del self._orphaned_switchboards[i]
+                self._orphaned_switchboards.discard(switchboard)
                 handler._switchboard = switchboard
                 return
 
@@ -249,7 +249,7 @@ class SwitchboardManager(gobject.GObject):
 
     def _ns_switchboard_invite(self, protocol, session, inviter):
         switchboard = self._build_switchboard(session)
-        self._orphaned_switchboards.append(switchboard)
+        self._orphaned_switchboards.add(switchboard)
 
     def _build_switchboard(self, session):
         server, session_id, key = session
@@ -300,8 +300,7 @@ class SwitchboardManager(gobject.GObject):
                 for handler in self._switchboards[switchboard]:
                     self._orphaned_handlers.add(handler)
                 del self._switchboards[switchboard]
-            if switchboard in self._orphaned_switchboards:
-                del self._orphaned_switchboards[switchboard]
+            self._orphaned_switchboards.discard(switchboard)
 
     def _sb_message_received(self, switchboard, message):
         switchboard_participants = set(switchboard.participants.values())
