@@ -228,15 +228,19 @@ class SwitchboardManager(gobject.GObject):
 
     def close_handler(self, handler):
         self._orphaned_handlers.discard(handler)
-        for switchboard, handlers in self._switchboards.iteritems():
+        for switchboard in self._switchboards.keys():
+            handlers = self._switchboards[switchboard]
             handlers.discard(handler)
             if len(handlers) == 0:
                 switchboard.leave()
                 del self._switchboards[switchboard]
         
-        for switchboard, handlers in self._pending_switchboards.iteritems():
+        for switchboard in self._pending_switchboards.keys():
+            handlers = self._switchboards[switchboard]
             handlers.discard(handler)
-            # we will send a leave() once they are open if no handler is available
+            if len(handlers) == 0:
+                del self._switchboards[switchboard]
+                self._orphaned_switchboards.add(handler)
 
     def _ns_switchboard_request_response(self, session, handler):
         switchboard = self._build_switchboard(session)
