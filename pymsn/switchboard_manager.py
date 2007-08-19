@@ -72,7 +72,7 @@ class SwitchboardClient(object):
                 lambda sb, contact: self.__on_user_left(contact))
         self.switchboard.connect("user-invitation-failed",
                 lambda sb, contact: self.__on_user_invitation_failed(contact))
-
+        logger.info("New switchboard attached")
         self._process_pending_queues()
 
     _switchboard = property(__get_switchboard, __set_switchboard)
@@ -93,7 +93,6 @@ class SwitchboardClient(object):
     def _invite_user(self, contact):
         self._pending_invites.add(contact)
         self._process_pending_queues()
-
 
     def _leave(self):
         self._switchboard_manager.close_handler(self)
@@ -125,15 +124,20 @@ class SwitchboardClient(object):
         self._on_contact_joined(contact)
 
     def __on_user_left(self, contact):
-        if len(self.participants) > 1:
-            self.participants.remove(contact)
-            self._on_contact_left(contact)
+        self._on_contact_left(contact)
+        self.participants.remove(contact)
+        if len(self.participants) == 0:
+            self._pending_invites.add(contact)
 
     def __on_user_invitation_failed(self, contact):
         self._pending_invites.discard(contact)
     
     # Helper functions
     def _process_pending_queues(self):
+        if len(self._pending_invites) == 0 and \
+                len(self._pending_messages) == 0:
+            return
+
         if self._request_switchboard():
             return
 
@@ -148,8 +152,8 @@ class SwitchboardClient(object):
             self._pending_messages = []
 
     def _request_switchboard(self):
-        if self.switchboard is not None and \
-                self.switchboard.state != msnp.ProtocolState.CLOSED:
+        if (self.switchboard is not None) and \
+                self.switchboard.state == msnp.ProtocolState.OPEN:
             return False
         if self._switchboard_requested:
             return True
@@ -206,7 +210,7 @@ class SwitchboardManager(gobject.GObject):
                 return
 
         # Check Orphaned switchboards
-        for switchboard in self._orphaned_switchboards:
+        for switchboard in list(self._orphaned_switchboards):
             switchboard_participants = set(switchboard.participants.values())
             if handler_participants == switchboard_participants:
                 self._switchboards[switchboard] = set([handler]) #FIXME: WeakSet ?
@@ -283,12 +287,13 @@ class SwitchboardManager(gobject.GObject):
                 del self._pending_switchboards[switchboard]
             
             # Orphaned Handlers
-            for handler in self._orphaned_handlers:
+            for handler in list(self._orphaned_handlers):
                 switchboard_participants = set(switchboard.participants.values())
                 handler_participants = handler.total_participants
                 if handler_participants == switchboard_participants:
                     self._switchboards[switchboard].add(handler)
                     self._orphaned_handlers.discard(handler)
+                    self._orphaned_switchboards.discard(switchboard)
                     handler._switchboard = switchboard
             
             # no one wants it, it is an orphan
@@ -297,7 +302,7 @@ class SwitchboardManager(gobject.GObject):
                 self._orphaned_switchboards.add(switchboard)
 
         elif state == msnp.ProtocolState.CLOSED:
-            if switchboard in self._switchboards:
+            if switchboard in self._switchboards.keys():
                 for handler in self._switchboards[switchboard]:
                     self._orphaned_handlers.add(handler)
                 del self._switchboards[switchboard]
@@ -305,14 +310,14 @@ class SwitchboardManager(gobject.GObject):
 
     def _sb_message_received(self, switchboard, message):
         switchboard_participants = set(switchboard.participants.values())
-        if switchboard in self._switchboards:
+        if switchboard in self._switchboards.keys():
             handlers = self._switchboards[switchboard]
             for handler in handlers:
                 if not handler._can_handle_message(message):
                     continue
                 handler._on_message_received(message)
 
-        if switchboard in self._orphaned_switchboards:
+        if switchboard in list(self._orphaned_switchboards):
             for handler_class in self._handlers_class:
                 if not handler_class._can_handle_message(message):
                     continue

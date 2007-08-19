@@ -233,8 +233,6 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             account = command.arguments[0]
             self.emit("user-left", self.participants[account])
             del self.participants[account]
-            if len(self.participants) == 0:
-                self._state = ProtocolState.CLOSED
         else:
             self._state = ProtocolState.CLOSED
             self.participants = {}
