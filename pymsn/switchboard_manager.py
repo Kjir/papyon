@@ -271,15 +271,16 @@ class SwitchboardManager(gobject.GObject):
             self._switchboards[switchboard] = set() #FIXME: WeakSet ?
 
             # Requested switchboards
-            handlers = self._pending_switchboards[switchboard]
-            while True:
-                try:
-                    handler = handlers.pop()
-                    self._switchboards[switchboard].add(handler)
-                    handler._switchboard = switchboard
-                except KeyError:
-                    break
-            del self._pending_switchboards[switchboard]
+            if switchboard in self._pending_switchboards:
+                handlers = self._pending_switchboards[switchboard]
+                while True:
+                    try:
+                        handler = handlers.pop()
+                        self._switchboards[switchboard].add(handler)
+                        handler._switchboard = switchboard
+                    except KeyError:
+                        break
+                del self._pending_switchboards[switchboard]
             
             # Orphaned Handlers
             for handler in self._orphaned_handlers:
