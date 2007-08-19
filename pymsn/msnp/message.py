@@ -26,7 +26,7 @@ import pymsn.util.debug as debug
 from urllib import quote, unquote
 import struct
 
-__all__ = ['MessageAcknowledgement', 'Message', 'IncomingMessage', 'OutgoingMessage']
+__all__ = ['MessageAcknowledgement', 'Message']
 
 
 class MessageAcknowledgement(object):
@@ -58,14 +58,13 @@ class Message(HTTPMessage):
         @ivar content_type: the message content type
         @type content_type: tuple(mime_type, encoding)"""
 
-    def __init__(self, message=""):
+    def __init__(self, sender=None, message=""):
         """Initializer
             
             @param body: The body of the message, it is put after the headers
             @type body: string"""
         HTTPMessage.__init__(self)
-        self.account = 'Hotmail'
-        self.friendly_name = 'Hotmail'
+        self.sender = sender
         if message:
             self.parse(message)
 
@@ -113,83 +112,3 @@ class Message(HTTPMessage):
     content_type = property(__get_content_type, __set_content_type,
             doc="a tuple specifying the content type")
 
-
-class IncomingMessage(Message):
-    """Incoming Message abstraction"""
-
-    def __init__(self, command):
-        """Initializer
-        
-            @param command: the MSG command received from the server
-            @type command: L{command.Command}"""
-        Message.__init__(self, command.payload)
-        self.account = command.arguments[0]
-        self.friendly_name = unquote(command.arguments[1])
-
-    def __str__(self):
-        """Represents the message
-        
-        the representation looks like this ::
-            MSG sender-account sender-friendly-name payload-size\\r\\n
-            header1: header-content\\r\\n
-            ...\\r\\n
-            \\r\\n
-            body
-            
-        @rtype: string"""
-        message = Message.__str__(self)
-        command = 'MSG %s %s %u\r\n' % (self.account,
-                quote(self.friendly_name),
-                len(message))
-        return command + message
-    
-    def __repr__(self):
-        """Represents the message"""
-        message = Message.__repr__(self)
-        length = len(Message.__str__(self))
-        command = 'MSG %s %s %u\n' % (self.account,
-                quote(self.friendly_name),
-                length)
-        return command + message
-
-
-class OutgoingMessage(Message):
-    """Build MSG commands destined to be sent."""
-
-    def __init__(self, transaction_id, ack):
-        """Initializer
-        
-            @param transaction_id: the transaction ID
-            @type transaction_id: integer
-            
-            @param ack: Acknowledgment type
-            @type ack: L{message.MessageAcknowledgement}"""
-        Message.__init__(self)
-        self.transaction_id = transaction_id
-        self.ack = ack
-        self.account = ''
-        self.friendly_name = ''
-
-    def __str__(self):
-        """Represents the message
-        
-        the representation looks like this ::
-            MSG transaction-id ack payload-size\\r\\n
-            header1: header-content\\r\\n
-            ...\\r\\n
-            \\r\\n
-            body
-            
-        @rtype: string"""
-        message = Message.__str__(self)
-        command = 'MSG %u %s %u\r\n' % \
-                (self.transaction_id, self.ack, len(message) )
-        return command + message
-
-    def __repr__(self):
-        """Represents the message"""
-        message = Message.__repr__(self)
-        length = len(Message.__str__(self))
-        command = 'MSG %u %s %u\r\n' % \
-                (self.transaction_id, self.ack, length )
-        return command + message

@@ -24,8 +24,9 @@
 Implements the protocol used to communicate with the Notification Server."""
 
 from base import BaseProtocol, ProtocolState
+from message import Message
+
 from pymsn.gnet.message.HTTP import HTTPMessage
-from message import IncomingMessage
 import pymsn.util.ElementTree as et
 import pymsn.profile as profile
 import pymsn.service.SingleSignOn as SSO
@@ -296,7 +297,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             method = 'SSO'
         else:
             method = 'TWN'
-        self._state = ProtocolState.AUTHENTICATING
         self._transport.send_command_ex('USR',
                 (method, 'I', self._client.profile.account))
 
@@ -333,6 +333,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
         # we need to authenticate with a passport server
         elif command.arguments[1] == "S":
+            self._state = ProtocolState.AUTHENTICATING
             if command.arguments[0] == "SSO":
                 self._client._sso.RequestMultipleSecurityTokens(
                     (self._sso_cb, command.arguments[3]),
@@ -381,8 +382,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 search_by_account(account)
 
         if len(contacts) == 0:
-            logger.warning("Contact (netword_id=%d) %s not found" % \
-                    (netword_id, account))
+            logger.warning("Contact (network_id=%d) %s not found" % \
+                    (network_id, account))
 
         for contact in contacts:
             contact._server_property_changed("presence",
@@ -397,8 +398,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 search_by_account(account)
         
         if len(contacts) == 0:
-            logger.warning("Contact (netword_id=%d) %s not found" % \
-                    (netword_id, account))
+            logger.warning("Contact (network_id=%d) %s not found" % \
+                    (network_id, account))
         for contact in contacts:
             presence = command.arguments[0]
             display_name = urllib.unquote(command.arguments[3])
@@ -434,7 +435,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 search_by_account(account)
 
         if len(contacts) == 0:
-            logger.warning("Contact (netword_id=%d) %s not found" % \
+            logger.warning("Contact (network_id=%d) %s not found" % \
                     (network_id, account))
         for contact in contacts:
             cm = et.fromstring(command.payload).find("./CurrentMedia")
@@ -462,8 +463,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     # --------- Messages -----------------------------------------------------
     def _handle_MSG(self, command):
-        msg = IncomingMessage(command)
-        if msg.content_type[0] == 'text/x-msmsgsprofile':
+        message = Message(None, command.payload)
+        content_type = message.content_type
+        if content_type[0] == 'text/x-msmsgsprofile':
             self._client.profile._server_property_changed("profile",
                     command.payload)
 
@@ -475,21 +477,21 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                         (self._client.profile.privacy,))
                 self._state = ProtocolState.SYNCHRONIZING
                 self._client.address_book.sync()
-        elif msg.content_type[0] in \
+        elif content_type[0] in \
                 ('text/x-msmsgsinitialemailnotification', \
                  'text/x-msmsgsemailnotification'):
-            self.emit("mail-received", msg)
-        elif msg.content_type[0] in \
+            self.emit("mail-received", message)
+        elif content_type[0] in \
                 ('text/x-msmsgsinitialmdatanotification', \
                  'text/x-msmsgsoimnotification'):
             if self._client.oim_box is not None:
                 m = HTTPMessage()
-                m.parse(msg.body)
+                m.parse(message.body)
                 mail_data = m.get_header('Mail-Data').strip()
                 if mail_data == 'too-large':
                     mail_data = None
                 #self._client.oim_box.sync(mail_data)
-        elif msg.content_type[0] == 'text/x-msmsgsactivemailnotification':
+        elif content_type[0] == 'text/x-msmsgsactivemailnotification':
             pass
 
     # --------- Invitation ---------------------------------------------------

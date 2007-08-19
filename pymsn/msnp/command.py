@@ -46,7 +46,7 @@ class CommandPrinter(object):
             result += ' ' + ' '.join(command.arguments) 
 
         if command.payload is not None:
-            result += "\n" + repr(Message(command.payload))
+            result += "\n" + repr(Message(None, str(command.payload)))
         return result
 
     
@@ -59,15 +59,16 @@ class CommandPrinter(object):
 
         if command.arguments is not None and len(command.arguments) > 0:
             result += ' ' + ' '.join(command.arguments) 
-
+        
         if command.payload is not None:
-            length = len(command.payload)
+            payload = repr(command.payload)
+            length = len(payload)
             if length > 0:
                 result += ' ' + str(length) + '\r\n'
                 if not command.is_error():
                     result += '\t[payload]'
                 else:
-                    result += command.payload
+                    result += payload
         return result
 
 

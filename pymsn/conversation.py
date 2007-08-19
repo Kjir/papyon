@@ -95,27 +95,24 @@ class Conversation(SwitchboardClient, EventsDispatcher):
         self._dispatch("on_conversation_user_left", contact)
     
     def _on_message_received(self, message):
+        sender = message.sender
         message_type = message.content_type[0]
-        sender_account = message.account
-        sender_friendly_name = message.friendly_name
-        
-        senders = self._client.address_book.contacts.\
-                search_by_account(sender_account)
-        if len(senders) == 0:
-            sender = pymsn.profile.Contact(id=0,
-                    network_id=pymsn.profile.NetworkID.MSN,
-                    account=account,
-                    display_name=display_name)
-        else:
-            sender = senders[0]
+        message_encoding = message.content_type[1]
+        try:
+            message_formatting = message.get_header('X-MMS-IM-Format')
+        except KeyError:
+            message_formatting = ''
 
         if message_type == 'text/plain':
             self._dispatch("on_conversation_message_received",
-                           sender, unicode(message.body, message.content_type[1]),
-                           TextFormat.parse(message.headers["X-MMS-IM-Format"]))
-        if message_type == 'text/x-msmsgscontrol':
+                           sender,
+                           unicode(message.body, message_encoding),
+                           TextFormat.parse(message_formatting))
+
+        elif message_type == 'text/x-msmsgscontrol':
             self._dispatch("on_conversation_user_typing", sender)
-        if message_type == 'text/x-msnmsgr-datacast' and \
+
+        elif message_type == 'text/x-msnmsgr-datacast' and \
                 message.body.strip() == "ID: 1":
             self._dispatch("on_conversation_nudge_received",
                     sender)

@@ -24,7 +24,7 @@
 Implements the protocol used to communicate with the Switchboard Server."""
 
 from base import BaseProtocol, ProtocolState
-from message import IncomingMessage
+from message import Message
 import pymsn.profile
 
 import logging
@@ -156,16 +156,18 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self._inviting = True
         self._transport.send_command_ex('CAL', (contact.account,) )
 
-    def send_message(self, message, callback=None, cb_args=()):
+    def send_message(self, message, ack, callback=None, cb_args=()):
         """Send a message to all contacts in this switchboard
         
             @param message: the message to send
-            @type message: L{message.OutgoingMessage}"""
+            @type message: L{message.Message}"""
         assert(self.state == ProtocolState.OPEN)
-        message.transaction_id = self._transport.transaction_id
-        our_cb_args = (message, callback, cb_args)
-        self._transport.send_command(message,
-                True, self.__on_message_sent, *our_cb_args)
+        self._transport.send_command_ex('MSG',
+                (ack,),
+                message,
+                True,
+                self.__on_message_sent,
+                message, callback, cb_args)
 
     def __on_message_sent(self, message, user_callback, user_cb_args):
         self.emit("message-sent", message)
@@ -239,7 +241,19 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
 
     # --------- Messenging ---------------------------------------------------
     def _handle_MSG(self, command):
-        self.emit("message-received", IncomingMessage(command))
+        account = command.arguments[0]
+        display_name = urllib.unquote(command.arguments[1])
+        contacts = self._client.address_book.contacts.\
+                search_by_account(account)
+        if len(contacts) == 0:
+            contact = pymsn.profile.Contact(id=0,
+                    network_id=pymsn.profile.NetworkID.MSN,
+                    account=account,
+                    display_name=display_name)
+        else:
+            contact = contacts[0]
+        message = Message(contact, command.payload)
+        self.emit("message-received", message)
         
     def _handle_ACK(self, command):
         self.emit("message-delivered", command)

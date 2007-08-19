@@ -81,13 +81,13 @@ class SwitchboardClient(object):
     # protected
     def _send_message(self, content_type, body, headers={},
             ack=msnp.MessageAcknowledgement.HALF):
-        message = msnp.OutgoingMessage(0, ack)
-        message.content_type = content_type
-        message.body = body
+        message = msnp.Message(self._client.profile)
         for key, value in headers.iteritems():
             message.add_header(key, value)
+        message.content_type = content_type
+        message.body = body
 
-        self._pending_messages.append(message)
+        self._pending_messages.append((message, ack))
         self._process_pending_queues()
 
     def _invite_user(self, contact):
@@ -147,8 +147,8 @@ class SwitchboardClient(object):
         self._pending_invites = set()
 
         if not self.switchboard.inviting:
-            for message in self._pending_messages:
-                self.switchboard.send_message(message)
+            for message, ack in self._pending_messages:
+                self.switchboard.send_message(message, ack)
             self._pending_messages = []
 
     def _request_switchboard(self):
