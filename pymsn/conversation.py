@@ -26,27 +26,39 @@ contact."""
 import msnp
 from switchboard_manager import SwitchboardClient
 from pymsn.event import EventsDispatcher
+from pymsn.profile import NetworkID
 
 import logging
 import gobject
 from urllib import quote, unquote
 
-__all__ = ['Conversation','TextFormat']
+__all__ = ['Conversation', 'ExternalNetworkConversation',
+        'SwitchboardConversation', 'TextFormat']
 
 logger = logging.getLogger('conversation')
 
-class Conversation(SwitchboardClient, EventsDispatcher):
-    def __init__(self, client, contacts):
-        SwitchboardClient.__init__(self, client, contacts)
+
+def Conversation(client, contacts):
+    msn_contacts = set([contact if contact.network_id == NetworkID.MSN \
+            for contact in contacts])
+    external_contacts = set(contacts) - msn_contacts
+
+    if len(external_contacts) == 0:
+        return SwitchboardConversation(client, contacts)
+    elif len(msn_contacts) != 0:
+        raise NotImplementedError("The protocol doesn't allow mixing " \
+                "contacts from different networks in a single conversation")
+    elif len(external_contacts) > 1:
+        raise NotImplementedError("The protocol doesn't allow having " \
+                "more than one external contact in a conversation")
+    elif len(external_contacts) == 1:
+        return ExternalNetworkConversation(client, contacts)
+
+
+class BaseConversation(EventsDispatcher):
+    def __init__(self, client):
+        self._client = client
         EventsDispatcher.__init__(self)
-    
-    @staticmethod
-    def _can_handle_message(message, switchboard_client=None):
-        content_type = message.content_type[0]
-        if switchboard_client is None:
-            return content_type in ('text/plain', 'text/x-msnmsgr-datacast')
-        return content_type in ('text/plain', 'text/x-msmsgscontrol',
-                'text/x-msnmsgr-datacast')
 
     def send_text_message(self, text, formatting=None):
         """Build and send a text message to all persons in this
@@ -82,11 +94,15 @@ class Conversation(SwitchboardClient, EventsDispatcher):
             
             @param contact: the contact to invite.
             @type contact: L{profile.Contact}"""
-        self._invite_user(contact)
+        raise NotImplementedError
 
     def leave(self):
         """Leave the conversation."""
-        self._leave()
+        raise NotImplementedError
+    
+    def _send_message(self, content_type, body, headers={},
+            ack=msnp.MessageAcknowledgement.HALF):
+        raise NotImplementedError
 
     def _on_contact_joined(self, contact):
         self._dispatch("on_conversation_user_joined", contact)
@@ -119,6 +135,61 @@ class Conversation(SwitchboardClient, EventsDispatcher):
 
     def _on_message_sent(self, message):
         pass
+
+    
+class ExternalNetworkConversation(BaseConversation):
+    def __init__(self, client, contacts):
+        BaseConversation.__init__(self, client)
+        self.participants = set(contacts)
+
+    def invite_user(self, contact):
+        raise NotImplementedError("The protocol doesn't allow multiuser " \
+                "conversations for external contacts")
+
+    def leave(self):
+        """Leave the conversation."""
+        self._client._unregister_external_conversation(self)
+
+    def _send_message(self, content_type, body, headers={},
+            ack=msnp.MessageAcknowledgement.HALF):
+        message = msnp.Message(self._client.profile)
+        for key, value in headers.iteritems():
+            message.add_header(key, value)
+        message.content_type = content_type
+        message.body = body
+        for contact in self.participants:
+            self._client._protocol.\
+                    send_unmanaged_message(contact, message)
+
+
+class SwitchboardConversation(BaseConversation, SwitchboardClient):
+    def __init__(self, client, contacts):
+        BaseConversation.__init__(self, client)
+        SwitchboardClient.__init__(self, client, contacts)
+    
+    @staticmethod
+    def _can_handle_message(message, switchboard_client=None):
+        content_type = message.content_type[0]
+        if switchboard_client is None:
+            return content_type in ('text/plain', 'text/x-msnmsgr-datacast')
+        return content_type in ('text/plain', 'text/x-msmsgscontrol',
+                'text/x-msnmsgr-datacast')
+
+    def invite_user(self, contact):
+        """Request a contact to join in the conversation.
+            
+            @param contact: the contact to invite.
+            @type contact: L{profile.Contact}"""
+        self._invite_user(contact)
+
+    def leave(self):
+        """Leave the conversation."""
+        self._leave()
+
+    def _send_message(self, content_type, body, headers={},
+            ack=msnp.MessageAcknowledgement.HALF):
+        SwitchboardClient._send_message(self, content_type, body, headers, ack)
+
 
 
 class TextFormat(object):

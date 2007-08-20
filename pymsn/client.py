@@ -33,7 +33,7 @@ import pymsn.service.AddressBook as AB
 import pymsn.service.OfflineIM as OIM
 
 from switchboard_manager import SwitchboardManager
-from conversation import Conversation
+from conversation import SwitchboardConversation, ExternalNetworkConversation
 from pymsn.event import EventsDispatcher
 
 import logging
@@ -72,7 +72,9 @@ class Client(EventsDispatcher):
                 self._proxies)
 
         self._switchboard_manager = SwitchboardManager(self)
-        self._switchboard_manager.register_handler(Conversation)
+        self._switchboard_manager.register_handler(SwitchboardConversation)
+
+        self._external_conversations = {}
 
         self._sso = None
         self.profile = None
@@ -88,6 +90,9 @@ class Client(EventsDispatcher):
 
         self._protocol.connect("notify::state",
                 self._on_protocol_state_changed)
+        self._protocol.connect("unmanaged-message-received",
+                self._on_protocol_unmanaged_message_received)
+
 
         self._switchboard_manager.connect("handler-created",
                 self._on_switchboard_handler_created)
@@ -150,6 +155,21 @@ class Client(EventsDispatcher):
         self._protocol.signoff()
         self.__state = ClientState.CLOSED
 
+    ### External Conversation handling
+    def _register_external_conversation(self, conversation):
+        for contact in conversation.participants:
+            break
+
+        if contact in self._external_conversations:
+            logger.warning("trying to register an external conversation twice")
+            return
+        self._external_conversations[contact] = conversation
+
+    def _unregister_external_conversation(self, conversation):
+        for contact in conversation.participants:
+            break
+        del self._external_conversations[contact]
+
     # - - Transport
     def _on_connect_success(self, transp):
         self._sso = SSO.SingleSignOn(self.profile.account, 
@@ -188,6 +208,17 @@ class Client(EventsDispatcher):
             for contact in im_contacts:
                 self._connect_contact_signals(contact)
 
+    def _on_protocol_unmanaged_message_received(self, proto, sender, message):
+        if sender in self._external_conversations:
+            conversation = self._external_conversations[sender]
+            conversation._on_message_received(message)
+        else:
+            conversation = ExternalNetworkConversation(self, [sender])
+            self._register_external_conversation(conversation)
+            if self._dispatch("on_invite_conversation", conversation) == 0:
+                logger.warning("No event handler attached for conversations")
+            conversation._on_message_received(message)
+
     # - - Contact
     def _connect_contact_signals(self, contact):
         contact.connect("notify::presence",
@@ -209,7 +240,7 @@ class Client(EventsDispatcher):
 
     # - - Switchboard Manager
     def _on_switchboard_handler_created(self, sb_mgr, handler_class, handler):
-        if handler_class is Conversation:
+        if handler_class is SwitchboardConversation:
             if self._dispatch("on_invite_conversation", handler) == 0:
                 logger.warning("No event handler attached for conversations")
         else:

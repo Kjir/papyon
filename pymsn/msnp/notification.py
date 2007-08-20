@@ -120,7 +120,11 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
             "switchboard-invitation-received" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object, object))
+                (object, object)),
+
+            "unmanaged-message-received" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object, object)),
             }
 
     __gproperties__ = {
@@ -273,7 +277,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             self._transport.send_command_ex("RML", payload=payload)
 
     def send_unmanaged_message(self, contact, message):
-        content_type = message.get_header('Content-Type')
+        content_type = message.content_type[0]
         if content_type == 'text/x-msnmsgr-datacast':
             message_type = 3
         elif content_type == 'text/x-msmsgscontrol':
@@ -493,6 +497,22 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 #self._client.oim_box.sync(mail_data)
         elif content_type[0] == 'text/x-msmsgsactivemailnotification':
             pass
+    
+    def _handle_UBM(self, command):
+        network_id = int(command.arguments[1])
+        account = command.arguments[0]
+
+        contacts = self._client.address_book.contacts.\
+                search_by_network_id(network_id).\
+                search_by_account(account)
+
+        if len(contacts) == 0:
+            logger.warning("Contact (network_id=%d) %s not found" % \
+                    (network_id, account))
+        else:
+            contact = contacts[0]
+            message = Message(contact, command.payload)
+            self.emit("unmanaged-message-received", contact, message)
 
     # --------- Invitation ---------------------------------------------------
     def _handle_RNG(self,command):
