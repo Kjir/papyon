@@ -382,11 +382,13 @@ class AddressBook(gobject.GObject):
                 display_name = external_email.Email
 
             c = profile.Contact(contact.Id,
-                                profile.NetworkID.EXTERNAL,
-                                external_email.Email.encode("utf-8"),
-                                display_name.encode("utf-8"),
-                                contact.CID,
-                                profile.Membership.FORWARD)
+                    profile.NetworkID.EXTERNAL,
+                    external_email.Email.encode("utf-8"),
+                    display_name.encode("utf-8"),
+                    contact.CID,
+                    profile.Membership.FORWARD)
+            c._server_attribute_changed("im_contact",
+                    external_email.IsMessengerEnabled)
                 
             for group_id in contact.Groups:
                 c._add_group_ownership(self.groups[group_id])
@@ -405,13 +407,13 @@ class AddressBook(gobject.GObject):
                 display_name = contact.PassportName
 
             c = profile.Contact(contact.Id,
-                                profile.NetworkID.MSN,
-                                contact.PassportName.encode("utf-8"),
-                                display_name.encode("utf-8"),
-                                contact.CID,
-                                profile.Membership.FORWARD)
-            c._server_contact_attribute_changed("im_contact",
-                                                contact.IsMessengerUser)
+                    profile.NetworkID.MSN,
+                    contact.PassportName.encode("utf-8"),
+                    display_name.encode("utf-8"),
+                    contact.CID,
+                    profile.Membership.FORWARD)
+            c._server_attribute_changed("im_contact",
+                    contact.IsMessengerUser)
             
             for group_id in contact.Groups:
                 c._add_group_ownership(self.groups[group_id])
@@ -436,8 +438,8 @@ class AddressBook(gobject.GObject):
                     # Pending contact
                     msg = member.Annotations.get('MSN.IM.InviteMessage', '')
                     p = PendingContact(member.Account.encode("utf-8"), network,
-                                       member.DisplayName.encode("utf-8"), 
-                                       msg.encode("utf-8"))
+                            member.DisplayName.encode("utf-8"), 
+                            msg.encode("utf-8"))
                     self._pending_contacts.add(p)
                     self.emit("new-pending-contact", p)
             else:

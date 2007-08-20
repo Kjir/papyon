@@ -141,6 +141,13 @@ class ExternalNetworkConversation(BaseConversation):
     def __init__(self, client, contacts):
         BaseConversation.__init__(self, client)
         self.participants = set(contacts)
+        client._register_external_conversation(self)
+        gobject.idle_add(self._open)
+    
+    def _open(self):
+        for contact in self.participants:
+            self._on_contact_joined(contact)
+        return False
 
     def invite_user(self, contact):
         raise NotImplementedError("The protocol doesn't allow multiuser " \

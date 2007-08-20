@@ -372,7 +372,8 @@ class Contact(gobject.GObject):
         self._memberships = memberships
         self._client_capabilities = ClientCapabilities()
         self._msn_object = ""
-        self._attributes = {'im_contact' : False}
+        self._attributes = {'im_contact' : False,
+                'icon_url' : None}
 
     @property
     def id(self):
@@ -487,7 +488,7 @@ class Contact(gobject.GObject):
             setattr(self, attr_name, value)
             self.notify(name)
 
-    def _server_contact_attribute_changed(self, name, value):
+    def _server_attribute_changed(self, name, value):
         self._attributes[name] = value
         
     ### group management

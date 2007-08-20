@@ -58,7 +58,8 @@ class CommandPrinter(object):
             result += ' ' + str(command.transaction_id)
 
         if command.arguments is not None and len(command.arguments) > 0:
-            result += ' ' + ' '.join(command.arguments) 
+            arguments = [str(argument) for argument in command.arguments]
+            result += ' ' + ' '.join(arguments) 
         
         if command.payload is not None:
             payload = repr(command.payload)
