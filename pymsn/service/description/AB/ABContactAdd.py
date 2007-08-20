@@ -20,6 +20,8 @@
 from common import *
 from constants import *
 
+import xml.sax.saxutils as xml
+
 def transport_headers():
     """Returns a dictionary, containing transport (http) headers
     to use for the request"""
@@ -66,10 +68,10 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
         contact_info += "<contactType>%s</contactType>" % contact_type
             
     if first_name is not None:
-        contact_info += "<firstName>%s</firstName>" % first_name
+        contact_info += "<firstName>%s</firstName>" % xml.escape(first_name)
 
     if last_name is not None:
-        contact_info += "<lastName>%s</lastName>" % last_name
+        contact_info += "<lastName>%s</lastName>" % xml.escape(last_name)
 
     if birth_date is not None:
         contact_info += "<birthdate>%s</birthdate>" % birth_date
@@ -124,7 +126,7 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
             websites += """<ContactWebSite>
                               <contactWebSiteType>%s</contactWebSiteType>
                               <webURL>%s</webURL>
-                           </ContactWebSite>""" % (type, url)
+                           </ContactWebSite>""" % (type, xml.escape(url))
         contact_info += "<webSites>%s</webSites>" % web_sites
 
     if annotation is not None:
@@ -133,11 +135,11 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
             annotations += """<Annotation>
                                  <Name>%s</Name>
                                  <Value>%s</Value>
-                              </Annotation>""" % (name, value)
+                              </Annotation>""" % (name, xml.escape(value))
         contact_info += "<annotations>%s</annotations>" % annotations
 
     if comment is not None:
-        contact_info += "<comment>%s</comment>" % comment
+        contact_info += "<comment>%s</comment>" % xml.escape(comment)
 
     if anniversary is not None:
         contact_info += "<Anniversary>%s</Anniversary>" % anniversary
@@ -157,8 +159,8 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
                            <DisplayName>
                                %(display_name)s
                            </DisplayName>
-                       </MessengerMemberInfo>""" % { 'invite_message' : invite_message,
-                                                     'display_name' : display_name }
+                       </MessengerMemberInfo>""" % { 'invite_message' : xml.escape(invite_message),
+                                                     'display_name' : xml.escape(display_name) }
 
     return """
        <ABContactAdd xmlns="http://www.msn.com/webservices/AddressBook">

@@ -39,8 +39,8 @@ logger = logging.getLogger('conversation')
 
 
 def Conversation(client, contacts):
-    msn_contacts = set([contact if contact.network_id == NetworkID.MSN \
-            for contact in contacts])
+    msn_contacts = set([contact for contact in contacts \
+            if contact.network_id == NetworkID.MSN])
     external_contacts = set(contacts) - msn_contacts
 
     if len(external_contacts) == 0:

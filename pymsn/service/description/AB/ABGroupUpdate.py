@@ -19,6 +19,8 @@
 
 from common import *
 
+import xml.sax.saxutils as xml
+
 def transport_headers():
     """Returns a dictionary, containing transport (http) headers
     to use for the request"""
@@ -55,7 +57,7 @@ def soap_body(group_id, group_name):
                 </Group>
             </groups>
         </ABGroupUpdate>""" % { 'group_id' : group_id,
-                                'group_name' : group_name }
+                                'group_name' : xml.escape(group_name) }
 
 def process_response(soap_response):
     return None
