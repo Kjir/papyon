@@ -105,7 +105,7 @@ class Command(object):
             'GCF', 'MSG', 'UBN', 'UBM', 'UBX', 'IPG',
             'NOT', 'ADL', 'FQY',
             
-            '241')
+            '241', '509')
 
     def __init__(self):
         self._reset()
