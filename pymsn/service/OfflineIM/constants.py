@@ -17,7 +17,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-__all__ = ["OfflineMessagesBoxState", "OfflineMessagesError"]
+__all__ = ["OfflineMessagesBoxState", "OfflineMessagesBoxError"]
 
 class OfflineMessagesBoxState(object):
     """Offline messages box synchronization state.
@@ -32,6 +32,10 @@ class OfflineMessagesBoxState(object):
     SYNCHRONIZED = 2
     """The box is already synchronized"""
 
-class OfflineMessagesError(object):
+class OfflineMessagesBoxError(object):
     UNKNOWN = 0
+    AUTHENTICATION_FAILED = 1
+    SYSTEM_UNAVAILABLE = 2
+    SENDER_THROTTLE_LIMIT_EXCEEDED = 3
+    
 

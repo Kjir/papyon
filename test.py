@@ -82,15 +82,19 @@ class Client(pymsn.Client):
 
     def start_conversation(self):
         contacts = self.address_book.contacts.\
-                search_by_presence(pymsn.Presence.ONLINE)
+                search_by_presence(pymsn.Presence.OFFLINE)
         if len(contacts) == 0:
-            print "No online contacts"
+            print "No offline contacts"
             return True
         else:
             for contact in contacts:
-                if contact.account == "im_a_jabber_monkey@hotmail.com":
+                #if contact.account == "im_a_jabber_monkey@hotmail.com":
                 #if contact.account == "tp-butterfly@hotmail.com":
-                #if contact.account == "johann.prieur@gmail.com":
+#                 if contact.account == "ks_test001@hotmail.com":
+#                     print "Sending OIM to %s" % contact.display_name
+#                     self.oim_box.send_message(self, contact, "Testing OIM!")
+
+                if contact.account == "johann.prieur@gmail.com":
                     print "Inviting %s for a conversation" % contact.display_name
                     self.conv = pymsn.Conversation(self, [contact])
                     AnnoyingConversation(self.conv)

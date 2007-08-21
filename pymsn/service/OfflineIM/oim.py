@@ -18,6 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from pymsn.service.OfflineIM.constants import *
 from pymsn.service.SOAPService import SOAPService
 from pymsn.msnp.notification import ProtocolConstant
 from pymsn.service.SingleSignOn import *
@@ -31,11 +32,14 @@ class OIM(SOAPService):
         self.__lock_key = ""
         SOAPService.__init__(self, "OIM", proxies)
 
+    def set_lock_key(self, lock_key):
+        self.__lock_key = lock_key
+
     @RequireSecurityTokens(LiveService.MESSENGER)
     def Store(self, callback, errback, from_member_name, friendly_name, 
               to_member_name, message_number, message_type, message_content):
         token = str(self._tokens[LiveService.MESSENGER])
-        fname = "=?utf-8?B?%s=" % friendly_name.encode('base64')
+        fname = "=?utf-8?B?%s=" % base64.b64encode(friendly_name)
 
         content = self.__build_mail_data(None, None, message_content)
 
@@ -55,18 +59,19 @@ class OIM(SOAPService):
     def _HandleStoreResponse(self, callback, errback, response, user_data):
         pass
 
-    @RequireSecurityTokens(LiveService.MESSENGER)
+    @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
     def Store2(self, callback, errback, from_member_name, friendly_name, 
-               to_member_name, message_number, message_type, message_content):
-        token = str(self._tokens[LiveService.MESSENGER])
-        fname = "=?utf-8?B?%s=" % friendly_name.encode('base64')
+               to_member_name, session_id, message_number, message_type, message_content):
+        import base64
+        token = str(self._tokens[LiveService.MESSENGER_SECURE])
+        fname = "=?utf-8?B?%s?=" % base64.b64encode(friendly_name)
 
-        content = self.__build_mail_data(None, None, message_content)
+        content = self.__build_mail_data(session_id, message_number, message_content)
 
         self.__soap_request(self._service.Store2,
                             (from_member_name, fname, 
                              ProtocolConstant.CVR[4],
-                             ProtocolConstant.VER[2],
+                             ProtocolConstant.VER[0],
                              ProtocolConstant.CVR[5],
                              to_member_name,
                              message_number, 
@@ -79,19 +84,45 @@ class OIM(SOAPService):
     def _HandleStore2Response(self, callback, errback, response, user_data):
         pass
 
+    def _HandleStore2Fault(self, callback, errback, soap_response, user_data): 
+        error_code = OfflineMessagesBoxError.UNKNOWN
+        auth_policy = None
+        lock_key_challenge = None
+
+        # FIXME : The faultcodes shouldn't have the namespace hardcoded...
+        if soap_response.fault.faultcode == "q0:AuthenticationFailed":
+            error_code = OfflineMessagesBoxError.AUTHENTICATION_FAILED
+            auth_policy = soap_response.fault.detail.findtext("./oim:RequiredAuthPolicy")
+            lock_key_challenge = soap_response.fault.detail.findtext("./oim:LockKeyChallenge")
+
+            if auth_policy == "":
+                auth_policy = None
+            if lock_key_challenge == "":
+                lock_key_challenge = None
+
+            #print "Authentication failed - policy = %s - lockkey = %s" % (auth_policy, lock_key_challenge)
+        elif soap_response.fault.faultcode == "q0:SystemUnavailable":
+            error_code = OfflineMessagesBoxError.SYSTEM_UNAVAILABLE
+        elif soap_response.fault.faultcode == "q0:SenderThrottleLimitExceeded":
+            error_code = OfflineMessagesBoxError.SENDER_THROTTLE_LIMIT_EXCEEDED
+            
+        errback[0](error_code, auth_policy, lock_key_challenge, *errback[1:])
+
     def __build_mail_data(self, run_id, sequence_number, content):
-        mail_data = 'MIME-Version: 1.0\n'
+        import base64
+        mail_data = 'MIME-Version: 1.0\r\n'
         # FIXME : the text/plain could be something else if the content is an IPG
-        mail_data += 'Content-Type: text/plain; charset=UTF-8\n'
-        mail_data += 'Content-Transfer-Encoding: base64\n'
-        mail_data += 'X-OIM-Message-Type: OfflineMessage\n'
-        mail_data += 'X-OIM-Run-Id: {%s}\n' % run_id
-        mail_data += 'X-OIM-Sequence-Num: %s\n\n' % sequence_number
-        mail_data += content.encode('base64')
+        # -FIXME : The IPG is sent by the 'mobile' client, not by a PC client, so it shouldn't happen.
+        mail_data += 'Content-Type: text/plain; charset=UTF-8\r\n'
+        mail_data += 'Content-Transfer-Encoding: base64\r\n'
+        mail_data += 'X-OIM-Message-Type: OfflineMessage\r\n'
+        mail_data += 'X-OIM-Run-Id: {%s}\r\n' % run_id
+        mail_data += 'X-OIM-Sequence-Num: %s\r\n\r\n' % sequence_number
+        mail_data += base64.b64encode(content)
         return mail_data
     
     def __soap_request(self, method, header_args, body_args, 
-                       callback, errback):
+                       callback, errback, user_data=None):
         http_headers = method.transport_headers()
         soap_action = method.soap_action()
         
@@ -101,7 +132,7 @@ class OIM(SOAPService):
         method_name = method.__name__.rsplit(".", 1)[1]
         self._send_request(method_name, self._service.url, 
                            soap_header, soap_body, soap_action, 
-                           callback, errback, http_headers)
+                           callback, errback, http_headers, user_data)
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):

@@ -29,6 +29,7 @@ import platform
 
 __all__ = ['HTTP']
 
+
 class HTTP(gobject.GObject):
     """HTTP protocol client class."""
     

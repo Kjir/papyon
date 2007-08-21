@@ -281,11 +281,13 @@ class OfflineMessagesBox(gobject.GObject):
         fm.message_ids = self._messages.keys()
         fm()
 
-    def send_message(self, recipient, message):
+    def send_message(self, client, recipient, message):
         sm = scenario.SendMessageScenario(self._oim,
-                 (self.__common_callback, 'message-sent'),
-                 (self.__common_errback,))
-        # FIXME : fill the scenario
+                                          client, 
+                                          recipient, 
+                                          message,
+                                          (self.__common_callback, 'message-sent'),
+                                          (self.__common_errback,))
         sm()
 
     def delete_messages(self):

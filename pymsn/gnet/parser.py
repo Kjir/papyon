@@ -87,6 +87,7 @@ class DelimiterParser(AbstractParser):
         self._process_recv_cache()
 
     def _process_recv_cache(self):
+        
         if len(self._recv_cache) == 0:
             return
         if self._chunk_delimiter is None or self._chunk_delimiter == "":

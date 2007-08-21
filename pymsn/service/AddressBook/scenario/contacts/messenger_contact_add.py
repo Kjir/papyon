@@ -24,7 +24,8 @@ __all__ = ['MessengerContactAddScenario']
 
 class MessengerContactAddScenario(BaseScenario):
     def __init__(self, ab, callback, errback, account='', 
-                 contact_type='LivePending', contact_info={}, invite_info={}):
+                 contact_type='LivePending', contact_info={},
+                 invite_display_name='', invite_message=''):
         """Adds a messenger contact and updates the address book.
 
             @param ab: the address book service
@@ -38,9 +39,14 @@ class MessengerContactAddScenario(BaseScenario):
 
         self.contact_type = contact_type
         self.contact_info = contact_info
-        self.invite_info = invite_info
+
+        self.invite_display_name = invite_display_name
+        self.invite_message = invite_message
 
     def execute(self):
+        invite_info = { 'display_name' : self.invite_display_name ,
+                        'invite_message' : self.invite_message }
+
         self.contact_info['passport_name'] = self.account
         self.contact_info['contact_type'] = self.contact_type
         self.contact_info['is_messenger_user'] = True
@@ -48,7 +54,7 @@ class MessengerContactAddScenario(BaseScenario):
                             (self.__contact_add_errback,),
                             self._scenario, 
                             self.contact_info,
-                            self.invite_info)
+                            invite_info)
 
     def __contact_add_callback(self, contact_guid):
         self._ab.FindAll((self.__find_all_callback, contact_guid),

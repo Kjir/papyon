@@ -267,11 +267,14 @@ class AddressBook(gobject.GObject):
         di.network = pending_contact.network
         di()
 
-    def add_messenger_contact(self, account):
+    def add_messenger_contact(self, account, invite_display_name='', 
+                              invite_message=''):
         am = scenario.MessengerContactAddScenario(self._ab,
                 (self.__add_messenger_contact_cb,),
                 (self.__common_errback,))
         am.account = account
+        am.invite_display_name = invite_display_name
+        am.invite_message = inviate_message
         am()
         if account.split("@", 1)[1].startswith("yahoo"):
             accounts = self.contacts.search_by_account(account)
@@ -283,6 +286,8 @@ class AddressBook(gobject.GObject):
                     (self.__add_messenger_contact_cb,),
                     (self.__common_errback,))
             ae.account = account
+            ae.invite_display_name = invite_display_name
+            ae.invite_message = inviate_message
             ae()
 
 #     def add_email_contact(self, email_address):
@@ -308,7 +313,7 @@ class AddressBook(gobject.GObject):
 
     def block_contact(self, contact):
         bc = scenario.BlockContactScenario(self._sharing,
-                (self.__common_callback, 'contact-blocked', contact),
+                (self.__block_contact_cb, contact),
                 (self.__common_errback,))
         bc.account = contact.account
         bc.network = contact.network_id
@@ -316,7 +321,7 @@ class AddressBook(gobject.GObject):
 
     def unblock_contact(self, contact):
         uc = scenario.UnblockContactScenario(self._sharing,
-                (self.__common_callback, 'contact-unblocked', contact),
+                (self.__unblock_contact_cb, contact),
                 (self.__common_errback,))
         uc.account = contact.account
         uc.network = contact.network_id
@@ -501,6 +506,16 @@ class AddressBook(gobject.GObject):
     def __delete_contact_cb(self, contact):
         self.contacts.discard(contact)
         self.emit('contact-deleted', contact)
+
+    def __block_contact_cb(self, contact):
+        contact._remove_membership(Membership.ALLOW)
+        contact._add_membership(Membership.BLOCK)
+        self.emit('contact-blocked', contact)
+
+    def __unblock_contact_cb(self, contact):
+        contact._add_membership(Membership.ALLOW)
+        contact._remove_membership(Membership.BLOCK)
+        self.emit('contact-unblocked', contact)
 
     def __add_group_cb(self, group_id, group_name):
         group = profile.Group(group_id, group_name)

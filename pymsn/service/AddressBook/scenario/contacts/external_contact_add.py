@@ -26,7 +26,8 @@ __all__ = ['ExternalContactAddScenario']
 
 class ExternalContactAddScenario(BaseScenario):
     def __init__(self, ab, callback, errback, account='', 
-                 network_id=NetworkID.EXTERNAL, contact_info={}, invite_info={}):
+                 network_id=NetworkID.EXTERNAL, contact_info={},
+                 invite_display_name='', invite_message=''):
         """Adds an external messenger contact and updates the address book.
 
             @param ab: the address book service
@@ -39,9 +40,14 @@ class ExternalContactAddScenario(BaseScenario):
         self.account = account 
         self.network_id = network_id
         self.contact_info = contact_info
-        self.invite_info = invite_info
+
+        self.invite_display_name = invite_display_name
+        self.invite_message = invite_message
 
     def execute(self):
+        invite_info = { 'display_name' : self.invite_display_name ,
+                        'invite_message' : self.invite_message }
+
         if self.contact_info.get('email', None) is None:
             self.contact_info['email'] = \
                 { ContactEmailType.EXTERNAL : self.account }
@@ -52,7 +58,7 @@ class ExternalContactAddScenario(BaseScenario):
                             (self.__contact_add_errback,),
                             self._scenario, 
                             self.contact_info,
-                            self.invite_info)
+                            invite_info)
 
     def __contact_add_callback(self, contact_guid):
         self._ab.FindAll((self.__find_all_callback, contact_guid),

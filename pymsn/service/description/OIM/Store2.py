@@ -17,6 +17,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
+import xml.sax.saxutils as xml
 def soap_header(from_member_name, friendly_name, proxy, msnp_ver, build_ver,
                 to_member_name, message_number, security_token, app_id, 
                 lock_key):
@@ -24,32 +25,21 @@ def soap_header(from_member_name, friendly_name, proxy, msnp_ver, build_ver,
 
     # FIXME : espace the parameters
 
-    return """<From memberName="%(from_member_name)s" 
-                    friendlyName="%(friendly_name)s" 
-                    xml:lang="en-US" proxy="%(proxy)s" 
-                    xmlns="http://messenger.msn.com/ws/2004/09/oim/" 
-                    msnpVer="%(msn_ver)s" 
-                    buildVer="%(build_ver)s"/>
-              <To memberName="%(to_member_name)s" 
-                  xmlns="http://messenger.msn.com/ws/2004/09/oim/"/>
-              <Ticket passport="%(passport)s" 
-                      appid="%(app_id)s" 
-                      lockkey="%(lock_key)s" 
-                      xmlns="http://messenger.msn.com/ws/2004/09/oim/"/>
-              <Sequence xmlns="http://schemas.xmlsoap.org/ws/2003/03/rm">
-                  <Identifier xmlns="http://schemas.xmlsoap.org/ws/2002/07/utility">
-                      http://messenger.msn.com
-                  </Identifier>
-                  <MessageNumber>
-                      %(message_number)s
-                  </MessageNumber>
-              </Sequence>""" % { 'from_member_name' : from_member_name,
+    return """<From memberName="%(from_member_name)s" friendlyName="%(friendly_name)s" xml:lang="en-US" proxy="%(proxy)s" xmlns="http://messenger.msn.com/ws/2004/09/oim/" msnpVer="%(msnp_ver)s" buildVer="%(build_ver)s"/>
+            <To memberName="%(to_member_name)s" xmlns="http://messenger.msn.com/ws/2004/09/oim/"/>
+                <Ticket passport="%(passport)s" appid="%(app_id)s" lockkey="%(lock_key)s" xmlns="http://messenger.msn.com/ws/2004/09/oim/"/>
+                <Sequence xmlns="http://schemas.xmlsoap.org/ws/2003/03/rm">
+                    <Identifier xmlns="http://schemas.xmlsoap.org/ws/2002/07/utility">
+                        http://messenger.msn.com
+                    </Identifier>
+                    <MessageNumber>%(message_number)s</MessageNumber>
+                </Sequence>""" % { 'from_member_name' : from_member_name,
                                  'friendly_name' : friendly_name,
                                  'proxy' : proxy,
                                  'msnp_ver' : msnp_ver,
                                  'build_ver' : build_ver,
                                  'to_member_name' : to_member_name,
-                                 'passport' : security_token,
+                                 'passport' : xml.escape(security_token),
                                  'app_id' : app_id,
                                  'lock_key' : lock_key,
                                  'message_number' : message_number }
@@ -69,13 +59,12 @@ def soap_action():
 def soap_body(message_type, message_content):
     """Returns the SOAP xml body"""
 
-    return """ 
-      <MessageType xmlns="http://messenger.msn.com/ws/2004/09/oim/">
-          %s
-      </MessageType>
-      <Content xmlns="http://messenger.msn.com/ws/2004/09/oim/">
-          %s
-      </Content>""" % (message_type, message_content)
+    return """<MessageType xmlns="http://messenger.msn.com/ws/2004/09/oim/">
+            %s
+            </MessageType>
+            <Content xmlns="http://messenger.msn.com/ws/2004/09/oim/">
+            %s
+            </Content>""" % (message_type, message_content)
 
 def process_response(soap_response):
     return None

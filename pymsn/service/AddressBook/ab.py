@@ -256,8 +256,8 @@ class AB(SOAPService):
                     contact_info.get('annotation', None),
                     contact_info.get('comment', None),
                     contact_info.get('anniversary', None),
-                    invite_info.get('display_name', None),
-                    invite_info.get('invite_message', None),
+                    invite_info.get('display_name', ''),
+                    invite_info.get('invite_message', ''),
                     contact_info.get('capability', None)),
                 callback, errback)
 

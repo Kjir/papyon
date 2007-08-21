@@ -261,8 +261,8 @@ class Client(EventsDispatcher):
     # - - Offline messages
     def _on_oim_box_state_changed(self, oim_box, pspec):
         state = oim_box.state
-        if state == OIM.constants.OfflineMessagesBoxState.SYNCHRONIZED:
-            oim_box.fetch_messages()
+#        if state == OIM.constants.OfflineMessagesBoxState.SYNCHRONIZED:
+#            oim_box.fetch_messages()
 
     def _on_oim_box_event(self, oim_box, *args):
         method_name = "on_oim_box_%s" % args[-1].replace("-", "_")

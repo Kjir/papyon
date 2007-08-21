@@ -65,6 +65,34 @@ soap_template = """<?xml version='1.0' encoding='utf-8'?>
     </soap:Body>
 </soap:Envelope>"""
 
+class SOAPFault(object):
+    def __init__(self, tree):
+        self.tree = tree
+        self.faultcode = None
+        self.faultstring = None
+        self.faultactor = None
+        self.detail = None
+
+        if tree is not None:
+            self.faultcode = tree.findtext("./faultcode")
+            self.faultstring = tree.findtext("./faultstring")
+            self.faultactor = tree.findtext("./faultactor")
+            self.detail = tree.find("./detail")
+            
+    def is_fault(self):
+        return self.tree is not None
+
+    def __repr__(self):
+        return """	fault code : %s
+	fault string : %s
+	fault actor : %s
+	detail : %s""" % (
+            self.faultcode, self.faultstring, self.faultactor, self.detail)
+
+    def __str__(self):
+        return self.__repr__()
+
+
 class SOAPResponse(ElementTree.XMLResponse):
     NS_SHORTHANDS = {'soap' : XMLNS.SOAP.ENVELOPE,
             "xmlenc" : XMLNS.ENCRYPTION.BASE,
@@ -85,16 +113,17 @@ class SOAPResponse(ElementTree.XMLResponse):
         try:
             self.header = self.tree.find("./soap:Header")
             self.body = self.tree.find("./soap:Body")
-            self.fault = self.body.find("./soap:Fault")
+            self.fault = SOAPFault(self.body.find("./soap:Fault"))
+            
         except:
             self.tree = None
             self.header = None
             self.body = None
             self.fault = None
-            logger.warning("SOAPResponse: Invalid xml+soap data")
+            logger.warning("SOAPResponse: Invalid xml+soap data : %s" % soap_data)
 
     def is_fault(self):
-        return self.fault is not None
+        return self.fault.is_fault()
 
     def is_valid(self):
         return ((self.header is not None) or \
@@ -167,8 +196,14 @@ class SOAPService(object):
                 self._HandleUnhandledResponse(request_id, callback, errback,
                         response, user_data)
         else:
-            self._HandleSOAPFault(request_id, callback, errback, soap_response,
-                    user_data)
+            handler = getattr(self,
+                    "_Handle" + request_id + "Fault",
+                    None)
+            if handler is not None:
+                handler(callback, errback, soap_response, user_data)
+            else:
+                self._HandleSOAPFault(request_id, callback, errback, soap_response,
+                                      user_data)
 
     def _request_handler(self, transport, http_request):
         logger.debug(">>> " + str(http_request))
