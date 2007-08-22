@@ -415,7 +415,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 if command.arguments[5] != '0':
                     msn_object = urllib.unquote(command.arguments[5])
                     contact._server_property_changed("msn-object", msn_object)
-                else:
+                elif len(command.arguments) > 6:
                     icon_url = command.arguments[6]
                     contact._server_attribute_changed('icon_url', icon_url)
 
