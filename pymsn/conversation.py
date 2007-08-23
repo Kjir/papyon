@@ -118,7 +118,7 @@ class BaseConversation(EventsDispatcher):
             message_formatting = message.get_header('X-MMS-IM-Format')
         except KeyError:
             message_formatting = ''
-
+        
         if message_type == 'text/plain':
             self._dispatch("on_conversation_message_received",
                            sender,
@@ -169,7 +169,7 @@ class ExternalNetworkConversation(BaseConversation):
                     send_unmanaged_message(contact, message)
 
 
-class SwitchboardConversation(SwitchboardClient, BaseConversation):
+class SwitchboardConversation(BaseConversation, SwitchboardClient):
     def __init__(self, client, contacts):
         SwitchboardClient.__init__(self, client, contacts)
         BaseConversation.__init__(self, client)
@@ -187,11 +187,11 @@ class SwitchboardConversation(SwitchboardClient, BaseConversation):
             
             @param contact: the contact to invite.
             @type contact: L{profile.Contact}"""
-        self._invite_user(contact)
+        SwitchboardClient._invite_user(self, contact)
 
     def leave(self):
         """Leave the conversation."""
-        self._leave()
+        SwitchboardClient._leave(self)
 
     def _send_message(self, content_type, body, headers={},
             ack=msnp.MessageAcknowledgement.HALF):

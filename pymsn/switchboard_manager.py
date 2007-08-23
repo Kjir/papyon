@@ -99,19 +99,19 @@ class SwitchboardClient(object):
 
     # callbacks
     def _on_message_received(self, message):
-        pass
+        raise NotImplementedError
 
     def _on_message_sent(self, message):
-        pass
+        raise NotImplementedError
 
     def _on_contact_joined(self, contact):
-        pass
+        raise NotImplementedError
 
     def _on_contact_left(self, contact):
-        pass
+        raise NotImplementedError
 
     def _on_error(self, switchboard, error_type, error):
-        pass 
+        raise NotImplementedError
 
     # private
     def __on_user_inviting_changed(self):
@@ -313,7 +313,7 @@ class SwitchboardManager(gobject.GObject):
         if switchboard in self._switchboards.keys():
             handlers = self._switchboards[switchboard]
             for handler in handlers:
-                if not handler._can_handle_message(message):
+                if not handler._can_handle_message(message, handler):
                     continue
                 handler._on_message_received(message)
 
