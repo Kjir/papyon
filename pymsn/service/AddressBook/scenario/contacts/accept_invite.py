@@ -17,6 +17,9 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from pymsn.service.AddressBook.scenario.base import BaseScenario
+from messenger_contact_add import MessengerContactAddScenario
+from external_contact_add import ExternalContactAddScenario
+
 from pymsn.service.AddressBook.constants import *
 from pymsn.profile import NetworkID
 

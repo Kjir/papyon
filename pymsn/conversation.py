@@ -169,10 +169,10 @@ class ExternalNetworkConversation(BaseConversation):
                     send_unmanaged_message(contact, message)
 
 
-class SwitchboardConversation(BaseConversation, SwitchboardClient):
+class SwitchboardConversation(SwitchboardClient, BaseConversation):
     def __init__(self, client, contacts):
-        BaseConversation.__init__(self, client)
         SwitchboardClient.__init__(self, client, contacts)
+        BaseConversation.__init__(self, client)
     
     @staticmethod
     def _can_handle_message(message, switchboard_client=None):

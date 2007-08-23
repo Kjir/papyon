@@ -421,7 +421,7 @@ class AB(SOAPService):
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):
-        error_code = soap_response.fault.find("./detail/ab:errorcode").text
+        error_code = soap_response.faultcode
         errback[0](error_code, *errback[1:])
 
 if __name__ == '__main__':

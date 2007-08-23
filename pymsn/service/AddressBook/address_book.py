@@ -164,6 +164,9 @@ class AddressBook(gobject.GObject):
             "contact-deleted"         : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE, 
                  (object,)),
+            "contact-updated"         : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE, 
+                 (object,)),
             "contact-blocked"         : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -251,7 +254,7 @@ class AddressBook(gobject.GObject):
     def accept_contact_invitation(self, pending_contact, add_to_contact_list=True):
         self._pending_contacts.discard(pending_contact)
         ai = scenario.AcceptInviteScenario(self._ab, self._sharing,
-                 (self.__accept_contact_invitation_cb),
+                 (self.__accept_contact_invitation_cb,),
                  (self.__common_errback,),
                  add_to_contact_list)
         ai.account = pending_contact.account
@@ -260,8 +263,8 @@ class AddressBook(gobject.GObject):
 
     def decline_contact_invitation(self, pending_contact):
         self._pending_contacts.discard(pending_contact)
-        di = scenario.DeclineInviteScenario(self._ab, self._sharing,
-                 (self.__decline_contact_invitation_cb),
+        di = scenario.DeclineInviteScenario(self._sharing,
+                 (self.__decline_contact_invitation_cb,),
                  (self.__common_errback,))
         di.account = pending_contact.account
         di.network = pending_contact.network
@@ -274,7 +277,7 @@ class AddressBook(gobject.GObject):
                 (self.__common_errback,))
         am.account = account
         am.invite_display_name = invite_display_name
-        am.invite_message = inviate_message
+        am.invite_message = invite_message
         am()
         if account.split("@", 1)[1].startswith("yahoo"):
             accounts = self.contacts.search_by_account(account)
@@ -287,7 +290,7 @@ class AddressBook(gobject.GObject):
                     (self.__common_errback,))
             ae.account = account
             ae.invite_display_name = invite_display_name
-            ae.invite_message = inviate_message
+            ae.invite_message = invite_message
             ae()
 
 #     def add_email_contact(self, email_address):
@@ -310,6 +313,14 @@ class AddressBook(gobject.GObject):
                 (self.__common_errback,))
         dc.contact_guid = contact.id
         dc()
+
+    def update_contact_properties(self, contact, properties):
+        up = scenario.ContactUpdatePropertiesScenario(self._ab,
+                (self.__update_contact_properties_cb, contact),
+                (self.__common_errback,))
+        up.contact_guid = contact.id
+        up.contact_properties = properties
+        up()
 
     def block_contact(self, contact):
         bc = scenario.BlockContactScenario(self._sharing,
@@ -507,14 +518,18 @@ class AddressBook(gobject.GObject):
         self.contacts.discard(contact)
         self.emit('contact-deleted', contact)
 
+    def __update_contact_properties_cb(self, contact):
+        # TODO : findall on the contact
+        self.emit('contact-updated', contact)
+
     def __block_contact_cb(self, contact):
-        contact._remove_membership(Membership.ALLOW)
-        contact._add_membership(Membership.BLOCK)
+        contact._remove_membership(profile.Membership.ALLOW)
+        contact._add_membership(profile.Membership.BLOCK)
         self.emit('contact-blocked', contact)
 
     def __unblock_contact_cb(self, contact):
-        contact._add_membership(Membership.ALLOW)
-        contact._remove_membership(Membership.BLOCK)
+        contact._add_membership(profile.Membership.ALLOW)
+        contact._remove_membership(profile.Membership.BLOCK)
         self.emit('contact-unblocked', contact)
 
     def __add_group_cb(self, group_id, group_name):
