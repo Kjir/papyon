@@ -164,9 +164,9 @@ class AddressBook(gobject.GObject):
             "contact-deleted"         : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE, 
                  (object,)),
-            "contact-updated"         : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE, 
-                 (object,)),
+#             "contact-updated"         : (gobject.SIGNAL_RUN_FIRST,
+#                 gobject.TYPE_NONE, 
+#                  (object,)),
             "contact-blocked"         : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -314,13 +314,13 @@ class AddressBook(gobject.GObject):
         dc.contact_guid = contact.id
         dc()
 
-    def update_contact_properties(self, contact, properties):
-        up = scenario.ContactUpdatePropertiesScenario(self._ab,
-                (self.__update_contact_properties_cb, contact),
-                (self.__common_errback,))
-        up.contact_guid = contact.id
-        up.contact_properties = properties
-        up()
+#     def update_contact_properties(self, contact, properties):
+#         up = scenario.ContactUpdatePropertiesScenario(self._ab,
+#                 (self.__update_contact_properties_cb, contact),
+#                 (self.__common_errback,))
+#         up.contact_guid = contact.id
+#         up.contact_properties = properties
+#         up()
 
     def block_contact(self, contact):
         bc = scenario.BlockContactScenario(self._sharing,
@@ -518,9 +518,9 @@ class AddressBook(gobject.GObject):
         self.contacts.discard(contact)
         self.emit('contact-deleted', contact)
 
-    def __update_contact_properties_cb(self, contact):
-        # TODO : findall on the contact
-        self.emit('contact-updated', contact)
+#     def __update_contact_properties_cb(self, contact):
+#         # TODO : findall on the contact
+#         self.emit('contact-updated', contact)
 
     def __block_contact_cb(self, contact):
         contact._remove_membership(profile.Membership.ALLOW)
