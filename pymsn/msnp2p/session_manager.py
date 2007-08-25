@@ -22,4 +22,8 @@ class P2PSessionManager(object):
     def __init__(self, client):
         """Initializer"""
         self._client = client
+        self._sessions = {}
+
+    def _dispatch_p2p_message(self, message):
+        pass
 
