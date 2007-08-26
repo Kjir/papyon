@@ -60,7 +60,7 @@ class RSI(SOAPService):
 
     @RequireSecurityTokens(LiveService.MESSENGER)
     def DeleteMessages(self, callback, errback, message_ids):
-        self.__soap_request(self._service.DeleteMessages, (message_ids),
+        self.__soap_request(self._service.DeleteMessages, (message_ids,),
                             callback, errback)
     
     def _HandleDeleteMessagesResponse(self, callback, errback, response, user_data):

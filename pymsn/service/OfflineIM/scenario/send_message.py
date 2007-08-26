@@ -18,7 +18,7 @@
 #
 from pymsn.service.OfflineIM.constants import *
 from pymsn.service.OfflineIM.scenario.base import BaseScenario
-from pymsn.msnp.notification import _msn_challenge
+from pymsn.msnp.challenge import _msn_challenge
 
 __all__ = ['SendMessageScenario']
 
@@ -37,6 +37,10 @@ class SendMessageScenario(BaseScenario):
         self.__oim = oim
         self.__from = client.profile
         self.__to = recipient
+        
+        self.run_id = ""
+        self.sequence_num = -1
+
         self.__msg = message
 
     def execute(self):
@@ -45,12 +49,10 @@ class SendMessageScenario(BaseScenario):
                           self.__from.account,
                           self.__from.display_name,
                           self.__to.account,
-                          "CC277E9A-5A76-4705-882C-461A01177259",
-                          "1",
+                          self.run_id,
+                          self.sequence_num,
                           "text",
                           self.__msg)
-        # FIXME : The run-id and seq-id should be fixed
-        pass
             
     def __store2_callback(self):
         callback = self._callback

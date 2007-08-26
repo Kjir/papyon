@@ -1,4 +1,4 @@
-3# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #
 # pymsn - a python client library for Msn
 #
@@ -35,30 +35,6 @@ class OIM(SOAPService):
     def set_lock_key(self, lock_key):
         self.__lock_key = lock_key
 
-    @RequireSecurityTokens(LiveService.MESSENGER)
-    def Store(self, callback, errback, from_member_name, friendly_name, 
-              to_member_name, message_number, message_type, message_content):
-        token = str(self._tokens[LiveService.MESSENGER])
-        fname = "=?utf-8?B?%s=" % base64.b64encode(friendly_name)
-
-        content = self.__build_mail_data(None, None, message_content)
-
-        self.__soap_request(self._service.Store,
-                            (from_member_name, fname, 
-                             ProtocolConstant.CVR[4],
-                             ProtocolConstant.VER[2],
-                             ProtocolConstant.CVR[5],
-                             to_member_name,
-                             message_number, 
-                             token,
-                             ProtocolConstant.PRODUCT_ID,
-                             self.__lock_key),
-                            (message_type, content),
-                            callback, errback)
-    
-    def _HandleStoreResponse(self, callback, errback, response, user_data):
-        pass
-
     @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
     def Store2(self, callback, errback, from_member_name, friendly_name, 
                to_member_name, session_id, message_number, message_type, message_content):
@@ -82,7 +58,7 @@ class OIM(SOAPService):
                             callback, errback)
 
     def _HandleStore2Response(self, callback, errback, response, user_data):
-        pass
+        callback[0](*callback[1:])
 
     def _HandleStore2Fault(self, callback, errback, soap_response, user_data): 
         error_code = OfflineMessagesBoxError.UNKNOWN

@@ -26,8 +26,11 @@ from pymsn.service.OfflineIM.constants import *
 
 import pymsn.util.ElementTree as ElementTree
 import pymsn.util.StringIO as StringIO
-import gobject
+import pymsn.util.guid as guid
 
+from xml.utils import iso8601
+import time
+import gobject
 import logging
 
 __all__ = ['OfflineMessagesBox', 'OfflineMessage']
@@ -39,7 +42,7 @@ class OfflineMessagesStorage(set):
         set.__init__(self, initial_set)
 
     def __repr__(self):
-        return "OfflineMessagesBox : %d message(s)" % len(self)
+        return "OfflineMessagesStorage : %d message(s)" % len(self)
 
     def __getitem__(self, key):
         i = 0
@@ -65,38 +68,11 @@ class OfflineMessagesStorage(set):
         else:
             raise AttributeError, name
         
-    def search_by_sender(self, sender):
-        result = []
-        for message in self:
-            if message.sender == sender:
-                result.append(message)
-        return OfflineMessagesStorage(result)
-
-    def search_by_groups(self, *groups):
-        result = []
-        groups = set(groups)
-        for contact in self:
-            if groups <= contact.groups:
-                result.append(contact)
-        return OfflineMessagesStorage(result)
-
-    def group_by_group(self):
-        result = {}
-        for contact in self:
-            groups = contact.groups
-            for group in groups:
-                if group not in result:
-                    result[group] = set()
-                result[group].add(contact)
-        return result
-
     def search_by(self, field, value):
         result = []
         for contact in self:
             if getattr(contact, field) == value:
                 result.append(contact)
-                # Do not break here, as the account
-                # might exist in multiple networks
         return OfflineMessagesStorage(result)
 
     def group_by(self, field):
@@ -108,7 +84,6 @@ class OfflineMessagesStorage(set):
             result[value].add(contact)
         return result
 
-
 class OfflineMessage(object):
 
     def __init__(self, id, sender, display_name='', date=None):
@@ -117,14 +92,13 @@ class OfflineMessage(object):
         self._display_name = display_name
 
         if date is None:
-            # FIXME : set the date attribute using the current date
-            pass
+            self._date = time.time()
         else:
-            self._date = date
+            self._date = iso8601.parse(date)
 
         self.__text = None
         self.__run_id = ''
-        self.__seq_num = ''
+        self.__sequence_num = -1
         self.__is_mobile = False
 
     @property
@@ -157,12 +131,12 @@ class OfflineMessage(object):
     run_id = property(__get_run_id)
     _run_id = property(__get_run_id, __set_run_id)
 
-    def __get_seq_num(self):
-        return self.__seq_num
-    def __set_seq_num(self, seq_num):
-        self.__seq_num = seq_num
-    seq_num = property(__get_seq_num)
-    _seq_num = property(__get_seq_num, __set_seq_num)
+    def __get_sequence_num(self):
+        return self.__sequence_num
+    def __set_sequence_num(self, sequence_num):
+        self.__sequence_num = sequence_num
+    sequence_num = property(__get_sequence_num)
+    _sequence_num = property(__get_sequence_num, __set_sequence_num)
 
     def __get_is_mobile(self):
         return self.__is_mobile
@@ -193,13 +167,18 @@ class Metadata(ElementTree.XMLResponse):
 class OfflineMessagesBox(gobject.GObject):
 
     __gsignals__ = {
+            "error"            : (gobject.SIGNAL_RUN_FIRST,
+                                  gobject.TYPE_NONE,
+                                  (object,)),
+
             "messages-fetched" : (gobject.SIGNAL_RUN_FIRST,
                                   gobject.TYPE_NONE,
                                   (object,)),
             "messages-deleted" : (gobject.SIGNAL_RUN_FIRST,
                                   gobject.TYPE_NONE, ()),
             "message-sent"     : (gobject.SIGNAL_RUN_FIRST,
-                                  gobject.TYPE_NONE, ())
+                                  gobject.TYPE_NONE, 
+                                  (object, str))
             }
 
     __gproperties__ = {
@@ -214,14 +193,17 @@ class OfflineMessagesBox(gobject.GObject):
                       gobject.PARAM_READABLE)
         }
 
-    def __init__(self, sso, proxies=None):
+    def __init__(self, sso, client, proxies=None):
         gobject.GObject.__init__(self)
 
+        self._client = client
         self._rsi = rsi.RSI(sso, proxies)
         self._oim = oim.OIM(sso, proxies)
 
         self.__state = OfflineMessagesBoxState.NOT_SYNCHRONIZED
-        self.__messages = {}
+        self.__messages = OfflineMessagesStorage()
+
+        self.__conversations = {}
 
     # Properties
     def __get_state(self):
@@ -245,7 +227,6 @@ class OfflineMessagesBox(gobject.GObject):
         if self._state != OfflineMessagesBoxState.NOT_SYNCHRONIZED:
             return
         self._state = OfflineMessagesBoxState.SYNCHRONIZING
-
         if xml_data is None:
             sh = scenario.SyncHeadersScenario(self._rsi,
                                               (self.__parse_metadata,),
@@ -267,54 +248,79 @@ class OfflineMessagesBox(gobject.GObject):
             if date is not None:
                 date = date.text
 
-            message = OfflineMessage(id, sender, date, name)
-            self.__messages[message._id] = message
+            self.__messages.add(OfflineMessage(id, sender, name, date))
 
         self._state = OfflineMessagesBoxState.SYNCHRONIZED
 
     # Public API
-    def fetch_messages(self):
+    def fetch_messages(self, messages=None):
+        if messages is None:
+            messages = self.messages
+
+        if len(messages) == 0:
+            return
+
         fm = scenario.FetchMessagesScenario(self._rsi,
                  (self.__fetch_message_cb,),
                  (self.__common_errback,),
-                 (self.__fetch_messages_cb,))
-        fm.message_ids = self._messages.keys()
+                 (self.__fetch_messages_cb, messages))
+        fm.message_ids = [m.id for m in messages]
         fm()
 
-    def send_message(self, client, recipient, message):
+    def send_message(self, recipient, message):
+        convo = self.__conversations.get(recipient, None)
+        if convo is None:
+            run_id = guid.generate_guid()
+            sequence_num = 1
+            self.__conversations[recipient] = [run_id, sequence_num]
+        else:
+            (run_id, sequence_num) = convo
+            convo[1] = convo[1] + 1
+
         sm = scenario.SendMessageScenario(self._oim,
-                                          client, 
-                                          recipient, 
-                                          message,
-                                          (self.__common_callback, 'message-sent'),
-                                          (self.__common_errback,))
+                 self._client, recipient, message,
+                 (self.__send_message_cb, recipient, message),
+                 (self.__common_errback,))
+
+        sm.run_id = run_id
+        sm.sequence_num = sequence_num
         sm()
 
-    def delete_messages(self):
-        dm = scenario.DeleteMessages(self._rsi,
-                 (self.__delete_messages_cb,),
+    def delete_messages(self, messages=None):
+        if messages is None:
+            messages = self.messages
+
+        if len(messages) == 0:
+            return
+
+        dm = scenario.DeleteMessagesScenario(self._rsi,
+                 (self.__delete_messages_cb, messages),
                  (self.__common_errback,))
-        dm.message_ids = self._messages.keys()
+        dm.message_ids = [m.id for m in messages]
         dm()
 
     # Callbacks
-    def __fetch_message_cb(self, id, run_id, seq_num, text):
-        self._messages[id]._run_id = run_id
-        self._messages[id]._seq_num = seq_num
-        self._messages[id]._text = text
+    def __fetch_message_cb(self, id, run_id, sequence_num, text):
+        message = self._messages.search_by_id(id)[0]
+        message._run_id = run_id
+        message._sequence_num = sequence_num
+        message._text = text
 
-    def __fetch_messages_cb(self):
-        self.emit('messages-fetched', self.messages)
+    def __fetch_messages_cb(self, messages):
+        self.emit('messages-fetched', messages)
 
-    def __delete_messages_cb(self):
-        self._messages = []
+    def __send_message_cb(self, recipient, message):
+        self.emit('message-sent', recipient, message)
+
+    def __delete_messages_cb(self, messages):
+        self._messages.difference_update(messages)
         self.emit('messages-deleted')
 
     def __common_callback(self, signal, *args):
         self.emit(signal, *args)
 
     def __common_errback(self, error_code, *args):
-        print "The offline messages service got the error (%s)" % error_code
+        self.emit('error', error_code)
 
 gobject.type_register(OfflineMessagesBox)
 

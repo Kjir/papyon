@@ -100,7 +100,6 @@ class _Element(object):
 
     def find(self, path):
         path = self._process_path(path)
-        
         node = self.element.find(path)
         if node is None:
             return None

@@ -106,7 +106,8 @@ class SOAPResponse(ElementTree.XMLResponse):
             "ab" : XMLNS.MICROSOFT.LIVE.ADDRESSBOOK,
             "st" : XMLNS.MICROSOFT.LIVE.STORAGE,
             "oim" : XMLNS.MICROSOFT.LIVE.OIM,
-            "rsi" : XMLNS.MICROSOFT.LIVE.RSI }
+            "rsi" : XMLNS.MICROSOFT.LIVE.RSI,
+            "spaces" : XMLNS.MICROSOFT.LIVE.SPACES }
 
     def __init__(self, soap_data):
         ElementTree.XMLResponse.__init__(self, soap_data, self.NS_SHORTHANDS)
@@ -189,7 +190,7 @@ class SOAPService(object):
                     None)
             method = getattr(self._service, request_id)
             response = method.process_response(soap_response)
-            
+
             if handler is not None:
                 handler(callback, errback, response, user_data)
             else:

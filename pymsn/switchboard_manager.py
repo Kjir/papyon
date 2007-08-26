@@ -313,7 +313,7 @@ class SwitchboardManager(gobject.GObject):
         if switchboard in self._switchboards.keys():
             handlers = self._switchboards[switchboard]
             for handler in handlers:
-                if not handler._can_handle_message(message, handler):
+                if not handler._can_handle_message(message):
                     continue
                 handler._on_message_received(message)
 

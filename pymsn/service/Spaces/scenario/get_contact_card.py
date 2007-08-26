@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
+# Copyright (C) 2007 Youness Alaoui <kakaroto@users.sourceforge.net>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,35 +16,34 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-from pymsn.service.OfflineIM.constants import *
-from pymsn.service.OfflineIM.scenario.base import BaseScenario
+from pymsn.service.Spaces.scenario.base import BaseScenario
 
-__all__ = ['DeleteMessagesScenario']
+__all__ = ['GetContactCardScenario']
 
-class DeleteMessagesScenario(BaseScenario):
-    def __init__(self, rsi, callback, errback, message_ids=[]):
+class GetContactCardScenario(BaseScenario):
+    def __init__(self, ccard, contact, callback, errback):
         """Accepts an invitation.
 
-            @param rsi: the rsi service
+            @param ccard: the contactcard service
+            @param contact: the contact to fetch his CCard
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
         BaseScenario.__init__(self, callback, errback)
-        self.__rsi = rsi
-
-        self.message_ids = message_ids
+        self.__ccard = ccard
+        self.__contact = contact
 
     def execute(self):
-        self.__rsi.DeleteMessages((self.__delete_messages_callback,),
-                                  (self.__delete_messages_errback,),
-                                  self.message_ids)
+        self.__ccard.GetXmlFeed((self.__get_xml_feed_callback,),
+                          (self.__get_xml_feed_errback,), 
+                          self.__contact)
+        pass
             
-    def __delete_messages_callback(self):
+    def __get_xml_feed_callback(self, ccard):
         callback = self._callback
-        callback[0](*callback[1:])
+        callback[0](ccard, *callback[1:])
 
-    def __delete_messages_errback(self, error_code):
-        errcode = OfflineMessagesBoxError.UNKNOWN
+    def __get_xml_feed_errback(self, error_code):
         errback = self._errback[0]
         args = self._errback[1:]
-        errback(errcode, *args)
+        errback(error_code, *args)

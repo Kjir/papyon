@@ -43,6 +43,7 @@ class ClientErrorType(object):
     AUTHENTICATION = 1
     PROTOCOL = 2
     ADDRESSBOOK = 3
+    OFFLINE_MESSAGES = 4
 
 NetworkError = pymsn.gnet.IoError
 

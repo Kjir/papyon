@@ -22,5 +22,4 @@ description = "Offline messages service"
 
 url = "https://ows.messenger.msn.com/OimWS/oim.asmx"
 
-import Store
 import Store2

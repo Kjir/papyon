@@ -31,6 +31,7 @@ import msnp
 import pymsn.service.SingleSignOn as SSO
 import pymsn.service.AddressBook as AB
 import pymsn.service.OfflineIM as OIM
+import pymsn.service.Spaces as Spaces
 
 from switchboard_manager import SwitchboardManager
 from conversation import SwitchboardConversation, ExternalNetworkConversation
@@ -98,6 +99,8 @@ class Client(EventsDispatcher):
                 self._on_switchboard_handler_created)
 
     def __setup_addressbook_callbacks(self):
+        self.address_book.connect('error', self._on_addressbook_error)
+
         def connect_signal(name):
             self.address_book.connect(name, self._on_addressbook_event, name)
 
@@ -118,6 +121,8 @@ class Client(EventsDispatcher):
     def __setup_oim_box_callbacks(self):
         self.oim_box.connect("notify::state", 
                              self._on_oim_box_state_changed)
+
+        self.address_book.connect('error', self._on_oim_box_error)
 
         def connect_signal(name):
             self.oim_box.connect(name, self._on_oim_box_event, name)
@@ -177,8 +182,9 @@ class Client(EventsDispatcher):
                                      self._proxies)
         self.address_book = AB.AddressBook(self._sso, self._proxies)
         self.__setup_addressbook_callbacks()
-        self.oim_box = OIM.OfflineMessagesBox(self._sso, self._proxies)
+        self.oim_box = OIM.OfflineMessagesBox(self._sso, self, self._proxies)
         self.__setup_oim_box_callbacks()
+        self.spaces_service = Spaces.Spaces(self._sso, self._proxies)
 
         self._state = ClientState.CONNECTED
 
@@ -260,10 +266,12 @@ class Client(EventsDispatcher):
 
     # - - Offline messages
     def _on_oim_box_state_changed(self, oim_box, pspec):
-        state = oim_box.state
-#        if state == OIM.constants.OfflineMessagesBoxState.SYNCHRONIZED:
-#            oim_box.fetch_messages()
+        self._dispatch("on_oim_state_changed", oim_box.state)
 
     def _on_oim_box_event(self, oim_box, *args):
-        method_name = "on_oim_box_%s" % args[-1].replace("-", "_")
-        self._dispatch(method_name, args[:-1])
+        method_name = "on_oim_%s" % args[-1].replace("-", "_")
+        self._dispatch(method_name, *args[:-1])
+
+    def _on_oim_box_error(self, oim_box, error_code):
+        self._dispatch("on_client_error", ClientErrorType.OFFLINE_MESSAGES, error_code)
+

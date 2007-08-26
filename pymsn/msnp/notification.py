@@ -25,12 +25,15 @@ Implements the protocol used to communicate with the Notification Server."""
 
 from base import BaseProtocol, ProtocolState
 from message import Message
+from constants import ProtocolConstant
+from challenge import _msn_challenge
 
 from pymsn.gnet.message.HTTP import HTTPMessage
 import pymsn.util.ElementTree as et
 import pymsn.profile as profile
 import pymsn.service.SingleSignOn as SSO
-import pymsn.service.AddressBook as AddressBook
+import pymsn.service.AddressBook as AB
+import pymsn.service.OfflineIM as OIM
 
 import logging
 import urllib
@@ -40,69 +43,6 @@ import xml.sax.saxutils as xml_utils
 __all__ = ['NotificationProtocol']
 
 logger = logging.getLogger('protocol:notification')
-
-class ProtocolConstant(object):
-    VER = ('MSNP15', 'MSNP14', 'MSNP13', 'CVR0')
-    CVR = ('0x0409', 'winnt', '5.1', 'i386', 'MSNMSGR', '8.1.0178', 'msmsgs')
-    PRODUCT_ID = "PROD0114ES4Z%Q5W"
-    PRODUCT_KEY = "PK}_A_0N_K%O?A9S"
-    CHL_MAGIC_NUM = 0x0E79A9C1
-
-
-def _msn_challenge(data):
-    """
-    Compute an answer for MSN Challenge from a given data
-
-        @param data: the challenge string sent by the server
-        @type data: string
-    """
-    import struct
-    import md5
-    def little_endify(value, c_type="L"):
-        """Transform the given value into little endian"""
-        return struct.unpack(">" + c_type, struct.pack("<" + c_type, value))[0]
-
-    md5_digest = md5.md5(data + ProtocolConstant.PRODUCT_KEY).digest()
-    # Make array of md5 string ints
-    md5_integers = struct.unpack("<llll", md5_digest)
-    md5_integers = [(x & 0x7fffffff) for x in md5_integers]
-    # Make array of chl string ints
-    data += ProtocolConstant.PRODUCT_ID
-    amount = 8 - len(data) % 8
-    data += "".zfill(amount)
-    chl_integers = struct.unpack("<%di" % (len(data)/4), data)
-    # Make the key
-    high = 0
-    low = 0
-    i = 0
-    while i < len(chl_integers) - 1:
-        temp = chl_integers[i]
-        temp = (ProtocolConstant.CHL_MAGIC_NUM * temp) % 0x7FFFFFFF
-        temp += high
-        temp = md5_integers[0] * temp + md5_integers[1]
-        temp = temp % 0x7FFFFFFF
-        high = chl_integers[i + 1]
-        high = (high + temp) % 0x7FFFFFFF
-        high = md5_integers[2] * high + md5_integers[3]
-        high = high % 0x7FFFFFFF
-        low = low + high + temp
-        i += 2
-    high = little_endify((high + md5_integers[1]) % 0x7FFFFFFF)
-    low = little_endify((low + md5_integers[3]) % 0x7FFFFFFF)
-    key = (high << 32L) + low
-    key = little_endify(key, "Q")
-    longs = [x for x in struct.unpack(">QQ", md5_digest)]
-    longs = [little_endify(x, "Q") for x in longs]
-    longs = [x ^ key for x in longs]
-    longs = [little_endify(abs(x), "Q") for x in longs]
-    out = ""
-    for value in longs:
-        value = hex(value)
-        value = value[2:-1]
-        value = value.zfill(16)
-        out += value.lower()
-    return out
-
 
 class NotificationProtocol(BaseProtocol, gobject.GObject):
     """Protocol used to communicate with the Notification Server
@@ -493,12 +433,14 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 ('text/x-msmsgsinitialmdatanotification', \
                  'text/x-msmsgsoimnotification'):
             if self._client.oim_box is not None:
+                self._client.oim_box._state = \
+                    OIM.OfflineMessagesBoxState.NOT_SYNCHRONIZED
                 m = HTTPMessage()
                 m.parse(message.body)
                 mail_data = m.get_header('Mail-Data').strip()
                 if mail_data == 'too-large':
                     mail_data = None
-                #self._client.oim_box.sync(mail_data)
+                self._client.oim_box.sync(mail_data)
         elif content_type[0] == 'text/x-msmsgsactivemailnotification':
             pass
     
@@ -561,7 +503,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     def _address_book_state_changed_cb(self, address_book, pspec):
         MAX_PAYLOAD_SIZE = 7500
-        if address_book.state != AddressBook.AddressBookState.SYNCHRONIZED:
+        if address_book.state != AB.AddressBookState.SYNCHRONIZED:
             return
         self._client.profile._server_property_changed("display-name",
                 address_book.profile.display_name)

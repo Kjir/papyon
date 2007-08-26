@@ -23,7 +23,7 @@ from pymsn.msnp2p.SLP import *
 from pymsn.msnp2p.transport import *
 import pymsn.profile
 
-import random
+import pymsn.util.guid as guid
 import base64
 
 __all__ = ['MSNObjectTransferSession']
@@ -39,19 +39,6 @@ def _generate_id(max=MAX_INT32):
         @rtype: integer
     """
     return random.randint(1000, max)
-
-def _generate_guid():
-    bytes = [random.randrange(256) for i in range(16)]
-
-    data1 = ("%02X" * 4) % tuple(bytes[0:4])
-    data2 = ("%02X" * 2) % tuple(bytes[4:6])
-    data3 = ("%02X" * 2) % tuple(bytes[6:8])
-    data4 = ("%02X" * 2) % tuple(bytes[8:10])
-    data5 = ("%02X" * 6) % tuple(bytes[10:])
-
-    data3 = "4" + data3[1:]
-
-    return "{%s-%s-%s-%s-%s}" % (data1, data2, data3, data4, data5)
 
 
 class P2PSessionInvite(object):
@@ -107,7 +94,7 @@ class P2PSession(object):
 
     def invite(self, context):
         if self._call_id is None:
-            self._call_id = _generate_guid()
+            self._call_id = "{%s}" % guid.generate_guid()
         if self._session_id is None:
             self._session_id = _generate_id()
 
@@ -121,7 +108,7 @@ class P2PSession(object):
                 "MSNMSGR:" + self._peer.account,
                 to = self._peer.account,
                 frm = self._client.profile.account,
-                branch = _generate_guid(),
+                branch = "{%s}" % guid.generate_guid(),
                 cseq = 0,
                 call_id = self._call_id)
 
@@ -135,7 +122,7 @@ class P2PSession(object):
                 "MSNMSGR:" + self._peer.account,
                 to = self._peer.account,
                 frm = self._client.profile.account,
-                branch = _generate_guid(),
+                branch = "{%s}" % guid.generate_guid(),
                 cseq = 0,
                 call_id = self._call_id)
         message.body = body

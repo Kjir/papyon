@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# pymsn - a python client library for Msn
-#
-# Copyright (C) 2005-2006 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,15 +14,19 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+#
+import random
 
-import SingleSignOn
+def generate_guid():
+    bytes = [random.randrange(256) for i in range(16)]
 
-import AB
-import Sharing
+    data1 = ("%02X" * 4) % tuple(bytes[0:4])
+    data2 = ("%02X" * 2) % tuple(bytes[4:6])
+    data3 = ("%02X" * 2) % tuple(bytes[6:8])
+    data4 = ("%02X" * 2) % tuple(bytes[8:10])
+    data5 = ("%02X" * 6) % tuple(bytes[10:])
 
-import SchematizedStore
+    data3 = "4" + data3[1:]
 
-import RSI
-import OIM
-import Spaces
+    return "%s-%s-%s-%s-%s" % (data1, data2, data3, data4, data5)

@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# pymsn - a python client library for Msn
-#
-# Copyright (C) 2005-2006 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,15 +14,25 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+#
 
-import SingleSignOn
+from base import BaseEventInterface
 
-import AB
-import Sharing
+__all__ = ["OfflineMessagesEventInterface"]
 
-import SchematizedStore
+class OfflineMessagesEventInterface(BaseEventInterface):
+    def __init__(self, client):
+        BaseEventInterface.__init__(self, client)
 
-import RSI
-import OIM
-import Spaces
+    def on_oim_state_changed(self, state):
+        pass
+
+    def on_oim_messages_fetched(self, messages):
+        pass
+
+    def on_oim_messages_deleted(self):
+        pass
+
+    def on_oim_message_sent(self, recipient, message):
+        pass

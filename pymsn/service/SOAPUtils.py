@@ -58,3 +58,4 @@ class XMLNS(object):
             STORAGE = "http://www.msn.com/webservices/storage/w10"
             OIM = "http://messenger.msn.com/ws/2004/09/oim/"
             RSI = "http://www.hotmail.msn.com/ws/2004/09/oim/rsi"
+            SPACES = "http://www.msn.com/webservices/spaces/v1/"

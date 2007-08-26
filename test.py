@@ -83,17 +83,16 @@ class Client(pymsn.Client):
     def start_conversation(self):
         contacts = self.address_book.contacts.\
                 search_by_presence(pymsn.Presence.ONLINE)
+        for c in self.address_book.contacts:
+            if c.account == "@hotmail.com":
+                print "Fetching space of : %s with cid %s\n" % (c.display_name, c.cid)
+                self.spaces_service.get_contact_card(c)
+
         if len(contacts) == 0:
-            print "No offline contacts"
+            print "No online contacts"
             return True
         else:
             for contact in contacts:
-                #if contact.account == "im_a_jabber_monkey@hotmail.com":
-                #if contact.account == "tp-butterfly@hotmail.com":
-#                 if contact.account == "ks_test001@hotmail.com":
-#                     print "Sending OIM to %s" % contact.display_name
-#                     self.oim_box.send_message(self, contact, "Testing OIM!")
-
                 if contact.account == "johann.prieur@gmail.com":
                     print "Inviting %s for a conversation" % contact.display_name
                     self.conv = pymsn.Conversation(self, [contact])
