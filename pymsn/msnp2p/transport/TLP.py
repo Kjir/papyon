@@ -141,7 +141,10 @@ class MessageBlob(object):
             session_id=None, blob_id=None):
         if data is not None:
             if isinstance(data, str):
-                data = StringIO.StringIO(data)
+                if len(data) > 0:
+                    data = StringIO.StringIO(data)
+                else:
+                    data = StringIO.StringIO()
 
             if total_size is None:
                 self.data.seek(0, 2) # relative to the end
@@ -151,6 +154,7 @@ class MessageBlob(object):
             total_size = 0
 
         self.data = data
+        self.current_size = 0
         self.total_size = total_size
         self.application_id = application_id
         if session_id is None:
@@ -167,9 +171,7 @@ class MessageBlob(object):
     
     @property
     def transferred(self):
-        if self.data is None:
-            return 0
-        return self.data.tell()
+        return self.current_size
 
     def is_complete(self):
         return self.transferred == self.total_size
@@ -196,6 +198,7 @@ class MessageBlob(object):
 
         chunk = MessageChunk(header, data)
         chunk.application_id = self.application_id
+        self.current_size += header.chunk_size
         return chunk
 
     def append_chunk(self, chunk):
@@ -204,6 +207,8 @@ class MessageBlob(object):
         assert self.id == chunk.header.blob_id, "Trying to append a chunk to the wrong blob"
         self.data.seek(chunk.header.blob_offset, 0)
         self.data.write(chunk.body)
+        self.data.seek(0, 2)
+        self.current_size = self.data.tell()
 
 
 class ControlBlob(MessageBlob):

@@ -71,7 +71,7 @@ class Client(pymsn.Client):
                 return True
             
             session = MSNObjectTransferSession(self, contact, 12)
-            session.invite(contact.msn_object)
+            session.request(contact.msn_object)
             
             return False
 

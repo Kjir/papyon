@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from pymsn.msnp2p.transport.switchboard import *
+from pymsn.msnp2p.transport.TLP import MessageBlob
 
 import gobject
 import struct
@@ -39,9 +40,87 @@ class P2PTransportManager(gobject.GObject):
                 gobject.TYPE_NONE,
                 (object,))
     }
+    
     def __init__(self, client):
         gobject.GObject.__init__(self)
+    
+        self._client = client
+        self._default_transport = SwitchboardP2PTransport
+        self._transports = set()
+        self._transport_signals = {}
+        self._signaling_blobs = {} # blob_id => blob
+        self._data_blobs = {} # session_id => blob
 
-        self._transports = {}
+    def _register_transport(self, transport):
+        assert transport not in self._transports, "Trying to register transport twice"
+        self._transports.add(transport)
+        signals = []
+        signals.append(transport.connect("chunk-received", self._on_chunk_received))
+        signals.append(transport.connect("chunk-sent", self._on_chunk_sent))
+        self._transport_signals[transport] = signals
+
+    def _unregister_transport(self, transport):
+        self._transports.discard(transport)
+        signals = self._transport_signals[transport]
+        for signal in signals:
+            transport.disconnect(signal)
+        del self._transport_signals[transport]
+
+    def _get_transport(self, contact):
+        for transport in self._transports:
+            if transport.peer == contact:
+                return transport
+        return self._default_transport(self, contact)
+
+    def _on_chunk_received(self, transport, chunk):
+        session_id = chunk.header.session_id
+        blob_id = chunk.header.blob_id
+
+        if session_id == 0: # signaling blob
+            if blob_id in self._signaling_blobs:
+                blob = self._signaling_blobs[blob_id]
+            else:
+                # create an in-memory blob
+                blob = MessageBlob(chunk.application_id, "",
+                    chunk.header.blob_size,
+                    session_id, chunk.header.blob_id)
+                self._signaling_blobs[blob_id] = blob
+        else: # data blob
+            if session_id in self._data_blobs:
+                blob = self._data_blobs[session_id]
+                if blob.transferred == 0:
+                    blob.id = chunk.header.blob_id
+            else:
+                # create an in-memory blob
+                blob = MessageBlob(chunk.application_id, "",
+                        chunk.header.blob_size,
+                        session_id, chunk.header.blob_id)
+                self._data_blobs[session_id] = blob
+
+        blob.append_chunk(chunk)
+        if blob.is_complete():
+            blob.data.seek(0, 0)
+            self.emit("blob-received", blob)
+            if session_id == 0:
+                del self._signaling_blobs[blob_id]
+            else:
+                del self._data_blobs[session_id]
+
+    def _on_chunk_sent(self, transport, chunk):
+        pass
+
+    def _on_blob_sent(self, blob):
+        self.emit("blob-sent", blob)
+
+    def send(self, recipient, blob):
+        transport = self._get_transport(recipient)
+        transport.send(blob, (self._on_blob_sent, blob))
+
+    def register_writable_blob(self, blob):
+        if blob.session_id in self._data_blobs:
+            logger.warning("registering already registered blob "\
+                    "with session_id=" + str(session_id))
+            return
+        self._data_blobs[blob.session_id] = blob
 
 gobject.type_register(P2PTransportManager) 

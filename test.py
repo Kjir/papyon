@@ -82,7 +82,7 @@ class Client(pymsn.Client):
 
     def start_conversation(self):
         contacts = self.address_book.contacts.\
-                search_by_presence(pymsn.Presence.OFFLINE)
+                search_by_presence(pymsn.Presence.ONLINE)
         if len(contacts) == 0:
             print "No offline contacts"
             return True

@@ -20,4 +20,4 @@
 """MSNP2P transport layer"""
 
 from TLP import *
-from switchboard import *
+from transport_manager import *

@@ -22,6 +22,7 @@ from pymsn.msnp2p.transport.TLP import TLPFlag, MessageChunk, ControlBlob
 
 import gobject
 import logging
+import weakref
 
 __all__ = ['BaseP2PTransport']
 
@@ -36,17 +37,16 @@ class BaseP2PTransport(gobject.GObject):
             "chunk-sent": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
-
-            "blob-received": (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                (object,))
             }
     
-    def __init__(self, client, name, peer):
+    def __init__(self, transport_manager, name, peer):
         gobject.GObject.__init__(self)
-        self._client = client
+        self._transport_manager = weakref.proxy(transport_manager)
+        self._client = transport_manager._client
         self._name = name
         self._peer = peer
+        
+        self._transport_manager._register_transport(self)
         self._reset()
 
     @property
@@ -67,24 +67,19 @@ class BaseP2PTransport(gobject.GObject):
 
     def send(self, blob, callback=None, errback=None):
         if blob.is_control_blob():
-            self._control_blob_queue.append(blob)
+            self._control_blob_queue.append((blob, callback, errback))
         else:
-            self._data_blob_queue.append(blob)
+            self._data_blob_queue.append((blob, callback, errback))
         self._process_send_queues()
 
-    def register_writable_blob(self, blob):
-        if blob.session_id in self._writable_blobs:
-            logger.warning("registering already registered blob "\
-                    "with session_id=" + str(session_id))
-            return
-        self._writable_blobs[blob.session_id] = blob
+    def close(self):
+        self._transport_manager._unregister_transport(self)
 
     def _send_chunk(self, chunk):
         raise NotImplementedError
 
     # Helper methods
     def _reset(self):
-        self._writable_blobs = {}
         self._control_blob_queue = []
         self._data_blob_queue = []
         self._pending_ack = {} # blob_id : [blob_offset1, blob_offset2 ...]
@@ -113,20 +108,6 @@ class BaseP2PTransport(gobject.GObject):
 
         if not chunk.is_control_chunk():
             self.emit("chunk-received", chunk)
-            session_id = chunk.header.session_id
-            if session_id == 0:
-                return
-
-            if session_id in self._writable_blobs:
-                blob = self._writable_blobs[session_id]
-
-                if chunk.header.blob_offset == 0:
-                    blob.id = chunk.header.blob_id
-
-                blob.append_chunk(chunk)
-                if blob.is_complete():
-                    self.emit("blob-received", blob)
-                    del self._writable_blobs[session_id]
 
         self._process_send_queues()
 
@@ -142,10 +123,13 @@ class BaseP2PTransport(gobject.GObject):
         else:
             return
 
-        blob = queue[0]
+        blob, callback, errback = queue[0]
         chunk = blob.get_chunk(self.max_chunk_size)
         if blob.is_complete():
-            queue.pop(0) # FIXME: we should keep it in the queue until we receive the ACK
+            if callback:
+                callback[0](*callback[1:])
+            # FIXME: we should keep it in the queue until we receive the ACK
+            queue.pop(0) 
 
         if chunk.require_ack() :
             self._add_pending_ack(chunk.header.blob_id, chunk.header.dw1)

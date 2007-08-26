@@ -88,6 +88,7 @@ class P2PSessionInvite(object):
                 call_id = self._request.call_id)
         self._session._send_p2p_data(response)
 
+
 class P2PSession(object):
     def __init__(self, client, peer, euf_guid="", application_id=0):
         """Initializer"""
@@ -100,8 +101,9 @@ class P2PSession(object):
         self._call_id = None
         self._session_id = None
 
-        #FIXME: implement the transport manager and get rid of this
-        self._transport = SwitchboardP2PTransport(self._client, self._peer)
+        self._transport = P2PTransportManager(self._client)
+        self._transport.connect("blob-received", self._on_blob_received)
+        self._transport.connect("blob-sent", self._on_blob_sent)
 
     def invite(self, context):
         if self._call_id is None:
@@ -130,6 +132,7 @@ class P2PSession(object):
         body = SLPMessageBody(SLPContentType.SESSION_CLOSE)
 
         message = SLPRequestMessage('BYE',
+                "MSNMSGR:" + self._peer.account,
                 to = self._peer.account,
                 frm = self._client.profile.account,
                 branch = _generate_guid(),
@@ -150,12 +153,26 @@ class P2PSession(object):
 
         blob = MessageBlob(self._application_id,
                 data, total_size, session_id)
-        self._transport.send(blob)
+        self._transport.send(self._peer, blob)
 
-    def _on_chunk_received(self, transport, chunk):
+    def _on_blob_sent(self, transport, chunk):
         pass
 
     def _on_blob_received(self, transport, blob):
+        if blob.session_id == 0:
+            # FIXME: handle the signaling correctly
+            pass
+        elif blob.total_size == 4 and \
+                blob.data.read() == ('\x00' * 4):
+            self._on_data_preparation_blob_received(blob)
+        else:
+            self._on_data_blob_received(blob)
+            self.close()
+
+    def _on_data_preparation_blob_received(self, blob):
+        pass
+
+    def _on_data_blob_received(self, blob):
         pass
 
 
@@ -167,4 +184,9 @@ class MSNObjectTransferSession(P2PSession):
     def request(self, msn_object):
         context = base64.b64encode(msn_object + "\x00")
         return P2PSession.invite(self, context)
+
+    def _on_data_blob_received(self, blob):
+        file = open("test.png", "w")
+        file.write(blob.read())
+        file.close()
 

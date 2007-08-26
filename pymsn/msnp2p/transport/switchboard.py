@@ -33,9 +33,13 @@ logger = logging.getLogger('msnp2p:transport')
 
 
 class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
-    def __init__(self, client, peer):
-        BaseP2PTransport.__init__(self, client, "switchboard", peer)
-        SwitchboardClient.__init__(self, client, (peer,))
+    def __init__(self, transport_manager, peer):
+        BaseP2PTransport.__init__(self, transport_manager, "switchboard", peer)
+        SwitchboardClient.__init__(self, transport_manager._client, (peer,))
+
+    def close(self):
+        BaseP2PTransport.close(self)
+        self._leave()
 
     @staticmethod
     def _can_handle_message(message, switchboard_client=None):
@@ -65,4 +69,10 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
         chunk = MessageChunk.parse(message.body[:-4])
         chunk.application_id = struct.unpack('>L', message.body[-4:])[0]
         self._on_chunk_sent(chunk)
+
+    def _on_contact_joined(self, contact):
+        pass
+
+    def _on_contact_left(self, contact):
+        self.close()
 
