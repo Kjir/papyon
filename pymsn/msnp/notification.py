@@ -393,6 +393,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     cm = (parts[4].encode("utf-8"), parts[5].encode("utf-8"))
                     contact._server_property_changed("current-media", cm)
                     continue
+                elif parts[2] == '0':
+                    contact._server_property_changed("current-media", None)
+            else:
+                contact._server_property_changed("current-media", None)
             pm = et.fromstring(command.payload).find("./PSM")
             if pm is not None and pm.text is not None:
                 pm = pm.text.encode("utf-8")
