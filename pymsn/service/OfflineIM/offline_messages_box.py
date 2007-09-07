@@ -24,6 +24,8 @@ import scenario
 from pymsn.service.SOAPUtils import *
 from pymsn.service.OfflineIM.constants import *
 
+from pymsn.profile import NetworkID
+
 import pymsn.util.ElementTree as ElementTree
 import pymsn.util.StringIO as StringIO
 import pymsn.util.guid as guid
@@ -168,18 +170,21 @@ class Metadata(ElementTree.XMLResponse):
 class OfflineMessagesBox(gobject.GObject):
 
     __gsignals__ = {
-            "error"            : (gobject.SIGNAL_RUN_FIRST,
+            "error"             : (gobject.SIGNAL_RUN_FIRST,
+                                   gobject.TYPE_NONE,
+                                   (object,)),
+            
+            "messages-received" : (gobject.SIGNAL_RUN_FIRST,
                                   gobject.TYPE_NONE,
-                                  (object,)),
-
-            "messages-fetched" : (gobject.SIGNAL_RUN_FIRST,
-                                  gobject.TYPE_NONE,
-                                  (object,)),
-            "messages-deleted" : (gobject.SIGNAL_RUN_FIRST,
-                                  gobject.TYPE_NONE, ()),
-            "message-sent"     : (gobject.SIGNAL_RUN_FIRST,
-                                  gobject.TYPE_NONE, 
-                                  (object, str))
+                                  (object,))
+            "messages-fetched"  : (gobject.SIGNAL_RUN_FIRST,
+                                   gobject.TYPE_NONE,
+                                   (object,)),
+            "messages-deleted"  : (gobject.SIGNAL_RUN_FIRST,
+                                   gobject.TYPE_NONE, ()),
+            "message-sent"      : (gobject.SIGNAL_RUN_FIRST,
+                                   gobject.TYPE_NONE, 
+                                   (object, str))
             }
 
     __gproperties__ = {
@@ -240,10 +245,23 @@ class OfflineMessagesBox(gobject.GObject):
         metadata = Metadata(xml_data)
         for m in metadata.findall('./M'):
             id = m.findtext('./I')
-            sender = m.findtext('./E')
+            network = (m.findtext('T','int'), m.findtext('S','int'))
+            if network == (11,6):
+                network_id = NetworkID.MSN
+            elif network == (13,7):
+                network_id = NetworkID.EXTERNAL
+            
+            account = m.findtext('./E')
 
-            name = m.findtext('./N').replace(' ','').\
-                split('?')[3].decode('base64')
+            sender = self._client.address_book.contacts.\
+                search_by_account(account).\
+                search_by_network_id(network_id)[0]
+            
+            if network_id == NetworkID.MSN:
+                name = m.findtext('./N').replace(' ','').\
+                    split('?')[3].decode('base64')
+            elif network_id == NetworkID.EXTERNAL:
+                name = m.findtext('./N')
 
             date = m.find('./RT')
             if date is not None:
@@ -252,6 +270,9 @@ class OfflineMessagesBox(gobject.GObject):
             self.__messages.add(OfflineMessage(id, sender, name, date))
 
         self._state = OfflineMessagesBoxState.SYNCHRONIZED
+
+        if len(self.__messages) > 0:
+            self.emit('messages-received', self.__messages)
 
     # Public API
     def fetch_messages(self, messages=None):

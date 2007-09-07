@@ -28,6 +28,9 @@ class OfflineMessagesEventInterface(BaseEventInterface):
     def on_oim_state_changed(self, state):
         pass
 
+    def on_oim_messages_received(self, messages):
+        pass
+
     def on_oim_messages_fetched(self, messages):
         pass
 

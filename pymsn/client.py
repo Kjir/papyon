@@ -126,6 +126,7 @@ class Client(EventsDispatcher):
         def connect_signal(name):
             self.oim_box.connect(name, self._on_oim_box_event, name)
 
+        connect_signal("messages-received")
         connect_signal("messages-fetched")
         connect_signal("message-sent")
         connect_signal("messages-deleted")

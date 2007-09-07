@@ -118,7 +118,7 @@ class BaseConversation(EventsDispatcher):
             message_formatting = message.get_header('X-MMS-IM-Format')
         except KeyError:
             message_formatting = '='
-        
+            
         if message_type == 'text/plain':
             self._dispatch("on_conversation_message_received",
                            sender,
@@ -178,7 +178,9 @@ class SwitchboardConversation(BaseConversation, SwitchboardClient):
     def _can_handle_message(message, switchboard_client=None):
         content_type = message.content_type[0]
         if switchboard_client is None:
-            return content_type in ('text/plain', 'text/x-msnmsgr-datacast')
+            return content_type in ('text/plain', 'text/x-msnmsgr-datacast',
+                                    'text/x-msmsgscontrol')
+        # FIXME : 'text/x-msmsgscontrol' shouldn't be there
         return content_type in ('text/plain', 'text/x-msmsgscontrol',
                 'text/x-msnmsgr-datacast')
 
