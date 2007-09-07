@@ -176,7 +176,7 @@ class OfflineMessagesBox(gobject.GObject):
             
             "messages-received" : (gobject.SIGNAL_RUN_FIRST,
                                   gobject.TYPE_NONE,
-                                  (object,))
+                                  (object,)),
             "messages-fetched"  : (gobject.SIGNAL_RUN_FIRST,
                                    gobject.TYPE_NONE,
                                    (object,)),

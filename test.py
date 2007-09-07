@@ -45,17 +45,20 @@ class AnnoyingConversation(pymsn.event.ConversationEventInterface):
         gobject.timeout_add(5000, self.annoy_user)
 
     def annoy_user(self):
-        self._client.send_typing_notification()
+#        self._client.send_typing_notification()
         formatting = pymsn.TextFormat("Comic Sans MS", 
                                       pymsn.TextFormat.UNDERLINE | pymsn.TextFormat.BOLD,
                                       'FF0000')
         self._client.send_text_message("Let's free the pandas ! (testing pymsn)",
                                        formatting)
-        #self._client.send_nudge()
-        #self._client.send_typing_notification()
-        #self._client.send_typing_notification()
-        #self._client.send_typing_notification()
+#         self._client.send_nudge()
+#         self._client.send_typing_notification()
+#         self._client.send_typing_notification()
+#         self._client.send_typing_notification()
         return True
+
+    def on_conversation_user_typing(self, contact):
+        pass
 
     def on_conversation_message_received(self, sender, message, formatting):
         print formatting
