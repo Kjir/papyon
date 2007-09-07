@@ -290,6 +290,12 @@ class OfflineMessagesBox(gobject.GObject):
         fm()
 
     def send_message(self, recipient, message):
+        # FIXME : To send offline messages to a yahoo contact
+        # we just need to send the usual UUM on the notification
+        # server.
+        if recipient.network_id == NetworkID.EXTERNAL:
+            return
+
         convo = self.__conversations.get(recipient, None)
         if convo is None:
             run_id = guid.generate_guid()
