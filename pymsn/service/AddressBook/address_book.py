@@ -249,12 +249,6 @@ class AddressBook(gobject.GObject):
     def profile(self):
         return self._profile
 
-    def get_group(self, group_name):
-        for group in self.groups:
-            if group.name == group_name:
-                return group
-        return None
-
     def sync(self):
         if self._state != AddressBookState.NOT_SYNCHRONIZED:
             return
