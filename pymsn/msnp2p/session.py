@@ -25,6 +25,7 @@ import pymsn.profile
 
 import pymsn.util.guid as guid
 import base64
+import random
 
 __all__ = ['MSNObjectTransferSession']
 
@@ -86,21 +87,25 @@ class P2PSession(object):
         self._application_id = application_id
 
         self._call_id = None
-        self._session_id = None
+        self._id = None
 
         self._transport = P2PTransportManager(self._client)
-        self._transport.connect("blob-received", self._on_blob_received)
-        self._transport.connect("blob-sent", self._on_blob_sent)
+        self._transport.connect("blob-received", lambda tr, blob: self._on_blob_received(blob))
+        self._transport.connect("blob-sent", lambda tr, blob: self._on_blob_sent(blob))
+
+    @property
+    def peer(self):
+        return self._peer
 
     def invite(self, context):
         if self._call_id is None:
             self._call_id = "{%s}" % guid.generate_guid()
-        if self._session_id is None:
-            self._session_id = _generate_id()
+        if self._id is None:
+            self._id = _generate_id()
 
         body = SLPMessageBody(SLPContentType.SESSION_REQUEST)
         body.add_header('EUF-GUID', self._euf_guid)
-        body.add_header('SessionID', self._session_id)
+        body.add_header('SessionID', self._id)
         body.add_header('AppID', self._application_id)
         body.add_header('Context', str(context))
 
@@ -127,6 +132,8 @@ class P2PSession(object):
                 call_id = self._call_id)
         message.body = body
         self._send_p2p_data(message)
+        self._id = None
+        self._call_id = None
 
     def _send_p2p_data(self, data_or_file):
         if isinstance(data_or_file, SLPMessage):
@@ -134,21 +141,23 @@ class P2PSession(object):
             data = str(data_or_file)
             total_size = len(data)
         else:
-            session_id = self._session_id
+            session_id = self._id
             data = data_or_file
             total_size = None
 
         blob = MessageBlob(self._application_id,
                 data, total_size, session_id)
-        self._transport.send(self._peer, blob)
+        self._transport.send(self, blob)
 
-    def _on_blob_sent(self, transport, chunk):
+    def _on_blob_sent(self, blob):
         pass
 
-    def _on_blob_received(self, transport, blob):
+    def _on_blob_received(self, blob):
         if blob.session_id == 0:
             # FIXME: handle the signaling correctly
             pass
+        elif blob.session_id != self._id:
+            return
         elif blob.total_size == 4 and \
                 blob.data.read() == ('\x00' * 4):
             self._on_data_preparation_blob_received(blob)

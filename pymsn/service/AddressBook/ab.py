@@ -116,9 +116,7 @@ class Contact(object):
         self.HasSpace = contact_info.findtext("./ab:hasSpace", "bool")
 
         self.SpotWatchState = contact_info.findtext("./ab:spotWatchState")
-        # HACK: handle pyxml iso8601 incompleteness
-        #birthdate = contact_info.findtext("./ab:birthdate") + ".00+00:00"
-        #self.Birthdate = XMLTYPE.datetime.decode()
+        self.Birthdate = contact_info.findtext("./ab:birthdate", "datetime")
 
         self.PrimaryEmailType = contact_info.findtext("./ab:primaryEmailType")
         self.PrimaryLocation = contact_info.findtext("./ab:PrimaryLocation")

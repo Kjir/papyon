@@ -145,7 +145,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
     def do_set_property(self, pspec, value):
         raise AttributeError, "unknown property %s" % pspec.name
     
-    # Public API -------------------------------------------------------------        
+    # Public API -------------------------------------------------------------
     def invite_user(self, contact):
         """Invite user to join in the conversation
             

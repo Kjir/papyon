@@ -128,6 +128,10 @@ class SwitchboardClient(object):
         self.participants.remove(contact)
         if len(self.participants) == 0:
             self._pending_invites.add(contact)
+            try:
+                self._switchboard.leave()
+            except:
+                pass
 
     def __on_user_invitation_failed(self, contact):
         self._pending_invites.discard(contact)

@@ -66,11 +66,11 @@ class P2PTransportManager(gobject.GObject):
             transport.disconnect(signal)
         del self._transport_signals[transport]
 
-    def _get_transport(self, contact):
+    def _get_transport(self, session):
         for transport in self._transports:
-            if transport.peer == contact:
+            if transport.session == session:
                 return transport
-        return self._default_transport(self, contact)
+        return self._default_transport(self, session)
 
     def _on_chunk_received(self, transport, chunk):
         session_id = chunk.header.session_id
@@ -109,12 +109,12 @@ class P2PTransportManager(gobject.GObject):
     def _on_chunk_sent(self, transport, chunk):
         pass
 
-    def _on_blob_sent(self, blob):
+    def _on_blob_sent(self, transport, blob):
         self.emit("blob-sent", blob)
 
-    def send(self, recipient, blob):
-        transport = self._get_transport(recipient)
-        transport.send(blob, (self._on_blob_sent, blob))
+    def send(self, session, blob):
+        transport = self._get_transport(session)
+        transport.send(blob, (self._on_blob_sent, transport, blob))
 
     def register_writable_blob(self, blob):
         if blob.session_id in self._data_blobs:

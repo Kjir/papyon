@@ -27,9 +27,9 @@ from pymsn.service.OfflineIM.constants import *
 import pymsn.util.ElementTree as ElementTree
 import pymsn.util.StringIO as StringIO
 import pymsn.util.guid as guid
+import pymsn.util.iso8601 as iso8601
 
-from xml.utils import iso8601
-import time
+import datetime
 import gobject
 import logging
 
@@ -92,9 +92,10 @@ class OfflineMessage(object):
         self._display_name = display_name
 
         if date is None:
-            self._date = time.time()
+            self._date = datetime.datetime.utcnow()
         else:
-            self._date = iso8601.parse(date)
+            date = iso8601.parse_date(date)
+            self._date = date.replace(tzinfo=None) # FIXME: do not disable the timezone
 
         self.__text = None
         self.__run_id = ''

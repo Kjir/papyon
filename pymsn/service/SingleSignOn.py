@@ -28,8 +28,8 @@ import struct
 import Crypto.Util.randpool as randpool
 from Crypto.Hash import HMAC, SHA
 from Crypto.Cipher import DES3
-from xml.utils import iso8601
 import time
+import datetime
 import sys
 
 __all__ = ['SingleSignOn', 'LiveService', 'RequireSecurityTokens']
@@ -44,7 +44,7 @@ class SecurityToken(object):
         self.proof_token = ""
 
     def is_expired(self):
-        return time.time() + 60 >= self.lifetime[1] # add 1 minute
+        return datetime.datetime.utcnow() + datetime.timedelta(seconds=60) >= self.lifetime[1]
 
     def mbi_crypt(self, nonce):
         WINCRYPT_CRYPT_MODE_CBC = 1
@@ -171,22 +171,22 @@ class SingleSignOn(SOAPService):
         result = {}
         for node in response:
             token = SecurityToken()
-            token.type = node.find("./wst:TokenType").text
-            token.service_address = node.find("./wsp:AppliesTo"
-                    "/wsa:EndpointReference/wsa:Address").text
-            token.lifetime[0] = iso8601.parse(node.find("./wst:LifeTime/wsu:Created").text)
-            token.lifetime[1] = iso8601.parse(node.find("./wst:LifeTime/wsu:Expires").text)
+            token.type = node.findtext("./wst:TokenType")
+            token.service_address = node.findtext("./wsp:AppliesTo"
+                    "/wsa:EndpointReference/wsa:Address")
+            token.lifetime[0] = node.findtext("./wst:LifeTime/wsu:Created", "datetime")
+            token.lifetime[1] = node.findtext("./wst:LifeTime/wsu:Expires", "datetime")
             
             try:
-                token.security_token = node.find("./wst:RequestedSecurityToken"
-                        "/wsse:BinarySecurityToken").text
+                token.security_token = node.findtext("./wst:RequestedSecurityToken"
+                        "/wsse:BinarySecurityToken")
             except AttributeError:
-                token.security_token = node.find("./wst:RequestedSecurityToken"
+                token.security_token = node.findtext("./wst:RequestedSecurityToken"
                         "/xmlenc:EncryptedData/xmlenc:CipherData"
-                        "/xmlenc:CipherValue").text
+                        "/xmlenc:CipherValue")
 
             try:
-                token.proof_token = node.find("./wst:RequestedProofToken/wst:BinarySecret").text
+                token.proof_token = node.findtext("./wst:RequestedProofToken/wst:BinarySecret")
             except AttributeError:
                 pass
 

@@ -24,9 +24,6 @@
 This module contains classes that clients should use in order to make use
 of the library."""
 
-from transport import *
-from event import ClientState, ClientErrorType
-
 import profile
 import msnp
 import pymsn.service.SingleSignOn as SSO
@@ -34,9 +31,10 @@ import pymsn.service.AddressBook as AB
 import pymsn.service.OfflineIM as OIM
 import pymsn.service.Spaces as Spaces
 
+from transport import *
 from switchboard_manager import SwitchboardManager
 from conversation import SwitchboardConversation, ExternalNetworkConversation
-from pymsn.event import EventsDispatcher
+from pymsn.event import ClientState, ClientErrorType, EventsDispatcher
 
 import logging
 
@@ -156,7 +154,7 @@ class Client(EventsDispatcher):
 
     def logout(self):
         """Logout from the server."""
-        if self.__state == ClientState.CLOSED: # FIXME: we need something better
+        if self.__state != ClientState.OPEN: # FIXME: we need something better
             return
         self._protocol.signoff()
         self.__state = ClientState.CLOSED

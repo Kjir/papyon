@@ -30,7 +30,7 @@ except ImportError:
 
 __all__ = ["XMLTYPE", "XMLResponse"]
 
-from xml.utils import iso8601
+import iso8601
 
 class XMLTYPE(object):
 
@@ -62,12 +62,13 @@ class XMLTYPE(object):
 
     class datetime(object):
         @staticmethod
-        def encode(date_int):
-            return iso8601.tostring(date_int)
+        def encode(datetime):
+            return datetime.isoformat()
 
         @staticmethod
         def decode(date_str):
-            return iso8601.parse(date_str.strip())
+            result = iso8601.parse_date(date_str.strip())
+            return result.replace(tzinfo=None) # FIXME: do not disable the timezone
 
 class _Element(object):
     def __init__(self, element, ns_shorthands):

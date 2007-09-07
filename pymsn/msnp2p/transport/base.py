@@ -39,12 +39,12 @@ class BaseP2PTransport(gobject.GObject):
                 (object,)),
             }
     
-    def __init__(self, transport_manager, name, peer):
+    def __init__(self, transport_manager, name, session):
         gobject.GObject.__init__(self)
         self._transport_manager = weakref.proxy(transport_manager)
         self._client = transport_manager._client
         self._name = name
-        self._peer = peer
+        self._session = session
         
         self._transport_manager._register_transport(self)
         self._reset()
@@ -52,10 +52,14 @@ class BaseP2PTransport(gobject.GObject):
     @property
     def name(self):
         return self._name
+
+    @property
+    def session(self):
+        return self._session
     
     @property
     def peer(self):
-        return self._peer
+        return self._session.peer
     
     @property
     def rating(self):

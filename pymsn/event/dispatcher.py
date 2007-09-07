@@ -37,7 +37,7 @@ class EventsDispatcher(object):
 
     def _dispatch(self, name, *args):
         count = 0
-        for event_handler in self._events_handlers:
+        for event_handler in list(self._events_handlers):
             if event_handler._dispatch_event(name, *args):
                 count += 1
         return count

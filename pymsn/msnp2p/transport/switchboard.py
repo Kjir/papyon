@@ -33,9 +33,11 @@ logger = logging.getLogger('msnp2p:transport')
 
 
 class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
-    def __init__(self, transport_manager, peer):
-        BaseP2PTransport.__init__(self, transport_manager, "switchboard", peer)
-        SwitchboardClient.__init__(self, transport_manager._client, (peer,))
+    def __init__(self, transport_manager, session):
+        BaseP2PTransport.__init__(self, transport_manager,
+                "switchboard", session)
+        SwitchboardClient.__init__(self, transport_manager._client,
+                (session.peer,))
 
     def close(self):
         BaseP2PTransport.close(self)
