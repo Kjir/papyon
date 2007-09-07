@@ -23,6 +23,8 @@ from pymsn.util.ElementTree import XMLTYPE
 from pymsn.service.SingleSignOn import *
 from pymsn.service.AddressBook.common import *
 
+from pymsn.service.description.AB.constants import ContactGeneral
+
 __all__ = ['AB']
 
 class ABResult(object):
@@ -283,7 +285,6 @@ class AB(SOAPService):
     @RequireSecurityTokens(LiveService.CONTACTS)
     def ContactUpdate(self, callback, errback,
             scenario, contact_id, contact_info):
-        # TODO : maybe put contact_id in contact_info
         """Updates a contact informations.
         
             @param scenario: "ContactSave" | "Timer" | ...
@@ -301,16 +302,16 @@ class AB(SOAPService):
                     contact_info.get('display_name', None),
                     contact_info.get('is_messenger_user', None),
                     contact_info.get('contact_type', None),
-                    contact_info.get('first_name', None),
-                    contact_info.get('last_name', None),
-                    contact_info.get('birth_date', None),
-                    contact_info.get('email', None),
-                    contact_info.get('phone', None),
-                    contact_info.get('location', None),
-                    contact_info.get('web_site', None),
-                    contact_info.get('annotation', None),
-                    contact_info.get('comment', None),
-                    contact_info.get('anniversary', None),
+                    contact_info.get(ContactGeneral.FIRST_NAME, None),
+                    contact_info.get(ContactGeneral.LAST_NAME, None),
+                    contact_info.get(ContactGeneral.BIRTH_DATE, None),
+                    contact_info.get(ContactGeneral.EMAILS, None),
+                    contact_info.get(ContactGeneral.PHONES, None),
+                    contact_info.get(ContactGeneral.LOCATIONS, None),
+                    contact_info.get(ContactGeneral.WEBSITES, None),
+                    contact_info.get(ContactGeneral.ANNOTATIONS, None),
+                    contact_info.get(ContactGeneral.COMMENT, None),
+                    contact_info.get(ContactGeneral.ANNIVERSARY, None),
                     contact_info.get('has_space', None)),
                 callback, errback)
 

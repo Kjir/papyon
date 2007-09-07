@@ -43,3 +43,4 @@ class AddressBookState(object):
     """The addressbook is being synchronized"""
     SYNCHRONIZED = 2
     """The addressbook is already synchronized"""
+

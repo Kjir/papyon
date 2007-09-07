@@ -24,6 +24,7 @@ from check_pending_invite import *
 from block_contact import *
 from unblock_contact import *
 
+from contact_update_properties import *
 from contact_delete import *
 
 from email_contact_add import *

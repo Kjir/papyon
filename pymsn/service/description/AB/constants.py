@@ -28,6 +28,18 @@ class ContactType(object):
     LIVE_DROPPED = "LiveDropped"
     YAHOO = "Messenger2"
 
+class ContactGeneral(object):
+    FIRST_NAME  = 0
+    LAST_NAME   = 1
+    BIRTH_DATE  = 2
+    EMAILS      = 3
+    PHONES      = 4
+    LOCATIONS   = 5
+    WEBSITES    = 6
+    ANNOTATIONS = 7
+    COMMENT     = 8
+    ANNIVERSARY = 9
+
 class ContactAnnotations(object):
     NICKNAME = "AB.NickName"
     JOB_TITLE = "AB.JobTitle"

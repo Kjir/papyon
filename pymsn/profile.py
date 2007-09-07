@@ -228,6 +228,11 @@ class User(gobject.GObject):
     def profile(self):
         return self._profile
 
+    @property
+    def id(self):
+        """Contact identifier in a GUID form"""
+        return "00000000-0000-0000-0000-000000000000"
+
     def __set_display_name(self, display_name):
         if not display_name:
             return
@@ -340,6 +345,11 @@ class Contact(gobject.GObject):
                  "The groups the contact belongs to",
                  gobject.PARAM_READABLE),
 
+            "infos": (gobject.TYPE_PYOBJECT,
+                "Informations",
+                "The contact informations",
+                gobject.PARAM_READABLE),
+
             "client-capabilities": (gobject.TYPE_UINT64,
                 "Client capabilities",
                 "The client capabilities of the contact 's client",
@@ -354,10 +364,11 @@ class Contact(gobject.GObject):
                 gobject.PARAM_READABLE),
             }
 
-    def __init__(self, id, network_id, account, display_name, cid,
+    def __init__(self, ab, id, network_id, account, display_name, alias, cid,
             memberships=Membership.UNKNOWN):
         """Initializer"""
         gobject.GObject.__init__(self)
+        self._ab = ab
         self._id = id
         self._cid = cid
         self._network_id = network_id
@@ -368,6 +379,7 @@ class Contact(gobject.GObject):
         self._personal_message = ""
         self._current_media = None
         self._groups = set()
+        self._infos = {}
 
         self._memberships = memberships
         self._client_capabilities = ClientCapabilities()
@@ -409,7 +421,7 @@ class Contact(gobject.GObject):
     def display_name(self):
         """Contact display name"""
         return self._display_name
-    
+
     @property
     def personal_message(self):
         """Contact personal message"""
@@ -424,6 +436,11 @@ class Contact(gobject.GObject):
     def groups(self):
         """Contact list of groups"""
         return self._groups
+
+    @property
+    def infos(self):
+        """Contact informations"""
+        return self._infos
 
     @property
     def memberships(self):
@@ -501,6 +518,13 @@ class Contact(gobject.GObject):
     def do_get_property(self, pspec):
         name = pspec.name.lower().replace("-", "_")
         return getattr(self, name)
+    
+    ### infos management
+    def _update_contact_infos(self, updated_infos):
+        # TODO : update the contact infos
+        # would be better to pass the updated_infos key list to the signal
+        self.notify("infos")
+
 gobject.type_register(Contact)
 
 class Group(gobject.GObject):

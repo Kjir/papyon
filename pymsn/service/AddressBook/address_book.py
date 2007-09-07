@@ -90,6 +90,13 @@ class AddressBookStorage(set):
                 result[group].add(contact)
         return result
 
+    def search_by_predicate(self, predicate):
+        result = []
+        for contact in self:
+            if predicate(contact):
+                result.append(contact)
+        return AddressBookStorage(result)
+
     def search_by(self, field, value):
         result = []
         for contact in self:
@@ -164,9 +171,11 @@ class AddressBook(gobject.GObject):
             "contact-deleted"         : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE, 
                  (object,)),
-#             "contact-updated"         : (gobject.SIGNAL_RUN_FIRST,
-#                 gobject.TYPE_NONE, 
-#                  (object,)),
+
+            "contact-infos-updated"         : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE, 
+                 (object,)),
+
             "contact-blocked"         : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -214,7 +223,7 @@ class AddressBook(gobject.GObject):
         self.__state = AddressBookState.NOT_SYNCHRONIZED
         self.__pending_contacts = set()
 
-        self.groups = {}
+        self.groups = set()
         self.contacts = AddressBookStorage()
         self._profile = None
 
@@ -239,6 +248,12 @@ class AddressBook(gobject.GObject):
     @property
     def profile(self):
         return self._profile
+
+    def get_group(self, group_name):
+        for group in self.groups:
+            if group.name == group_name:
+                return group
+        return None
 
     def sync(self):
         if self._state != AddressBookState.NOT_SYNCHRONIZED:
@@ -314,13 +329,13 @@ class AddressBook(gobject.GObject):
         dc.contact_guid = contact.id
         dc()
 
-#     def update_contact_properties(self, contact, properties):
-#         up = scenario.ContactUpdatePropertiesScenario(self._ab,
-#                 (self.__update_contact_properties_cb, contact),
-#                 (self.__common_errback,))
-#         up.contact_guid = contact.id
-#         up.contact_properties = properties
-#         up()
+    def update_contact_infos(self, contact, properties):
+        up = scenario.ContactUpdatePropertiesScenario(self._ab,
+                (self.__update_contact_infos_cb, contact),
+                (self.__common_errback,))
+        up.contact_guid = contact.id
+        up.contact_properties = properties
+        up()
 
     def block_contact(self, contact):
         bc = scenario.BlockContactScenario(self._sharing,
@@ -391,23 +406,28 @@ class AddressBook(gobject.GObject):
                 break
 
         if not contact.IsMessengerUser and external_email is not None:
-            display_name = \
-                contact.Annotations.get(ContactAnnotations.NICKNAME,
-                                        contact.DisplayName)
+            display_name = contact.DisplayName
             if display_name == "":
                 display_name = external_email.Email
 
-            c = profile.Contact(contact.Id,
+            alias = \
+                contact.Annotations.get(ContactAnnotations.NICKNAME,
+                                        display_name)
+
+            c = profile.Contact(self,
+                    contact.Id,
                     profile.NetworkID.EXTERNAL,
                     external_email.Email.encode("utf-8"),
                     display_name.encode("utf-8"),
+                    alias.encode("utf-8"),
                     contact.CID,
                     profile.Membership.FORWARD)
             c._server_attribute_changed("im_contact",
                     external_email.IsMessengerEnabled)
-                
-            for group_id in contact.Groups:
-                c._add_group_ownership(self.groups[group_id])
+            
+            for group in self.groups:
+                if group.id in contact.Groups:
+                    c._add_group_ownership(group)                    
             
             return c
 
@@ -422,18 +442,25 @@ class AddressBook(gobject.GObject):
             if display_name == "":
                 display_name = contact.PassportName
 
-            c = profile.Contact(contact.Id,
+            alias = \
+                contact.Annotations.get(ContactAnnotations.NICKNAME,
+                                        display_name)
+
+            c = profile.Contact(self, 
+                    contact.Id,
                     profile.NetworkID.MSN,
                     contact.PassportName.encode("utf-8"),
                     display_name.encode("utf-8"),
+                    alias.encode("utf-8"),
                     contact.CID,
                     profile.Membership.FORWARD)
             c._server_attribute_changed("im_contact",
                     contact.IsMessengerUser)
             
-            for group_id in contact.Groups:
-                c._add_group_ownership(self.groups[group_id])
-                
+            for group in self.groups:
+                if group.id in contact.Groups:
+                    c._add_group_ownership(group)                    
+
             return c
         return None
             
@@ -479,7 +506,8 @@ class AddressBook(gobject.GObject):
         groups = address_book.groups
 
         for group in groups:
-            self.groups[group.Id] = profile.Group(group.Id, group.Name)
+            g = profile.Group(group.Id, group.Name.encode("utf-8"))
+            self.groups.add(g)
 
         for contact in contacts:
             c = self.__build_contact(contact)
@@ -518,9 +546,9 @@ class AddressBook(gobject.GObject):
         self.contacts.discard(contact)
         self.emit('contact-deleted', contact)
 
-#     def __update_contact_properties_cb(self, contact):
-#         # TODO : findall on the contact
-#         self.emit('contact-updated', contact)
+    def __update_contact_infos_cb(self, contact, infos):
+        # TODO : update contact informations
+        self.emit('contact-infos-updated', contact)
 
     def __block_contact_cb(self, contact):
         contact._remove_membership(profile.Membership.ALLOW)
@@ -534,13 +562,13 @@ class AddressBook(gobject.GObject):
 
     def __add_group_cb(self, group_id, group_name):
         group = profile.Group(group_id, group_name)
-        self.groups[group_id] = group
+        self.groups.add(group)
         self.emit('group-added', group)
 
     def __delete_group_cb(self, group):
         for contact in self.contacts:
             contact._delete_group_ownership(group)
-        del self.groups[group.id]
+        self.groups.discard(group)
         self.emit('group-deleted', group)
 
     def __rename_group_cb(self, group, group_name):
@@ -585,6 +613,7 @@ if __name__ == '__main__':
     import gobject
     import logging
     from pymsn.service.SingleSignOn import *
+    from pymsn.service.description.AB.constants import ContactGeneral
 
     logging.basicConfig(level=logging.DEBUG)
 
@@ -616,6 +645,9 @@ if __name__ == '__main__':
 
             for pending in address_book.pending_contacts:
                 print "Pending contact : %s" % pending
+
+            print address_book.contacts[0].account
+            address_book.update_contact_infos(address_book.contacts[0], {ContactGeneral.FIRST_NAME : "lolibouep"})
 
             #address_book._check_pending_invitations()
             #address_book.accept_contact_invitation(address_book.pending_contacts.pop())

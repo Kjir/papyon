@@ -2,8 +2,9 @@
 #
 # pymsn - a python client library for Msn
 #
-# Copyright (C) 2005-2006 Ali Sabil <ali.sabil@gmail.com>
-# Copyright (C) 2006  Ole André Vadla Ravnås <oleavr@gmail.com>
+# Copyright (C) 2005-2007 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2006-2007 Ole André Vadla Ravnås <oleavr@gmail.com>
+# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -237,6 +238,8 @@ class Client(EventsDispatcher):
                 self._on_contact_property_changed)
         #contact.connect("notify::display-picture",
         #        self._on_contact_property_changed)
+        contact.connect("notify::infos",
+                self._on_contact_property_changed)
         contact.connect("notify::client-capabilities",
                 self._on_contact_property_changed)
 

@@ -117,7 +117,7 @@ class BaseConversation(EventsDispatcher):
         try:
             message_formatting = message.get_header('X-MMS-IM-Format')
         except KeyError:
-            message_formatting = ''
+            message_formatting = '='
         
         if message_type == 'text/plain':
             self._dispatch("on_conversation_message_received",
