@@ -266,9 +266,9 @@ class OfflineMessagesBox(gobject.GObject):
             
             if network_id == NetworkID.MSN:
                 name = m.findtext('./N').replace(' ','').\
-                    split('?')[3].decode('base64')
+                    split('?')[3].decode('base64').encode('utf-8')
             elif network_id == NetworkID.EXTERNAL:
-                name = m.findtext('./N')
+                name = m.findtext('./N').encode('utf-8')
 
             date = m.find('./RT')
             if date is not None:
@@ -297,9 +297,6 @@ class OfflineMessagesBox(gobject.GObject):
         fm()
 
     def send_message(self, recipient, message):
-        # FIXME : To send offline messages to a yahoo contact
-        # we just need to send the usual UUM on the notification
-        # server.
         if recipient.network_id == NetworkID.EXTERNAL:
             return
 

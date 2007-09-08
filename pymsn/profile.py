@@ -309,6 +309,10 @@ class Contact(gobject.GObject):
             "allowed": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 ()),
+
+            "infos-updated": (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object, object)),
             }
 
     __gproperties__ = {
@@ -379,7 +383,9 @@ class Contact(gobject.GObject):
         self._personal_message = ""
         self._current_media = None
         self._groups = set()
-        self._infos = {}
+        # FIXME : for now, we only stock the contact alias as information,
+        # need to extend this to all the other items
+        self._infos = alias
 
         self._memberships = memberships
         self._client_capabilities = ClientCapabilities()
@@ -521,9 +527,8 @@ class Contact(gobject.GObject):
     
     ### infos management
     def _update_contact_infos(self, updated_infos):
-        # TODO : update the contact infos
-        # would be better to pass the updated_infos key list to the signal
-        self.notify("infos")
+        self._infos.update(updated_infos)
+        self.emit("infos-updated", self, updated_infos)
 
 gobject.type_register(Contact)
 

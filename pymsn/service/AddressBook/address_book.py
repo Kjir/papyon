@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2006-2007 Ali Sabil <ali.sabil@gmail.com>
@@ -323,12 +324,12 @@ class AddressBook(gobject.GObject):
         dc.contact_guid = contact.id
         dc()
 
-    def update_contact_infos(self, contact, properties):
+    def update_contact_infos(self, contact, infos):
         up = scenario.ContactUpdatePropertiesScenario(self._ab,
-                (self.__update_contact_infos_cb, contact),
+                (self.__update_contact_infos_cb, contact, infos),
                 (self.__common_errback,))
         up.contact_guid = contact.id
-        up.contact_properties = properties
+        up.contact_properties = infos
         up()
 
     def block_contact(self, contact):
@@ -404,16 +405,14 @@ class AddressBook(gobject.GObject):
             if display_name == "":
                 display_name = external_email.Email
 
-            alias = \
-                contact.Annotations.get(ContactAnnotations.NICKNAME,
-                                        display_name)
+            alias = { ContactGeneral.ANNOTATIONS : contact.Annotations }
 
             c = profile.Contact(self,
                     contact.Id,
                     profile.NetworkID.EXTERNAL,
                     external_email.Email.encode("utf-8"),
                     display_name.encode("utf-8"),
-                    alias.encode("utf-8"),
+                    alias,
                     contact.CID,
                     profile.Membership.FORWARD)
             c._server_attribute_changed("im_contact",
@@ -436,16 +435,14 @@ class AddressBook(gobject.GObject):
             if display_name == "":
                 display_name = contact.PassportName
 
-            alias = \
-                contact.Annotations.get(ContactAnnotations.NICKNAME,
-                                        display_name)
+            alias = { ContactGeneral.ANNOTATIONS : contact.Annotations }
 
             c = profile.Contact(self, 
                     contact.Id,
                     profile.NetworkID.MSN,
                     contact.PassportName.encode("utf-8"),
                     display_name.encode("utf-8"),
-                    alias.encode("utf-8"),
+                    alias,
                     contact.CID,
                     profile.Membership.FORWARD)
             c._server_attribute_changed("im_contact",
@@ -541,7 +538,7 @@ class AddressBook(gobject.GObject):
         self.emit('contact-deleted', contact)
 
     def __update_contact_infos_cb(self, contact, infos):
-        # TODO : update contact informations
+        contact._update_contact_infos(infos)
         self.emit('contact-infos-updated', contact)
 
     def __block_contact_cb(self, contact):

@@ -234,17 +234,26 @@ class Client(EventsDispatcher):
         contact.connect("notify::personal-message",
                 self._on_contact_property_changed)
         contact.connect("notify::current-media",
-                self._on_contact_property_changed)
+                self._on_contact_property_changed)        
         #contact.connect("notify::display-picture",
         #        self._on_contact_property_changed)
-        contact.connect("notify::infos",
-                self._on_contact_property_changed)
         contact.connect("notify::client-capabilities",
                 self._on_contact_property_changed)
 
+        def connect_signal(name):
+            contact.connect(name, self._on_contact_event, name)
+        connect_signal("infos-updated")
+
+    # - - Contact
     def _on_contact_property_changed(self, contact, pspec):
         method_name = "on_contact_%s_changed" % pspec.name.replace("-", "_")
         self._dispatch(method_name, contact)
+
+    def _on_contact_event(self, contact, *args):
+        event_name = args[-1]
+        event_args = args[:-1]
+        method_name = "on_contact_%s" % event_name.replace("-", "_")
+        self._dispatch(method_name, *event_args)
 
     # - - Switchboard Manager
     def _on_switchboard_handler_created(self, sb_mgr, handler_class, handler):
