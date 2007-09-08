@@ -180,9 +180,7 @@ class SwitchboardConversation(BaseConversation, SwitchboardClient):
         if switchboard_client is None:
             return content_type in ('text/plain', 'text/x-msnmsgr-datacast',
                                     'text/x-msmsgscontrol')
-        # FIXME : 'text/x-msmsgscontrol' shouldn't be there
-        return content_type in ('text/plain', 'text/x-msmsgscontrol',
-                'text/x-msnmsgr-datacast')
+        return content_type in ('text/plain', 'text/x-msnmsgr-datacast')
 
     def invite_user(self, contact):
         """Request a contact to join in the conversation.
