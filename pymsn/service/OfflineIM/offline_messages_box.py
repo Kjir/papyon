@@ -154,6 +154,13 @@ class OfflineMessage(object):
     def __repr__(self):
         return str(self)
 
+    def __gt__(self, other):
+        if self.__run_id == other._run_id:
+            return self.__sequence_num >= other._sequence_num
+        else:
+            return self._date >= other._date
+            
+
 class Metadata(ElementTree.XMLResponse):
     def __init__(self, metadata):
         ElementTree.XMLResponse.__init__(self, metadata)
