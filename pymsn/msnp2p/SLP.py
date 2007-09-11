@@ -26,8 +26,9 @@ import base64
 
 __all__ = ['SLPMessage', 'SLPRequestMessage', 'SLPResponseMessage', 'SLPMessageBody']
 
+
 class SLPMessage(HTTPMessage):
-    STD_HEADERS = [ "To", "From", "Via", "CSeq", "Call-ID", "Max-Forwards" ]
+    STD_HEADERS = ["To", "From", "Via", "CSeq", "Call-ID", "Max-Forwards"]
 
     def __init__(self, to="", frm="", branch="", cseq=0, call_id="", max_forwards=0):
         HTTPMessage.__init__(self)
@@ -44,7 +45,7 @@ class SLPMessage(HTTPMessage):
     def to(self):
         to = self.get_header("To")
         return to.split(":", 1)[1][:-1]
-    
+
     @property
     def frm(self):
         frm = self.get_header("From")
@@ -55,14 +56,15 @@ class SLPMessage(HTTPMessage):
         try:
             via = self.get_header("Via")
             params = via.split(";", 1)[1:]
-            
-            for param, value in params.split("="):
-                if param.strip() == "branch":
+
+            for param in params:
+                key, value = param.split('=')
+                if key.strip() == "branch":
                     return value.strip()
             return ""
         except KeyError:
             return ""
-    
+
     @property
     def cseq(self):
         return int(self.get_header("CSeq"))
@@ -80,7 +82,7 @@ class SLPMessage(HTTPMessage):
         return HTTPMessage.__str__(self)
 
     @staticmethod
-    def parse(raw_message):
+    def build(raw_message):
         if raw_message.find("MSNSLP/1.0") < 0:
             raise ParseError("message doesn't seem to be an MSNSLP/1.0 message")
         start_line, content = raw_message.split("\r\n", 1)
@@ -123,7 +125,8 @@ class SLPRequestMessage(SLPMessage):
         message = SLPMessage.__str__(self)
         start_line = "%s %s MSNSLP/1.0" % (self.method, self.resource)
         return start_line + "\r\n" + message
-        
+
+
 class SLPResponseMessage(SLPMessage):
     STATUS_MESSAGE =  {
             200 : "OK",
@@ -141,6 +144,7 @@ class SLPResponseMessage(SLPMessage):
         reason = SLPResponseMessage.STATUS_MESSAGE[self.status]
         start_line = "MSNSLP/1.0 %d %s" % (self.status, reason)
         return start_line + "\r\n" + message
+
 
 class SLPMessageBody(HTTPMessage):
     def __init__(self, content_type, data=""):

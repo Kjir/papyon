@@ -2,7 +2,9 @@
 
 import pymsn
 import pymsn.event
+from pymsn.msnp2p.session_manager import *
 from pymsn.msnp2p.session import *
+from pymsn.msnp2p.constants import EufGuid
 
 import logging
 import gobject
@@ -51,6 +53,7 @@ class Client(pymsn.Client):
         else:
             pymsn.Client.__init__(self, server, proxies = get_proxies())
         ClientEvents(self)
+        self._p2p_session_manager = P2PSessionManager(self)
         gobject.idle_add(self._connect)
 
     def _connect(self):
@@ -69,10 +72,10 @@ class Client(pymsn.Client):
             print "CONTACT : ", contact.account, contact.msn_object
             if not contact.msn_object:
                 return True
-            
-            session = MSNObjectTransferSession(self, contact, 12)
-            session.request(contact.msn_object)
-            
+            import base64
+            context = base64.b64encode(contact.msn_object + "\x00")
+            self.session = OutgoingP2PSession(self._p2p_session_manager, contact, context, EufGuid.MSN_OBJECT, 12)
+
             return False
 
 def main():

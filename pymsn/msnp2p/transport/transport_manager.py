@@ -123,4 +123,4 @@ class P2PTransportManager(gobject.GObject):
             return
         self._data_blobs[blob.session_id] = blob
 
-gobject.type_register(P2PTransportManager) 
+gobject.type_register(P2PTransportManager)
