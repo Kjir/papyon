@@ -26,6 +26,7 @@ of the library."""
 
 import profile
 import msnp
+
 import pymsn.service.SingleSignOn as SSO
 import pymsn.service.AddressBook as AB
 import pymsn.service.OfflineIM as OIM
@@ -33,6 +34,7 @@ import pymsn.service.Spaces as Spaces
 
 from transport import *
 from switchboard_manager import SwitchboardManager
+from msnp2p import P2PSessionManager
 from conversation import SwitchboardConversation, ExternalNetworkConversation
 from pymsn.event import ClientState, ClientErrorType, EventsDispatcher
 
@@ -73,6 +75,9 @@ class Client(EventsDispatcher):
 
         self._switchboard_manager = SwitchboardManager(self)
         self._switchboard_manager.register_handler(SwitchboardConversation)
+
+        self._p2p_session_manager = P2PSessionManager(self)
+        # TODO: attach the incoming-session signal
 
         self._external_conversations = {}
 

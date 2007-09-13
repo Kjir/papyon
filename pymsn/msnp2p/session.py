@@ -43,8 +43,14 @@ def _generate_id(max=MAX_INT32):
     return random.randint(1000, max)
 
 
-class P2PSession(object):
+class P2PSession(gobject.GObject):
+    __gsignals__ = {
+            "transfer-completed" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,))
+    }
     def __init__(self, session_manager, peer, euf_guid="", application_id=0):
+        gobject.GObject.__init__(self)
         self._session_manager = session_manager
         self._peer = peer
 
@@ -101,15 +107,22 @@ class P2PSession(object):
         self._session_manager._transport_manager.send(self, blob)
 
     def _on_blob_sent(self, blob):
-        pass
+        if blob.session_id == 0:
+            # FIXME: handle the signaling correctly
+            return
+
+        if blob.total_size == 4 and \
+                blob.data.read() == ('\x00' * 4):
+            pass
+        else:
+            self._on_data_blob_sent(blob)
 
     def _on_blob_received(self, blob):
         if blob.session_id == 0:
             # FIXME: handle the signaling correctly
-            pass
-        elif blob.session_id != self._id:
             return
-        elif blob.total_size == 4 and \
+
+        if blob.total_size == 4 and \
                 blob.data.read() == ('\x00' * 4):
             self._on_data_preparation_blob_received(blob)
         else:
@@ -119,8 +132,15 @@ class P2PSession(object):
     def _on_data_preparation_blob_received(self, blob):
         pass
 
+    def _on_data_blob_sent(self, blob):
+        blob.data.seek(0, 0)
+        self.emit("transfer-completed", blob.data)
+
     def _on_data_blob_received(self, blob):
-        pass
+        blob.data.seek(0, 0)
+        self.emit("transfer-completed", blob.data)
+
+gobject.type_register(P2PSession)
 
 
 class IncomingP2PSession(P2PSession):
