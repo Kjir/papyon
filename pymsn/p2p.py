@@ -30,6 +30,7 @@ from profile import NetworkID
 import pymsn.util.ElementTree as ElementTree
 import pymsn.util.StringIO as StringIO
 
+import xml.sax.saxutils as xml
 import logging
 import base64
 import sha
@@ -60,6 +61,8 @@ class MSNObject(object):
         self.__data = None
 
     def __set_data(self, data):
+        # FIXME : find a better way than load the whole data 
+        # in memory to perform the hash
         tmp = data.getvalue()
         data_sha = base64.b64encode(sha.new(tmp).digest())
         if self._data_sha is not None:
@@ -85,12 +88,13 @@ class MSNObject(object):
             search_by_network_id(NetworkID.MSN)[0]
         size = int(element["Size"])
         type = int(element["Type"])
-        location = element["Location"]
-        friendly = element["Friendly"]
+        location = xml.unescape(element["Location"])
+        friendly = xml.unescape(element["Friendly"])
         shad = element.get("SHA1D", None)
         shac = element.get("SHA1C", None)
 
-        return MSNObject(creator, size, type, location, friendly, shad, shac)
+        return MSNObject(creator, size, type, location, \
+                             friendly, shad, shac)
 
     @property
     def context(self):
@@ -103,10 +107,19 @@ class MSNObject(object):
         return sha.new(input).digest()
 
     def __str__(self):
-        #FIXME: we need to xml.attr_escape many of those ?
-        return """<msnobj Creator="%s" Size="%s" Type="%s" Location="%s" Friendly="%s" SHA1D="%s" SHA1C="%s"/>""" % \
-            (self._creator.account, str(self._size), str(self._type), \
-                 self._location, self._friendly, self._data_sha, self._checksum_sha)
+        if self._checksum_sha is not None:
+            dump = "<msnobj Creator=\"%s\" Size=\"%s\" Type=\"%s\" Location=\"%s\""\
+                "Friendly=\"%s\" SHA1D=\"%s\" SHA1C=\"%s\"/>" % \
+                (self._creator.account, self._size, str(self._type), \
+                     xml.quoteattr(self._location), xml.quoteattr(self._friendly), \
+                     self._data_sha, self._checksum_sha)
+        else:
+            dump = "<msnobj Creator=\"%s\" Size=\"%s\" Type=\"%s\" Location=\"%s\""\
+                "Friendly=\"%s\" SHA1D=\"%s\"/>" % \
+                (self._creator.account, self._size, str(self._type), \
+                     xml.quoteattr(self._location), xml.quoteattr(self._friendly), \
+                     self._data_sha)
+        return dump
 
 
 class MSNObjectStore(EventsDispatcher):
@@ -124,6 +137,7 @@ class MSNObjectStore(EventsDispatcher):
             application_id = ApplicationID.DISPLAY_PICTURE_TRANSFER
         else:
             raise NotImplementedError
+
         session = OutgoingP2PSession(self._client._p2p_session_manager, 
                                      msn_object._creator, msn_object.context, 
                                      EufGuid.MSN_OBJECT, application_id)

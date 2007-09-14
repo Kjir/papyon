@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__all__ = ['EufGuid', 'MSNObjectType', 'ApplicationID', 'SLPContentType']
+__all__ = ['EufGuid', 'ApplicationID', 'SLPContentType']
 
 class EufGuid(object):
     MSN_OBJECT = "{A4268EEC-FEC5-49E5-95C3-F126696BDBF6}"
