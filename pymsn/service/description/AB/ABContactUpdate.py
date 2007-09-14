@@ -136,7 +136,7 @@ def soap_body(contact_id, display_name, is_messenger_user, contact_type,
     if annotation is not None:
         annotations = ""
         for name, value in annotation.iteritems():
-            if value == None:
+            if value == None or value == "":
                 value = "<Value/>"
             else:
                 value = "<Value>%s</Value>" % value

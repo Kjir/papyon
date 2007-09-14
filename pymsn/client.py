@@ -249,7 +249,7 @@ class Client(EventsDispatcher):
 
         def connect_signal(name):
             contact.connect(name, self._on_contact_event, name)
-        connect_signal("infos-updated")
+        connect_signal("infos-changed")
 
     # - - Contact
     def _on_contact_property_changed(self, contact, pspec):
