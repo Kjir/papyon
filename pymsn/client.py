@@ -35,6 +35,7 @@ import pymsn.service.Spaces as Spaces
 from transport import *
 from switchboard_manager import SwitchboardManager
 from msnp2p import P2PSessionManager
+from p2p import MSNObjectStore
 from conversation import SwitchboardConversation, ExternalNetworkConversation
 from pymsn.event import ClientState, ClientErrorType, EventsDispatcher
 
@@ -78,6 +79,7 @@ class Client(EventsDispatcher):
 
         self._p2p_session_manager = P2PSessionManager(self)
         # TODO: attach the incoming-session signal
+        self._msn_object_store = MSNObjectStore(self)
 
         self._external_conversations = {}
 

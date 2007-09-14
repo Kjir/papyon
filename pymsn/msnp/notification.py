@@ -28,6 +28,7 @@ from message import Message
 from constants import ProtocolConstant
 from challenge import _msn_challenge
 
+import pymsn
 from pymsn.gnet.message.HTTP import HTTPMessage
 import pymsn.util.ElementTree as et
 import pymsn.profile as profile
@@ -353,7 +354,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             contact._server_property_changed("client-capabilities", capabilities)
             if len(command.arguments) >= 6:
                 if command.arguments[5] != '0':
-                    msn_object = urllib.unquote(command.arguments[5])
+                    msn_object = pymsn.p2p.MSNObject.parse(self._client,
+                                     urllib.unquote(command.arguments[5]))
                     contact._server_property_changed("msn-object", msn_object)
                 elif len(command.arguments) > 6:
                     icon_url = command.arguments[6]
@@ -446,6 +448,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     mail_data = None
                 self._client.oim_box.sync(mail_data)
         elif content_type[0] == 'text/x-msmsgsactivemailnotification':
+            pass
+        elif content_type[0] == 'text/x-mms-animemoticon':
             pass
     
     def _handle_UBM(self, command):

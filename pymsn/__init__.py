@@ -30,6 +30,7 @@ from client import *
 from conversation import *
 from profile import NetworkID, Presence, Privacy, Membership, Contact, Group
 import event
+import p2p
 
 import gnet.proxy
 Proxy = gnet.proxy.ProxyFactory

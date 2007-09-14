@@ -18,16 +18,22 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__all__ = ['EufGuid', 'ApplicationID', 'SLPContentType']
+__all__ = ['EufGuid', 'MSNObjectType', 'ApplicationID', 'SLPContentType']
 
 class EufGuid(object):
     MSN_OBJECT = "{A4268EEC-FEC5-49E5-95C3-F126696BDBF6}"
     FILE_TRANSFER = "{5D3E02AB-6190-11D3-BBBB-00C04F795683}"
     WEBCAM_RECEIVER = "{1C9AA97E-9C05-4583-A3BD-908A196F1E92}"
 
+class MSNObjectType(object):
+    CUSTOM_EMOTICON = 2
+    DISPLAY_PICTURE = 3
+    BACKGROUND_PICTURE = 5
+    DYNAMIC_DISPLAY_PICTURE = 7
+    WINK = 8
+
 class ApplicationID(object):
     DISPLAY_PICTURE_TRANSFER = 12
-
 
 class SLPContentType(object):
     """MSNSLP content types"""

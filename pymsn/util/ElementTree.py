@@ -79,7 +79,6 @@ class _Element(object):
         return getattr(self.element, name)
 
     def __getitem__(self, name):
-        path = self._process_path(path)
         return self.element[name]
 
     def __iter__(self):

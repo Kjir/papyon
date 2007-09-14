@@ -69,14 +69,15 @@ class Client(pymsn.Client):
             return True
         else:
             contact = contacts[0]
-            print "CONTACT : ", contact.account, contact.msn_object
+            print "CONTACT : ", contact.account, str(contact.msn_object)
             if not contact.msn_object:
                 return True
-            import base64
-            context = base64.b64encode(contact.msn_object + "\x00")
-            self.session = OutgoingP2PSession(self._p2p_session_manager, contact, context, EufGuid.MSN_OBJECT, 12)
-
+            self._msn_object_store.request(contact.msn_object, (self.__request_display_picture_callback, contact.msn_object))
             return False
+
+    def __request_display_picture_callback(self, data, msn_object):
+        msn_object._data = data
+        print str(msn_object)
 
 def main():
     import sys
