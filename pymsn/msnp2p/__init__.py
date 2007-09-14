@@ -24,4 +24,4 @@ and display pictures."""
 
 from session_manager import P2PSessionManager
 from session import OutgoingP2PSession
-from constants import EufGuid, MSNObjectType, ApplicationID
+from constants import EufGuid, ApplicationID

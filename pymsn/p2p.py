@@ -24,7 +24,7 @@ This module contains the classes needed to engage in a peer to peer transfer
 with a contact."""
 
 from event import EventsDispatcher
-from msnp2p import OutgoingP2PSession, EufGuid, MSNObjectType, ApplicationID
+from msnp2p import OutgoingP2PSession, EufGuid, ApplicationID
 from profile import NetworkID
 
 import pymsn.util.ElementTree as ElementTree
@@ -34,40 +34,18 @@ import logging
 import base64
 import sha
 
-__all__ = ['MSNObjectStore','MSNObject']
+__all__ = ['MSNObjectType', 'MSNObject', 'MSNObjectStore']
 
 logger = logging.getLogger('p2p')
 
-class MSNObjectStore(EventsDispatcher):
-    def __init__(self, client):
-        self._client = client
-        self._outgoing_sessions = {} # session => (handle_id, callback, errback)
-        self._incoming_sessions = {}
-        EventsDispatcher.__init__(self)
 
-    def request(self, msn_object, callback, errback=None):
-        if msn_object._data is not None:
-            callback[0](msn_object._data, *callback[1:])
+class MSNObjectType(object):
+    CUSTOM_EMOTICON = 2
+    DISPLAY_PICTURE = 3
+    BACKGROUND_PICTURE = 5
+    DYNAMIC_DISPLAY_PICTURE = 7
+    WINK = 8
 
-        if msn_object._type == MSNObjectType.DISPLAY_PICTURE:
-            application_id = ApplicationID.DISPLAY_PICTURE_TRANSFER
-        else:
-            raise NotImplementedError
-        session = OutgoingP2PSession(self._client._p2p_session_manager, 
-                                     msn_object._creator, msn_object.context, 
-                                     EufGuid.MSN_OBJECT, application_id)
-        handle_id = session.connect("transfer-completed",
-                        self._outgoing_session_transfer_completed)
-        self._outgoing_sessions[session] = (handle_id, callback, errback)
-
-    def publish(self, msn_object, file_object):
-        pass
-    
-    def _outgoing_session_transfer_completed(self, session, data):
-        handle_id, callback, errback = self._outgoing_sessions[session]
-        session.disconnect(handle_id)
-        callback[0](data, *callback[1:])
-        del self._outgoing_sessions[session]
 
 class MSNObject(object):
     def __init__(self, creator, size, type, location, friendly, shad=None, shac=None):
@@ -125,6 +103,41 @@ class MSNObject(object):
         return sha.new(input).digest()
 
     def __str__(self):
+        #FIXME: we need to xml.attr_escape many of those ?
         return """<msnobj Creator="%s" Size="%s" Type="%s" Location="%s" Friendly="%s" SHA1D="%s" SHA1C="%s"/>""" % \
             (self._creator.account, str(self._size), str(self._type), \
                  self._location, self._friendly, self._data_sha, self._checksum_sha)
+
+
+class MSNObjectStore(EventsDispatcher):
+    def __init__(self, client):
+        self._client = client
+        self._outgoing_sessions = {} # session => (handle_id, callback, errback)
+        self._incoming_sessions = {}
+        EventsDispatcher.__init__(self)
+
+    def request(self, msn_object, callback, errback=None):
+        if msn_object._data is not None:
+            callback[0](msn_object._data, *callback[1:])
+
+        if msn_object._type == MSNObjectType.DISPLAY_PICTURE:
+            application_id = ApplicationID.DISPLAY_PICTURE_TRANSFER
+        else:
+            raise NotImplementedError
+        session = OutgoingP2PSession(self._client._p2p_session_manager, 
+                                     msn_object._creator, msn_object.context, 
+                                     EufGuid.MSN_OBJECT, application_id)
+        handle_id = session.connect("transfer-completed",
+                        self._outgoing_session_transfer_completed)
+        self._outgoing_sessions[session] = (handle_id, callback, errback)
+
+    def publish(self, msn_object, file_object):
+        pass
+    
+    def _outgoing_session_transfer_completed(self, session, data):
+        handle_id, callback, errback = self._outgoing_sessions[session]
+        session.disconnect(handle_id)
+        callback[0](data, *callback[1:])
+        del self._outgoing_sessions[session]
+
+
