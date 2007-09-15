@@ -61,10 +61,13 @@ class MSNObject(object):
         self.__data = None
 
     def __set_data(self, data):
-        # FIXME : find a better way than load the whole data 
-        # in memory to perform the hash
-        tmp = data.getvalue()
-        data_sha = base64.b64encode(sha.new(tmp).digest())
+        digest = sha.new()
+        read_data = data.read(1024)
+        while len(read_data) > 0:
+            digest.update(read_data)
+            read_data = data.read(1024)
+
+        data_sha = digest.digest()
         if self._data_sha is not None:
             if self._data_sha != data_sha:
                 # TODO : error on corrupted data
@@ -147,11 +150,10 @@ class MSNObjectStore(EventsDispatcher):
 
     def publish(self, msn_object, file_object):
         pass
-    
+
     def _outgoing_session_transfer_completed(self, session, data):
         handle_id, callback, errback = self._outgoing_sessions[session]
         session.disconnect(handle_id)
         callback[0](data, *callback[1:])
         del self._outgoing_sessions[session]
-
 
