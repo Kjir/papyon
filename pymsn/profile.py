@@ -197,6 +197,13 @@ class User(gobject.GObject):
                 "The privacy policy to use",
                 Privacy.BLOCK,
                 gobject.PARAM_READABLE),
+
+            "msn-object": (gobject.TYPE_STRING,
+                "MSN Object",
+                "MSN Object attached to the user, this generally represent "
+                "its display picture",
+                "",
+                gobject.PARAM_READABLE),
             }
 
     def __init__(self, account, ns_client):
@@ -213,8 +220,7 @@ class User(gobject.GObject):
         self._current_media = None
 
         self.client_id = ClientCapabilities(7)
-
-        #FIXME: Display Picture
+        self._msn_object = ""
 
     @property
     def account(self):
@@ -230,7 +236,7 @@ class User(gobject.GObject):
 
     @property
     def id(self):
-        """Contact identifier in a GUID form"""
+        """User identifier in a GUID form"""
         return "00000000-0000-0000-0000-000000000000"
 
     def __set_display_name(self, display_name):
@@ -244,7 +250,7 @@ class User(gobject.GObject):
     def __set_presence(self, presence):
         if presence == self._presence:
             return
-        self._ns_client.set_presence(presence)
+        self._ns_client.set_presence(presence, self._msn_object)
     def __get_presence(self):
         return self._presence
     presence = property(__get_presence, __set_presence)
@@ -272,6 +278,14 @@ class User(gobject.GObject):
     def __get_current_media(self):
         return self._current_media
     current_media = property(__get_current_media, __set_current_media)
+
+    def __set_msn_object(self, msn_object):
+        if msn_object == self._msn_object:
+            return
+        self._ns_client.set_presence(self._presence, msn_object)
+    def __get_msn_object(self):
+        return self._msn_object
+    msn_object = property(__set_msn_object, __get_msn_object)
 
     def _server_property_changed(self, name, value):
         attr_name = "_" + name.lower().replace("-", "_")
