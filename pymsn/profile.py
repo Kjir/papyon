@@ -285,7 +285,7 @@ class User(gobject.GObject):
         self._ns_client.set_presence(self._presence, msn_object)
     def __get_msn_object(self):
         return self._msn_object
-    msn_object = property(__set_msn_object, __get_msn_object)
+    msn_object = property(__get_msn_object, __set_msn_object)
 
     def _server_property_changed(self, name, value):
         attr_name = "_" + name.lower().replace("-", "_")

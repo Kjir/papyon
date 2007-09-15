@@ -31,9 +31,10 @@ import pymsn.util.ElementTree as ElementTree
 import pymsn.util.StringIO as StringIO
 
 import xml.sax.saxutils as xml
-import logging
+import urllib
 import base64
 import sha
+import logging
 
 __all__ = ['MSNObjectType', 'MSNObject', 'MSNObjectStore']
 
@@ -61,6 +62,9 @@ class MSNObject(object):
         self.__data = None
 
     def __eq__(self, other):
+        if other == "":
+            return False
+
         if self._data_sha is None:
             return other._creator == self._creator and \
                 other._type == self._type and \
@@ -92,7 +96,7 @@ class MSNObject(object):
         self._size = data.tell()
         data.seek(old_pos, 0)
         self.__data = data
-        self._checksum_sha = base64.b64encode(self.__compute_checksum())
+        self._checksum_sha = self.__compute_checksum()
     def __get_data(self):
         return self.__data
     _data = property(__get_data, __set_data)
@@ -117,27 +121,32 @@ class MSNObject(object):
 
     @property
     def context(self):
-        return base64.b64encode(str(self) + "\x00")
+        return base64.b64encode(self.__repr__() + "\x00")
 
     def __compute_checksum(self):
         input = "Creator%sSize%sType%sLocation%sFriendly%sSHA1D%s" % \
             (self._creator.account, str(self._size), str(self._type),\
-                 self._location, self._friendly, self._data_sha)
+                 str(self._location), self._friendly, self._data_sha)
         return sha.new(input).digest()
 
     def __str__(self):
-        if self._checksum_sha is not None:
-            dump = "<msnobj Creator=\"%s\" Size=\"%s\" Type=\"%s\" Location=\"%s\""\
-                "Friendly=\"%s\" SHA1D=\"%s\" SHA1C=\"%s\"/>" % \
-                (self._creator.account, self._size, str(self._type), \
-                     xml.quoteattr(self._location), xml.quoteattr(self._friendly), \
-                     self._data_sha, self._checksum_sha)
-        else:
-            dump = "<msnobj Creator=\"%s\" Size=\"%s\" Type=\"%s\" Location=\"%s\""\
-                "Friendly=\"%s\" SHA1D=\"%s\"/>" % \
-                (self._creator.account, self._size, str(self._type), \
-                     xml.quoteattr(self._location), xml.quoteattr(self._friendly), \
-                     self._data_sha)
+        return urllib.quote(self.__repr__())
+
+    def __repr__(self):
+#         if self._checksum_sha is not None:
+#             dump = "<msnobj Creator=\"%s\" Size=\"%s\" Type=\"%s\" Location=\"%s\" "\
+#                 "Friendly=\"%s\" SHA1D=\"%s\" SHA1C=\"%s\"/>" % \
+#                 (self._creator.account, self._size, str(self._type), \
+#                      xml.quoteattr(str(self._location)), xml.quoteattr(self._friendly), \
+#                      self._data_sha, self._checksum_sha)
+#         else:
+        dump = "<msnobj Creator=\"%s\" Type=\"%s\" SHA1D=\"%s\" Size=\"%s\" Location=\"%s\" Friendly=\"%s\"/>" % \
+            (self._creator.account, 
+             str(self._type), 
+             base64.b64encode(self._data_sha), 
+             self._size,
+             str(self._location), 
+             base64.b64encode(self._friendly))
         return dump
 
 

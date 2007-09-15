@@ -317,7 +317,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 command.arguments[0])
         if len(command.arguments) > 2:
             self._client.profile._server_property_changed("msn_object",
-                pymsn.p2p.MSNObject(command.arguments[2]))
+                pymsn.p2p.MSNObject.parse(self._client,
+                urllib.unquote(command.arguments[2])))
 
     def _handle_ILN(self,command):
         self._handle_NLN(command)
