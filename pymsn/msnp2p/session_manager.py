@@ -47,8 +47,10 @@ class P2PSessionManager(gobject.GObject):
         self._client = client
         self._sessions = weakref.WeakValueDictionary() # session_id => session
         self._transport_manager = P2PTransportManager(self._client)
-        self._transport_manager.connect("blob-received", lambda tr, blob: self._on_blob_received(blob))
-        self._transport_manager.connect("blob-sent", lambda tr, blob: self._on_blob_sent(blob))
+        self._transport_manager.connect("blob-received",
+                lambda tr, blob: self._on_blob_received(blob))
+        self._transport_manager.connect("blob-sent",
+                lambda tr, blob: self._on_blob_sent(blob))
 
     def _register_session(self, session):
         self._sessions[session.id] = session

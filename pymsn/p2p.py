@@ -60,6 +60,19 @@ class MSNObject(object):
 
         self.__data = None
 
+    def __eq__(self, other):
+        if self._data_sha is None:
+            return other._creator == self._creator and \
+                other._type == self._type and \
+                other._location == self._location
+        return other._type == self._type and \
+            other._data_sha == self._data_sha
+
+    def __hash__(self):
+        if self._data_sha is None:
+            return hash(self._creator + str(self._type) + str(self._location))
+        return hash(str(self._type) + self._data_sha)
+
     def __set_data(self, data):
         digest = sha.new()
         read_data = data.read(1024)
@@ -74,7 +87,10 @@ class MSNObject(object):
                 return
         else:
             self._data_sha = data_sha
-        self._size = len(tmp)
+        old_pos = data.tell()
+        data.seek(0, 2)
+        self._size = data.tell()
+        data.seek(old_pos, 0)
         self.__data = data
         self._checksum_sha = base64.b64encode(self.__compute_checksum())
     def __get_data(self):
@@ -130,6 +146,7 @@ class MSNObjectStore(EventsDispatcher):
         self._client = client
         self._outgoing_sessions = {} # session => (handle_id, callback, errback)
         self._incoming_sessions = {}
+        self._published_objects = set()
         EventsDispatcher.__init__(self)
 
     def request(self, msn_object, callback, errback=None):
@@ -148,8 +165,11 @@ class MSNObjectStore(EventsDispatcher):
                         self._outgoing_session_transfer_completed)
         self._outgoing_sessions[session] = (handle_id, callback, errback)
 
-    def publish(self, msn_object, file_object):
-        pass
+    def publish(self, msn_object):
+        if msn_object._data is None:
+            logger.warning("Trying to publish an empty MSNObject")
+        else:
+            self._published_objects.add(msn_object)
 
     def _outgoing_session_transfer_completed(self, session, data):
         handle_id, callback, errback = self._outgoing_sessions[session]

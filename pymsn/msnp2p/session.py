@@ -113,7 +113,7 @@ class P2PSession(gobject.GObject):
 
         if blob.total_size == 4 and \
                 blob.data.read() == ('\x00' * 4):
-            pass
+            self._on_data_preparation_blob_sent(blob)
         else:
             self._on_data_blob_sent(blob)
 
@@ -130,6 +130,9 @@ class P2PSession(gobject.GObject):
             self._close()
 
     def _on_data_preparation_blob_received(self, blob):
+        pass
+
+    def _on_data_preparation_blob_sent(self, blob):
         pass
 
     def _on_data_blob_sent(self, blob):
