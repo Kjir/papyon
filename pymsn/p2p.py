@@ -160,7 +160,7 @@ class MSNObjectStore(EventsDispatcher):
 
     def request(self, msn_object, callback, errback=None):
         if msn_object._data is not None:
-            callback[0](msn_object._data, *callback[1:])
+            callback[0](msn_object, *callback[1:])
 
         if msn_object._type == MSNObjectType.DISPLAY_PICTURE:
             application_id = ApplicationID.DISPLAY_PICTURE_TRANSFER
@@ -172,7 +172,7 @@ class MSNObjectStore(EventsDispatcher):
                                      EufGuid.MSN_OBJECT, application_id)
         handle_id = session.connect("transfer-completed",
                         self._outgoing_session_transfer_completed)
-        self._outgoing_sessions[session] = (handle_id, callback, errback)
+        self._outgoing_sessions[session] = (handle_id, callback, errback, msn_object)
 
     def publish(self, msn_object):
         if msn_object._data is None:
@@ -181,8 +181,9 @@ class MSNObjectStore(EventsDispatcher):
             self._published_objects.add(msn_object)
 
     def _outgoing_session_transfer_completed(self, session, data):
-        handle_id, callback, errback = self._outgoing_sessions[session]
+        handle_id, callback, errback, msn_object = self._outgoing_sessions[session]
         session.disconnect(handle_id)
-        callback[0](data, *callback[1:])
+        msn_object._data = data
+        callback[0](msn_object, *callback[1:])
         del self._outgoing_sessions[session]
 

@@ -90,12 +90,12 @@ class Client(pymsn.Client):
             print "CONTACT : ", contact.account, str(contact.msn_object)
             if not contact.msn_object:
                 return True
-            self._msn_object_store.request(contact.msn_object, (self.__request_display_picture_callback, contact.msn_object))
+            self._msn_object_store.request(contact.msn_object, (self.__request_display_picture_callback,))
             return False
 
-    def __request_display_picture_callback(self, data, msn_object):
-        msn_object._data = data
-        print str(msn_object)
+    def __request_display_picture_callback(self, msn_object):
+        print "Received %s" % str(msn_object)
+
 
 def main():
     import sys

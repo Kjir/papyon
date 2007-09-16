@@ -47,5 +47,5 @@ class ContactEventInterface(BaseEventInterface):
     def on_contact_client_capabilities_changed(self, contact):
         pass
 
-    def on_contact_details_changed(self, contact, details_flag):
+    def on_contact_client_msn_object_changed(self, contact):
         pass
