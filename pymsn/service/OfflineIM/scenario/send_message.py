@@ -35,6 +35,7 @@ class SendMessageScenario(BaseScenario):
         """
         BaseScenario.__init__(self, callback, errback)
         self.__oim = oim
+        self.__client = client
         self.__from = client.profile
         self.__to = recipient
         
@@ -63,13 +64,12 @@ class SendMessageScenario(BaseScenario):
             if lock_key_challenge != None:
                 self.__oim.set_lock_key(_msn_challenge(lock_key_challenge))
             if auth_policy != None:
-               # sso = SingleSignOn(account, password)
-                #sso.RequestMultipleSecurityTokens((self.execute, ), None, LiveService.CONTACTS)
-                pass
+                self._client._sso.DiscardSecurityTokens([LiveService.CONTACTS])
+                self._client._sso.RequestMultipleSecurityTokens((self.execute, ), None, LiveService.CONTACTS)
+                return
 
             self.execute()
             return
 
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(error_code, *args)
+        errback = self._errback
+        errback[0](error_code, *errback[1:])

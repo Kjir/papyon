@@ -206,6 +206,10 @@ class SingleSignOn(SOAPService):
             callback, errback, services = self.__pending_requests.pop(0)
             self.RequestMultipleSecurityTokens(callback, errback, *services)
 
+    def DiscardSecurityTokens(self, services):
+        for service in services:
+            del self.__storage[service[0]]
+
     def _HandleSOAPFault(self, request_id, callback, errback,
              soap_response, user_data):
         if soap_response.fault.faultcode.endswith("FailedAuthentication"):

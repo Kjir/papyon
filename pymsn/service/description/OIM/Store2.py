@@ -23,7 +23,7 @@ def soap_header(from_member_name, friendly_name, proxy, msnp_ver, build_ver,
                 lock_key):
     """Returns the SOAP xml header"""
 
-    # FIXME : espace the parameters
+    # FIXME : escape the parameters
 
     return """<From memberName="%(from_member_name)s" friendlyName="%(friendly_name)s" xml:lang="en-US" proxy="%(proxy)s" xmlns="http://messenger.msn.com/ws/2004/09/oim/" msnpVer="%(msnp_ver)s" buildVer="%(build_ver)s"/>
             <To memberName="%(to_member_name)s" xmlns="http://messenger.msn.com/ws/2004/09/oim/"/>
