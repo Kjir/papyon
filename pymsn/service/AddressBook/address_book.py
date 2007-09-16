@@ -281,9 +281,9 @@ class AddressBook(gobject.GObject):
         di()
 
     def add_messenger_contact(self, account, invite_display_name='', 
-                              invite_message=''):
+                              invite_message='', groups=[]):
         am = scenario.MessengerContactAddScenario(self._ab,
-                (self.__add_messenger_contact_cb,),
+                (self.__add_messenger_contact_cb, groups),
                 (self.__common_errback,))
         am.account = account
         am.invite_display_name = invite_display_name
@@ -296,7 +296,7 @@ class AddressBook(gobject.GObject):
                     return            
 
             ae = scenario.ExternalContactAddScenario(self._ab,
-                    (self.__add_messenger_contact_cb,),
+                    (self.__add_messenger_contact_cb, groups),
                     (self.__common_errback,))
             ae.account = account
             ae.invite_display_name = invite_display_name
@@ -520,7 +520,7 @@ class AddressBook(gobject.GObject):
     def __decline_contact_invitation_cb(self):
         pass
 
-    def __add_messenger_contact_cb(self, contact_guid, address_book_delta):
+    def __add_messenger_contact_cb(self, contact_guid, address_book_delta, groups):
         contacts = address_book_delta.contacts
         for contact in contacts:
             if contact.Id != contact_guid:
@@ -532,6 +532,9 @@ class AddressBook(gobject.GObject):
             
             self.contacts.add(c)
             self.emit('messenger-contact-added', c)
+            
+            for group in groups:
+                self.add_contact_to_group(group, c)
 
     def __delete_contact_cb(self, contact):
         self.contacts.discard(contact)
@@ -661,10 +664,11 @@ if __name__ == '__main__':
             #address_book.block_contact(address_book.contacts.search_by_account('pymsn.rewrite@yahoo.com')[0])
             #address_book.unblock_contact(address_book.contacts[0])
             #address_book.block_contact(address_book.contacts[0])
-            contact = address_book.contacts[2]
-            address_book.delete_contact(contact)
-            address_book.delete_contact(contact)
-            #address_book.add_messenger_contact("tryggve2@gmail.com")
+            #contact = address_book.contacts[2]
+            #address_book.delete_contact(contact)
+            #address_book.delete_contact(contact)
+            #g=list(address_book.groups)
+            #address_book.add_messenger_contact("wikipedia-bot@hotmail.com",groups=g)
 
             #for i in range(5):
             #    address_book.delete_contact(address_book.contacts[i])
