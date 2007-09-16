@@ -113,11 +113,14 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         raise AttributeError, "unknown property %s" % pspec.name
 
     # Public API -------------------------------------------------------------
-    def set_presence(self, presence, msn_object=""):
+    def set_presence(self, presence, msn_object=None):
         """Publish the new user presence.
 
             @param presence: the new presence
             @type presence: string L{profile.Presence}"""
+        if msn_object == None:
+            msn_object = ""
+
         if presence == profile.Presence.OFFLINE:
             self.signoff()
         else:
@@ -319,6 +322,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             self._client.profile._server_property_changed("msn_object",
                 pymsn.p2p.MSNObject.parse(self._client,
                 urllib.unquote(command.arguments[2])))
+        else:
+            self._client.profile._server_property_changed("msn_object", None)
 
     def _handle_ILN(self,command):
         self._handle_NLN(command)

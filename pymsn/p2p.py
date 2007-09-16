@@ -62,7 +62,7 @@ class MSNObject(object):
         self.__data = None
 
     def __eq__(self, other):
-        if other == "":
+        if other == None:
             return False
 
         if self._data_sha is None:

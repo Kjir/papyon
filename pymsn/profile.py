@@ -220,7 +220,7 @@ class User(gobject.GObject):
         self._current_media = None
 
         self.client_id = ClientCapabilities(7)
-        self._msn_object = ""
+        self._msn_object = None
 
     @property
     def account(self):
@@ -282,10 +282,33 @@ class User(gobject.GObject):
     def __set_msn_object(self, msn_object):
         if msn_object == self._msn_object:
             return
+        if self._presence == Presence.OFFLINE:
+            raise NotImplementedError
         self._ns_client.set_presence(self._presence, msn_object)
     def __get_msn_object(self):
         return self._msn_object
-    msn_object = property(__get_msn_object, __set_msn_object)
+    msn_object = property(__get_msn_object, __set_msn_object)            
+
+    def __set_presence_msn_object(self, args):
+        presence, msn_object = args
+        if presence == self._presence and msn_object == self._msn_object:
+            return
+        self._ns_client.set_presence(presence, msn_object)
+    def __get_presence_msn_object(self):
+        return self._presence, self._msn_object
+    presence_msn_object = property(__get_presence_msn_object,
+                                   __set_presence_msn_object)
+    
+    def __set_personal_message_current_media(self, args):
+        personal_message, current_media = args
+        if personal_message == self._personal_message and \
+                current_media == self._current_media:
+            return
+        self._ns_client.set_personal_message(personal_message, current_media)
+    def __get_personal_message_current_media(self):
+        return self._personal_message, self._current_media
+    personal_message_current_media = property(__get_personal_message_current_media,
+                                              __set_personal_message_current_media)
 
     def _server_property_changed(self, name, value):
         attr_name = "_" + name.lower().replace("-", "_")
