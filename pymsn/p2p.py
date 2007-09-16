@@ -47,51 +47,38 @@ class MSNObjectType(object):
     DYNAMIC_DISPLAY_PICTURE = 7
     WINK = 8
 
-
 class MSNObject(object):
-    def __init__(self, creator, size, type, location, friendly, shad=None, shac=None):
+    def __init__(self, creator, size, type, location, friendly, 
+                 shad=None, shac=None, data=None):
         self._creator = creator
         self._size = size
         self._type = type
         self._location = location
         self._friendly = friendly
-        self._data_sha = shad
         self._checksum_sha = shac
 
-        self.__data = None
+        if shad is None:
+            if data is None:
+                raise NotImplementedError                
+            shad = self.__compute_data_hash(data)
+        self._data_sha = shad
+        self.__data = data
 
     def __eq__(self, other):
         if other == None:
             return False
-
-        if self._data_sha is None:
-            return other._creator == self._creator and \
-                other._type == self._type and \
-                other._location == self._location
         return other._type == self._type and \
             other._data_sha == self._data_sha
 
     def __hash__(self):
-        if self._data_sha is None:
-            return hash(self._creator + str(self._type) + str(self._location))
         return hash(str(self._type) + self._data_sha)
 
     def __set_data(self, data):
-        digest = sha.new()
-        read_data = data.read(1024)
-        while len(read_data) > 0:
-            digest.update(read_data)
-            read_data = data.read(1024)
-
-        data_sha = digest.hexdigest()
-
-        if self._data_sha is not None:
-            if self._data_sha != data_sha:
-                logger.warning("Received data doesn't match the MSNObject data hash.")
-                return
-        else:
-            self._data_sha = data_sha
-
+        logger.warning(self.__compute_data_hash(data))
+        logger.warning(self._data_sha)
+        if self._data_sha != self.__compute_data_hash(data):
+            logger.warning("Received data doesn't match the MSNObject data hash.")
+            return
         old_pos = data.tell()
         data.seek(0, 2)
         self._size = data.tell()
@@ -115,7 +102,11 @@ class MSNObject(object):
         location = xml.unescape(element["Location"])
         friendly = xml.unescape(element["Friendly"])
         shad = element.get("SHA1D", None)
+        if shad is not None:
+            shad = base64.b64decode(shad)
         shac = element.get("SHA1C", None)
+        if shac is not None:
+            shac = base64.b64decode(shac)
 
         return MSNObject(creator, size, type, location, \
                              friendly, shad, shac)
@@ -124,11 +115,20 @@ class MSNObject(object):
     def context(self):
         return base64.b64encode(self.__repr__() + "\x00")
 
+    def __compute_data_hash(self, data):
+        digest = sha.new()
+        read_data = data.read(1024)
+        while len(read_data) > 0:
+            digest.update(read_data)
+            read_data = data.read(1024)
+        return digest.digest()
+
     def __compute_checksum(self):
         input = "Creator%sSize%sType%sLocation%sFriendly%sSHA1D%s" % \
             (self._creator.account, str(self._size), str(self._type),\
-                 str(self._location), self._friendly, self._data_sha)
-        return sha.new(input).digest()
+                 str(self._location), base64.b64encode(self._friendly), \
+                 base64.b64encode(self._data_sha))
+        return sha.new(input).hexdigest()
 
     def __str__(self):
         return urllib.quote(self.__repr__())
