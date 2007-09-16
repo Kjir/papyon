@@ -129,7 +129,7 @@ class Client(EventsDispatcher):
         self.oim_box.connect("notify::state", 
                              self._on_oim_box_state_changed)
 
-        self.address_book.connect('error', self._on_oim_box_error)
+        self.oim_box.connect('error', self._on_oim_box_error)
 
         def connect_signal(name):
             self.oim_box.connect(name, self._on_oim_box_event, name)

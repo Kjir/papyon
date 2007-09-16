@@ -65,8 +65,7 @@ class OIM(SOAPService):
         auth_policy = None
         lock_key_challenge = None
 
-        # FIXME : The faultcodes shouldn't have the namespace hardcoded...
-        if soap_response.fault.faultcode == "q0:AuthenticationFailed":
+        if soap_response.fault.faultcode.endswith("AuthenticationFailed"):
             error_code = OfflineMessagesBoxError.AUTHENTICATION_FAILED
             auth_policy = soap_response.fault.detail.findtext("./oim:RequiredAuthPolicy")
             lock_key_challenge = soap_response.fault.detail.findtext("./oim:LockKeyChallenge")
@@ -77,9 +76,9 @@ class OIM(SOAPService):
                 lock_key_challenge = None
 
             #print "Authentication failed - policy = %s - lockkey = %s" % (auth_policy, lock_key_challenge)
-        elif soap_response.fault.faultcode == "q0:SystemUnavailable":
+        elif soap_response.fault.faultcode.endswith("SystemUnavailable"):
             error_code = OfflineMessagesBoxError.SYSTEM_UNAVAILABLE
-        elif soap_response.fault.faultcode == "q0:SenderThrottleLimitExceeded":
+        elif soap_response.fault.faultcode.endswith("SenderThrottleLimitExceeded"):
             error_code = OfflineMessagesBoxError.SENDER_THROTTLE_LIMIT_EXCEEDED
             
         errback[0](error_code, auth_policy, lock_key_challenge, *errback[1:])
@@ -87,8 +86,6 @@ class OIM(SOAPService):
     def __build_mail_data(self, run_id, sequence_number, content):
         import base64
         mail_data = 'MIME-Version: 1.0\r\n'
-        # FIXME : the text/plain could be something else if the content is an IPG
-        # -FIXME : The IPG is sent by the 'mobile' client, not by a PC client, so it shouldn't happen.
         mail_data += 'Content-Type: text/plain; charset=UTF-8\r\n'
         mail_data += 'Content-Transfer-Encoding: base64\r\n'
         mail_data += 'X-OIM-Message-Type: OfflineMessage\r\n'
