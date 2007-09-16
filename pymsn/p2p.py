@@ -83,13 +83,15 @@ class MSNObject(object):
             digest.update(read_data)
             read_data = data.read(1024)
 
-        data_sha = digest.digest()
+        data_sha = digest.hexdigest()
+
         if self._data_sha is not None:
             if self._data_sha != data_sha:
                 logger.warning("Received data doesn't match the MSNObject data hash.")
                 return
         else:
             self._data_sha = data_sha
+
         old_pos = data.tell()
         data.seek(0, 2)
         self._size = data.tell()
@@ -183,6 +185,7 @@ class MSNObjectStore(EventsDispatcher):
         handle_id, callback, errback, msn_object = self._outgoing_sessions[session]
         session.disconnect(handle_id)
         msn_object._data = data
+
         callback[0](msn_object, *callback[1:])
         del self._outgoing_sessions[session]
 
