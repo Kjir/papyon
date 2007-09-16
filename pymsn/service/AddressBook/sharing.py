@@ -177,7 +177,7 @@ class Sharing(SOAPService):
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):
-        errback[0](soap_response.faultcode, *errback[1:])
+        errback[0](soap_response.fault.faultcode, *errback[1:])
 
 if __name__ == '__main__':
     import sys

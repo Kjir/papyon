@@ -625,8 +625,8 @@ if __name__ == '__main__':
     
     def address_book_state_changed(address_book, pspec):
         if address_book.state == AddressBookState.SYNCHRONIZED:
-            for guid, group in address_book.groups.iteritems():
-                print "Group : %s (%s)" % (guid, group.name)
+            for group in address_book.groups:
+                print "Group : %s " % group.name
 
             for contact in address_book.contacts:
                 print "Contact : %s (%s) %s" % \
@@ -658,11 +658,12 @@ if __name__ == '__main__':
             #address_book.delete_contact_from_group(address_book.groups.values()[0],
             #                                       contact)
             #address_book.block_contact(address_book.contacts.search_by_account('pymsn.rewrite@yahoo.com')[0])
+            #address_book.block_contact(address_book.contacts.search_by_account('pymsn.rewrite@yahoo.com')[0])
             #address_book.unblock_contact(address_book.contacts[0])
             #address_book.block_contact(address_book.contacts[0])
-            #contact = address_book.contacts[2]
-            #address_book.delete_contact(contact)
-            #address_book.delete_contact(contact)
+            contact = address_book.contacts[2]
+            address_book.delete_contact(contact)
+            address_book.delete_contact(contact)
             #address_book.add_messenger_contact("tryggve2@gmail.com")
 
             #for i in range(5):
