@@ -40,7 +40,6 @@ __all__ = ['MSNObjectType', 'MSNObject', 'MSNObjectStore']
 
 logger = logging.getLogger('p2p')
 
-
 class MSNObjectType(object):
     CUSTOM_EMOTICON = 2
     DISPLAY_PICTURE = 3
@@ -87,7 +86,7 @@ class MSNObject(object):
         data_sha = digest.digest()
         if self._data_sha is not None:
             if self._data_sha != data_sha:
-                # TODO : error on corrupted data
+                logger.warning("Received data doesn't match the MSNObject data hash.")
                 return
         else:
             self._data_sha = data_sha

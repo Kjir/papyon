@@ -426,7 +426,7 @@ class Contact(gobject.GObject):
 
         self._memberships = memberships
         self._client_capabilities = ClientCapabilities()
-        self._msn_object = ""
+        self._msn_object = None
         self._attributes = {'im_contact' : False,
                 'icon_url' : None}
 
