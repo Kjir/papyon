@@ -37,7 +37,8 @@ from switchboard_manager import SwitchboardManager
 from msnp2p import P2PSessionManager
 from p2p import MSNObjectStore
 from conversation import SwitchboardConversation, ExternalNetworkConversation
-from pymsn.event import ClientState, ClientErrorType, EventsDispatcher
+from pymsn.event import ClientState, ClientErrorType, \
+    AuthenticationError, EventsDispatcher
 
 import logging
 
@@ -201,6 +202,11 @@ class Client(EventsDispatcher):
 
     def _on_disconnected(self, transp, reason):
         self._dispatch("on_client_error", ClientErrorType.NETWORK, reason)
+        self._state = ClientState.CLOSED
+        
+    def _on_authentication_failure(self):
+        self._dispatch("on_client_error", ClientErrorType.AUTHENTICATION,
+                       AuthenticationError.INVALID_USERNAME_OR_PASSWORD)
         self._state = ClientState.CLOSED
 
     # - - Notification Protocol

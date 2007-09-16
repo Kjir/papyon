@@ -94,7 +94,7 @@ class SOAPFault(object):
 
 
 class SOAPResponse(ElementTree.XMLResponse):
-    NS_SHORTHANDS = {'soap' : XMLNS.SOAP.ENVELOPE,
+    NS_SHORTHANDS = {"soap" : XMLNS.SOAP.ENVELOPE,
             "xmlenc" : XMLNS.ENCRYPTION.BASE,
             "wsse" : XMLNS.WS.SECEXT,
             "wst" : XMLNS.WS.TRUST,
@@ -114,8 +114,10 @@ class SOAPResponse(ElementTree.XMLResponse):
         try:
             self.header = self.tree.find("./soap:Header")
             self.body = self.tree.find("./soap:Body")
-            self.fault = SOAPFault(self.body.find("./soap:Fault"))
-            
+            try:
+                self.fault = SOAPFault(self.body.find("./soap:Fault"))
+            except:
+                self.fault = SOAPFault(self.tree.find("./soap:Fault"))
         except:
             self.tree = None
             self.header = None

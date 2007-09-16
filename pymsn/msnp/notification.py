@@ -286,7 +286,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             if command.arguments[0] == "SSO":
                 self._client._sso.RequestMultipleSecurityTokens(
                     (self._sso_cb, command.arguments[3]),
-                    None,
+                    (self._client._on_authentication_failure,),
                     SSO.LiveService.MESSENGER_CLEAR)
                 
                 self._client.address_book.connect("notify::state",

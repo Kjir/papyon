@@ -6,6 +6,8 @@ from pymsn.msnp2p.session_manager import *
 from pymsn.msnp2p.session import *
 from pymsn.msnp2p.constants import EufGuid
 
+import pymsn.util.StringIO as StringIO
+
 import logging
 import gobject
 
@@ -35,8 +37,24 @@ class ClientEvents(pymsn.event.ClientEventInterface):
             self._client.quit()
         elif state == pymsn.event.ClientState.OPEN:
             self._client.profile.display_name = "Kimbix"
-            self._client.profile.presence = pymsn.Presence.ONLINE
             self._client.profile.personal_message = "Testing pymsn, and freeing the pandas!"
+
+#             path = '/home/jprieur/projects/pymsn.rewrite/pymsn/service/ContentRoaming/test.jpeg'
+#             f = open(path, 'r')
+#             old_pos = f.tell()
+#             f.seek(0, 2)
+#             size = f.tell()
+#             f.seek(old_pos,0)
+
+#             msn_object = \
+#                 pymsn.p2p.MSNObject(self._client.profile,
+#                                     size, pymsn.p2p.MSNObjectType.DISPLAY_PICTURE,
+#                                     0, "lalala")
+#             msn_object._data = StringIO.StringIO(f.read())
+
+            self._client.profile.presence_msn_object = pymsn.Presence.ONLINE, None
+            self._client.profile.personal_message_current_media = "yo!", None
+            
             gobject.timeout_add(5000, self._client.request_display_picture)
 
     def on_client_error(self, error_type, error):
