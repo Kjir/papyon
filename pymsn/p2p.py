@@ -131,7 +131,7 @@ class MSNObject(object):
         return sha.new(input).hexdigest()
 
     def __str__(self):
-        return urllib.quote(self.__repr__())
+        return self.__repr__()
 
     def __repr__(self):
 #         if self._checksum_sha is not None:
@@ -157,6 +157,8 @@ class MSNObjectStore(EventsDispatcher):
         self._outgoing_sessions = {} # session => (handle_id, callback, errback)
         self._incoming_sessions = {}
         self._published_objects = set()
+        self._client._p2p_session_manager.connect("incoming-session",
+                self._incoming_session_received)
         EventsDispatcher.__init__(self)
 
     def request(self, msn_object, callback, errback=None):
@@ -169,7 +171,7 @@ class MSNObjectStore(EventsDispatcher):
             raise NotImplementedError
 
         session = OutgoingP2PSession(self._client._p2p_session_manager, 
-                                     msn_object._creator, msn_object.context, 
+                                     msn_object._creator, msn_object, 
                                      EufGuid.MSN_OBJECT, application_id)
         handle_id = session.connect("transfer-completed",
                         self._outgoing_session_transfer_completed)
@@ -189,3 +191,22 @@ class MSNObjectStore(EventsDispatcher):
         callback[0](msn_object, *callback[1:])
         del self._outgoing_sessions[session]
 
+    def _incoming_session_received(self, session_manager, session):
+        if session._euf_guid != EufGuid.MSN_OBJECT:
+            # FIXME: we should not reject here
+            session.reject()
+        handle_id = session.connect("transfer-completed",
+                        self._incoming_session_transfer_completed)
+        self._incoming_sessions[session] = handle_id
+        msn_object = MSNObject.parse(session._context)
+        for obj in self._published_objects:
+            if obj._data_sha == msn_object._data_sha:
+                session.accept(obj._data)
+                return
+        session.reject()
+
+    def _incoming_session_transfer_completed(self, session, data):
+        handle_id = self._incoming_sessions[session]
+        session.disconnect(handle_id)
+        del self._incoming_sessions[session]
+        

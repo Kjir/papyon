@@ -147,21 +147,23 @@ gobject.type_register(P2PSession)
 
 
 class IncomingP2PSession(P2PSession):
-    def __init__(self, session_manager, peer, id, call_id,
-            euf_guid, application_id, cseq, branch):
+    def __init__(self, session_manager, peer, id, message):
         P2PSession.__init__(self, session_manager, peer,
-                euf_guid, application_id)
+                message.body.euf_guid, message.body.application_id)
         self._id =  id
-        self._call_id = call_id
+        self._call_id = message.call_id
 
-        self._cseq = cseq
-        self._branch = branch
+        self._cseq = message.cseq
+        self._branch = message.branch
+        self._context = base64.b64decode(message.body.context)[:-1]
 
-    def accept(self):
-        return self._respond(200)
+    def accept(self, data_file):
+        self._respond(200)
+        self._send_p2p_data("\x00" * 4)
+        self._send_p2p_data(data_file)
 
     def reject(self):
-        return self._respond(603)
+        self._respond(603)
 
     def _respond(self, status_code):
         body = SLPMessageBody(SLPContentType.SESSION_REQUEST)
@@ -189,7 +191,7 @@ class OutgoingP2PSession(P2PSession):
         body.add_header('EUF-GUID', self._euf_guid)
         body.add_header('SessionID', self._id)
         body.add_header('AppID', self._application_id)
-        body.add_header('Context', str(context))
+        body.add_header('Context', base64.b64encode(str(context) + '\x00'))
 
         message = SLPRequestMessage('INVITE',
                 "MSNMSGR:" + self._peer.account,

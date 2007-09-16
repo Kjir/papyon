@@ -143,8 +143,10 @@ class MessageBlob(object):
             if isinstance(data, str):
                 if len(data) > 0:
                     data = StringIO.StringIO(data)
+                    total_size = len(data)
                 else:
                     data = StringIO.StringIO()
+                    total_size = 0
 
             if total_size is None:
                 self.data.seek(0, 2) # relative to the end

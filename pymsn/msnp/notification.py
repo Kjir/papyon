@@ -126,7 +126,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         else:
             client_id = self._client.profile.client_id
             self._transport.\
-                send_command_ex('CHG', (presence, str(client_id), str(msn_object)))
+                send_command_ex('CHG', (presence, str(client_id), 
+                        urllib.quote(str(msn_object))))
 
     def set_display_name(self, display_name):
         """Sets the new display name

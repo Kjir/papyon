@@ -87,10 +87,7 @@ class P2PSessionManager(gobject.GObject):
                             display_name=message.frm)
                 else:
                     peer = contacts[0]
-                session = IncomingP2PSession(self, peer,
-                        session_id, message.call_id,
-                        message.body.euf_guid, message.body.application_id,
-                        message.cseq, message.branch)
+                session = IncomingP2PSession(self, peer, session_id, message)
                 self.emit("incoming-session", session)
                 return session
             else:
