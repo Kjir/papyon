@@ -142,8 +142,8 @@ class MessageBlob(object):
         if data is not None:
             if isinstance(data, str):
                 if len(data) > 0:
-                    data = StringIO.StringIO(data)
                     total_size = len(data)
+                    data = StringIO.StringIO(data)
                 else:
                     data = StringIO.StringIO()
                     total_size = 0

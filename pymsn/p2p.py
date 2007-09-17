@@ -79,10 +79,12 @@ class MSNObject(object):
         if self._data_sha != self.__compute_data_hash(data):
             logger.warning("Received data doesn't match the MSNObject data hash.")
             return
+
         old_pos = data.tell()
         data.seek(0, 2)
         self._size = data.tell()
         data.seek(old_pos, 0)
+
         self.__data = data
         self._checksum_sha = self.__compute_checksum()
     def __get_data(self):
@@ -100,7 +102,7 @@ class MSNObject(object):
         size = int(element["Size"])
         type = int(element["Type"])
         location = xml.unescape(element["Location"])
-        friendly = xml.unescape(element["Friendly"])
+        friendly = base64.b64decode(xml.unescape(element["Friendly"]))
         shad = element.get("SHA1D", None)
         if shad is not None:
             shad = base64.b64decode(shad)
