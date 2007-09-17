@@ -320,9 +320,12 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._client.profile._server_property_changed("presence",
                 command.arguments[0])
         if len(command.arguments) > 2:
-            self._client.profile._server_property_changed("msn_object",
-                pymsn.p2p.MSNObject.parse(self._client,
-                urllib.unquote(command.arguments[2])))
+            if command.arguments[2] != '0':
+                msn_object = pymsn.p2p.MSNObject.parse(self._client,
+                                 urllib.unquote(command.arguments[2]))
+            else:
+                msn_object = None
+            self._client.profile._server_property_changed("msn_object", msn_object)
         else:
             self._client.profile._server_property_changed("msn_object", None)
 
@@ -368,6 +371,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     msn_object = pymsn.p2p.MSNObject.parse(self._client,
                                      urllib.unquote(command.arguments[5]))
                     contact._server_property_changed("msn-object", msn_object)
+                elif command.arguments[5] == '0':
+                    contact._server_property_changed("msn-object", None)
                 elif len(command.arguments) > 6:
                     icon_url = command.arguments[6]
                     contact._server_attribute_changed('icon_url', icon_url)

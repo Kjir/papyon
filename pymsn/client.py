@@ -248,7 +248,7 @@ class Client(EventsDispatcher):
                 self._on_contact_property_changed)
         contact.connect("notify::current-media",
                 self._on_contact_property_changed)        
-        contact.connect("notify::msn_object",
+        contact.connect("notify::msn-object",
                 self._on_contact_property_changed)
         contact.connect("notify::client-capabilities",
                 self._on_contact_property_changed)
