@@ -47,6 +47,7 @@ class MSNObjectType(object):
     DYNAMIC_DISPLAY_PICTURE = 7
     WINK = 8
 
+
 class MSNObject(object):
     def __init__(self, creator, size, type, location, friendly, 
                  shad=None, shac=None, data=None):
@@ -67,15 +68,22 @@ class MSNObject(object):
     def __eq__(self, other):
         if other == None:
             return False
+
+        if self._data_sha is None:
+            return other._creator == self._creator and \
+                other._type == self._type and \
+                other._location == self._location
         return other._type == self._type and \
             other._data_sha == self._data_sha
 
     def __hash__(self):
+        if self._data_sha is None:
+            return hash(self._creator + str(self._type) + str(self._location))
         return hash(str(self._type) + self._data_sha)
 
     def __set_data(self, data):
-        logger.warning(self.__compute_data_hash(data))
-        logger.warning(self._data_sha)
+        logger.warning(repr(self.__compute_data_hash(data)))
+        logger.warning(repr(self._data_sha))
         if self._data_sha != self.__compute_data_hash(data):
             logger.warning("Received data doesn't match the MSNObject data hash.")
             return
@@ -113,16 +121,14 @@ class MSNObject(object):
         return MSNObject(creator, size, type, location, \
                              friendly, shad, shac)
 
-    @property
-    def context(self):
-        return base64.b64encode(self.__repr__() + "\x00")
-
     def __compute_data_hash(self, data):
         digest = sha.new()
+        data.seek(0, 0)
         read_data = data.read(1024)
         while len(read_data) > 0:
             digest.update(read_data)
             read_data = data.read(1024)
+        data.seek(0, 0)
         return digest.digest()
 
     def __compute_checksum(self):
