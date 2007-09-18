@@ -46,7 +46,9 @@ class MSNObjectType(object):
     BACKGROUND_PICTURE = 5
     DYNAMIC_DISPLAY_PICTURE = 7
     WINK = 8
-
+    VOICE_CLIP = 11
+    SAVED_STATE_PROPERTY = 12
+    LOCATION = 14
 
 class MSNObject(object):
     def __init__(self, creator, size, type, location, friendly, 
