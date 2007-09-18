@@ -322,7 +322,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         if len(command.arguments) > 2:
             if command.arguments[2] != '0':
                 msn_object = pymsn.p2p.MSNObject.parse(self._client,
-                                 urllib.unquote(command.arguments[2]))
+                               urllib.unquote(command.arguments[2]))
             else:
                 msn_object = None
             self._client.profile._server_property_changed("msn_object", msn_object)
@@ -369,7 +369,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             if len(command.arguments) >= 6:
                 if command.arguments[5] != '0':
                     msn_object = pymsn.p2p.MSNObject.parse(self._client,
-                                     urllib.unquote(command.arguments[5]))
+                                   urllib.unquote(command.arguments[5]))
                     contact._server_property_changed("msn-object", msn_object)
                 elif command.arguments[5] == '0':
                     contact._server_property_changed("msn-object", None)
@@ -464,8 +464,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     mail_data = None
                 self._client.oim_box.sync(mail_data)
         elif content_type[0] == 'text/x-msmsgsactivemailnotification':
-            pass
-        elif content_type[0] == 'text/x-mms-animemoticon':
             pass
     
     def _handle_UBM(self, command):

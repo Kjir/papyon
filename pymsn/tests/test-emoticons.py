@@ -3,6 +3,11 @@
 import pymsn
 import pymsn.event
 
+from pymsn.msnp2p.session_manager import *
+from pymsn.msnp2p.session import *
+from pymsn.msnp2p.constants import EufGuid
+
+import pymsn.util.StringIO as StringIO
 
 import logging
 import gobject
@@ -32,37 +37,49 @@ class ClientEvents(pymsn.event.ClientEventInterface):
         if state == pymsn.event.ClientState.CLOSED:
             self._client.quit()
         elif state == pymsn.event.ClientState.OPEN:
-            self._client.profile.display_name = "Kimbix"
+            self._client.profile.display_name = "Panda"
             self._client.profile.presence = pymsn.Presence.ONLINE
-            self._client.profile.current_media = ("I listen to", "Nothing")
-            #self._client.profile.personal_message = "Testing pymsn, and freeing the pandas!"
+            self._client.profile.personal_message = "Testing pymsn, and freeing the pandas!"
             gobject.timeout_add(5000, self._client.start_conversation)
 
     def on_client_error(self, error_type, error):
         print "ERROR :", error_type, " ->", error
 
-class AnnoyingConversation(pymsn.event.ConversationEventInterface):
-    def on_conversation_user_joined(self, contact):
-        gobject.timeout_add(5000, self.annoy_user)
+class ConversationEvents(pymsn.event.ConversationEventInterface):
 
-    def annoy_user(self):
-        msg = "Let's free the pandas ! (testing pymsn)"
-        formatting = pymsn.TextFormat("Comic Sans MS", 
-                         pymsn.TextFormat.UNDERLINE | pymsn.TextFormat.BOLD,
-                         'FF0000')
-        self._client.send_text_message(pymsn.ConversationMessage(msg, formatting))
-#         self._client.send_nudge()
-#         self._client.send_typing_notification()
+    def on_conversation_user_joined(self, contact):
+        gobject.timeout_add(5000, self.send_message)
+    
+    def send_message(self):
+        path = '/home/jprieur/projects/pymsn.rewrite/pymsn/tests/emoticon.gif'
+        f = open(path, 'r')
+        old_pos = f.tell()
+        f.seek(0, 2)
+        size = f.tell()
+        f.seek(old_pos,0)
+        
+        msn_object = pymsn.p2p.MSNObject(self._client._client.profile, size, 
+                         pymsn.p2p.MSNObjectType.CUSTOM_EMOTICON, 0, "",
+                         data = StringIO.StringIO(f.read()))
+        
+        msg = "lalala (CAT) hihihi hu"
+        emoticons = { "(CAT)" : msn_object , "hu" : msn_object }  
+        self._client.send_text_message(pymsn.ConversationMessage(
+                msg, None, emoticons))
         return True
 
     def on_conversation_user_typing(self, contact):
         pass
 
     def on_conversation_message_received(self, sender, message):
-        pass
+        print sender
+        print message.content
+        print message.formatting
+        print message.msn_objects
 
     def on_conversation_error(self, error_type, error):
         print "ERROR :", error_type, " ->", error
+
 
 class Client(pymsn.Client):
     def __init__(self, account, quit, http_mode=False):
@@ -75,6 +92,7 @@ class Client(pymsn.Client):
         else:
             pymsn.Client.__init__(self, server, proxies = get_proxies())
         ClientEvents(self)
+        self._p2p_session_manager = P2PSessionManager(self)
         gobject.idle_add(self._connect)
 
     def _connect(self):
@@ -84,10 +102,6 @@ class Client(pymsn.Client):
     def start_conversation(self):
         contacts = self.address_book.contacts.\
                 search_by_presence(pymsn.Presence.ONLINE)
-        for c in self.address_book.contacts:
-            if c.account == "@hotmail.com":
-                print "Fetching space of : %s with cid %s\n" % (c.display_name, c.cid)
-                self.spaces_service.get_contact_card(c)
 
         if len(contacts) == 0:
             print "No online contacts"
@@ -97,7 +111,7 @@ class Client(pymsn.Client):
                 if contact.account == "johann.prieur@gmail.com":
                     print "Inviting %s for a conversation" % contact.display_name
                     self.conv = pymsn.Conversation(self, [contact])
-                    AnnoyingConversation(self.conv)
+                    ConversationEvents(self.conv)
             return False
 
 def main():

@@ -41,7 +41,7 @@ class ConversationEventInterface(BaseEventInterface):
     def on_conversation_user_typing(self, contact):
         pass
 
-    def on_conversation_message_received(self, sender, message, formatting):
+    def on_conversation_message_received(self, sender, message):
         pass
     
     def on_conversation_nudge_received(self, sender):

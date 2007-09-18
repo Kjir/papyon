@@ -24,6 +24,7 @@ This module contains the class needed to have a conversation with a
 contact."""
 
 import msnp
+import p2p
 from switchboard_manager import SwitchboardClient
 from pymsn.event import EventsDispatcher
 from pymsn.profile import NetworkID
@@ -33,7 +34,7 @@ import gobject
 from urllib import quote, unquote
 
 __all__ = ['Conversation', 'ExternalNetworkConversation',
-        'SwitchboardConversation', 'TextFormat']
+        'SwitchboardConversation', 'ConversationMessage', 'TextFormat']
 
 logger = logging.getLogger('conversation')
 
@@ -60,18 +61,24 @@ class BaseConversation(EventsDispatcher):
         self._client = client
         EventsDispatcher.__init__(self)
 
-    def send_text_message(self, text, formatting=None):
-        """Build and send a text message to all persons in this
-        switchboard.
-        
-            @param text: the text message to send.
-            @type text: string"""
+        self.__last_received_msn_objects = {}
+
+    def send_text_message(self, message):
+        """Build and send a message to all persons in this switchboard."""
+        if len(message.msn_objects) > 0:
+            body = []
+            for alias, msn_object in message.msn_objects.iteritems():
+                body.append(alias.encode("utf-8"))
+                body.append(str(msn_object))
+            self._send_message(("text/x-mms-emoticon",), '\t'.join(body))
+
         content_type = ("text/plain","utf-8")
-        body = text.encode("utf-8")
+        body = message.content.encode("utf-8")
         ack = msnp.MessageAcknowledgement.HALF
         headers = {}
-        if formatting is not None: 
-            headers["X-MMS-IM-Format"] = str(formatting)
+        if message.formatting is not None: 
+            headers["X-MMS-IM-Format"] = str(message.formatting)
+
         self._send_message(content_type, body, headers, ack)
 
     def send_nudge(self):
@@ -120,18 +127,26 @@ class BaseConversation(EventsDispatcher):
             message_formatting = '='
 
         if message_type == 'text/plain':
-            self._dispatch("on_conversation_message_received",
-                           sender,
-                           unicode(message.body, message_encoding),
-                           TextFormat.parse(message_formatting))
-
+            self._dispatch("on_conversation_message_received", sender, 
+                    ConversationMessage(unicode(message.body, message_encoding),
+                                        TextFormat.parse(message_formatting),
+                                        self.__last_received_msn_objects))
+            self.__last_received_msn_objects = {}
         elif message_type == 'text/x-msmsgscontrol':
             self._dispatch("on_conversation_user_typing", sender)
-
+        elif message_type in ['text/x-mms-emoticon', 
+                              'text/x-mms-animemoticon']:
+            msn_objects = {}
+            parts = message.body.split('\t')
+            logger.debug(parts)
+            for i in [i for i in range(len(parts)) if not i % 2]:
+                if parts[i] == '': break
+                msn_objects[parts[i]] = p2p.MSNObject.parse(self._client._client, 
+                                                            parts[i+1])
+            self.__last_received_msn_objects = msn_objects
         elif message_type == 'text/x-msnmsgr-datacast' and \
                 message.body.strip() == "ID: 1":
-            self._dispatch("on_conversation_nudge_received",
-                    sender)
+            self._dispatch("on_conversation_nudge_received", sender)
 
     def _on_message_sent(self, message):
         pass
@@ -159,6 +174,9 @@ class ExternalNetworkConversation(BaseConversation):
 
     def _send_message(self, content_type, body, headers={},
             ack=msnp.MessageAcknowledgement.HALF):
+        if content_type[0]  in ['text/x-mms-emoticon',
+                                'text/x-mms-animemoticon']:
+            return
         message = msnp.Message(self._client.profile)
         for key, value in headers.iteritems():
             message.add_header(key, value)
@@ -179,8 +197,10 @@ class SwitchboardConversation(BaseConversation, SwitchboardClient):
         content_type = message.content_type[0]
         if switchboard_client is None:
             return content_type in ('text/plain', 'text/x-msnmsgr-datacast')
+        # FIXME : we need to not filter those 'text/x-mms-emoticon', 'text/x-mms-animemoticon'
         return content_type in ('text/plain', 'text/x-msmsgscontrol',
-                'text/x-msnmsgr-datacast')
+                'text/x-msnmsgr-datacast', 'text/x-mms-emoticon',
+                                'text/x-mms-animemoticon')
 
     def invite_user(self, contact):
         """Request a contact to join in the conversation.
@@ -197,7 +217,11 @@ class SwitchboardConversation(BaseConversation, SwitchboardClient):
             ack=msnp.MessageAcknowledgement.HALF):
         SwitchboardClient._send_message(self, content_type, body, headers, ack)
 
-
+class ConversationMessage(object):
+    def __init__(self, content, formatting=None, msn_objects={}):
+        self.content = content
+        self.formatting = formatting
+        self.msn_objects = msn_objects    
 
 class TextFormat(object):
     
