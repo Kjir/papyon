@@ -184,12 +184,11 @@ class MessageBlob(object):
         blob_offset = self.transferred
 
         if self.data is not None:
-            data.seek(blob_offset, 0)
             data = self.data.read(max_size - TLPHeader.SIZE)
             assert len(data) > 0, "Trying to read more data than available"
         else:
             data = ""
-
+        
         header = TLPHeader()
         header.session_id = self.session_id
         header.blob_id = self.id

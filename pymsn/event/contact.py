@@ -38,9 +38,6 @@ class ContactEventInterface(BaseEventInterface):
     def on_contact_current_media_changed(self, contact):
         pass
 
-    def on_contact_display_picture_changed(self, contact):
-        pass
-
     def on_contact_infos_changed(self, contact):
         pass
 
