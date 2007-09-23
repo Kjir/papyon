@@ -122,8 +122,8 @@ class MessageChunk(object):
     def require_ack(self):
         if self.is_ack_chunk():
             return False
-        if self.header.flags & TLPFlag.EACH:
-            return True
+        #if self.header.flags & TLPFlag.EACH:
+        #    return True
         current_size = self.header.chunk_size + self.header.blob_offset
         if current_size == self.header.blob_size:
             return True
@@ -148,9 +148,9 @@ class MessageBlob(object):
                     data = StringIO.StringIO()
 
             if total_size is None:
-                self.data.seek(0, 2) # relative to the end
-                total_size = self.data.tell()
-                self.data.seek(0, 0)
+                data.seek(0, 2) # relative to the end
+                total_size = data.tell()
+                data.seek(0, 0)
         else:
             total_size = 0
 
@@ -167,9 +167,6 @@ class MessageBlob(object):
         if self.data is not None:
             self.data.close()
 
-    def __getattr__(self, name):
-        return getattr(self.data, name)
-    
     @property
     def transferred(self):
         return self.current_size
@@ -184,6 +181,7 @@ class MessageBlob(object):
         blob_offset = self.transferred
 
         if self.data is not None:
+            self.data.seek(blob_offset, 0)
             data = self.data.read(max_size - TLPHeader.SIZE)
             assert len(data) > 0, "Trying to read more data than available"
         else:
@@ -196,6 +194,8 @@ class MessageBlob(object):
         header.blob_size = self.total_size
         header.chunk_size = len(data)
         header.dw1 = _chunk_id()
+        if self.session_id != 0 and self.total_size != 4 and data != '\x00' * 4:
+            header.flags = TLPFlag.EACH
 
         chunk = MessageChunk(header, data)
         chunk.application_id = self.application_id

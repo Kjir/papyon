@@ -104,7 +104,7 @@ class P2PSession(gobject.GObject):
 
         blob = MessageBlob(self._application_id,
                 data, total_size, session_id)
-        self._session_manager._transport_manager.send(self, blob)
+        self._session_manager._transport_manager.send(self.peer, blob)
 
     def _on_blob_sent(self, blob):
         if blob.session_id == 0:
@@ -155,12 +155,10 @@ class IncomingP2PSession(P2PSession):
 
         self._cseq = message.cseq
         self._branch = message.branch
-        self._context = base64.b64decode(message.body.context)[:-1]
+        self._context = message.body.context.strip('\x00')
 
     def accept(self, data_file):
-        self._respond(200)
-        self._send_p2p_data("\x00" * 4)
-        self._send_p2p_data(data_file)
+        gobject.idle_add(self._start_transfer, data_file)
 
     def reject(self):
         self._respond(603)
@@ -168,16 +166,22 @@ class IncomingP2PSession(P2PSession):
     def _respond(self, status_code):
         body = SLPMessageBody(SLPContentType.SESSION_REQUEST)
         body.add_header('SessionID', self._id)
-        
+
         self._cseq += 1
         response = SLPResponseMessage(status_code,
             to = self._peer.account,
             frm = self._session_manager._client.profile.account,
             cseq = self._cseq,
             branch = self._branch,
-            call_id = self._request.call_id)
+            call_id = self._call_id)
         response.body = body
         self._send_p2p_data(response)
+
+    def _start_transfer(self, data_file):
+        self._respond(200)
+        self._send_p2p_data("\x00" * 4)
+        self._send_p2p_data(data_file)
+        return False
 
 
 class OutgoingP2PSession(P2PSession):

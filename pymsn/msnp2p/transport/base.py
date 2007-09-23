@@ -39,13 +39,12 @@ class BaseP2PTransport(gobject.GObject):
                 (object,)),
             }
     
-    def __init__(self, transport_manager, name, session):
+    def __init__(self, transport_manager, name):
         gobject.GObject.__init__(self)
         self._transport_manager = weakref.proxy(transport_manager)
         self._client = transport_manager._client
         self._name = name
-        self._session = session
-        
+
         self._transport_manager._register_transport(self)
         self._reset()
 
@@ -54,17 +53,13 @@ class BaseP2PTransport(gobject.GObject):
         return self._name
 
     @property
-    def session(self):
-        return self._session
-    
-    @property
     def peer(self):
-        return self._session.peer
-    
+        raise NotImplementedError
+
     @property
     def rating(self):
         raise NotImplementedError
-    
+
     @property
     def max_chunk_size(self):
         raise NotImplementedError
@@ -74,6 +69,7 @@ class BaseP2PTransport(gobject.GObject):
             self._control_blob_queue.append((blob, callback, errback))
         else:
             self._data_blob_queue.append((blob, callback, errback))
+        gobject.timeout_add(400, self._process_send_queues)
         self._process_send_queues()
 
     def close(self):
@@ -125,7 +121,7 @@ class BaseP2PTransport(gobject.GObject):
         elif len(self._data_blob_queue) > 0:
             queue = self._data_blob_queue
         else:
-            return
+            return False
 
         blob, callback, errback = queue[0]
         chunk = blob.get_chunk(self.max_chunk_size)
@@ -138,6 +134,7 @@ class BaseP2PTransport(gobject.GObject):
         if chunk.require_ack() :
             self._add_pending_ack(chunk.header.blob_id, chunk.header.dw1)
         self._send_chunk(chunk)
+        return True
 
     def _send_ack(self, received_chunk):
         flags = received_chunk.header.flags

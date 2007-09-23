@@ -33,11 +33,9 @@ logger = logging.getLogger('msnp2p:transport')
 
 
 class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
-    def __init__(self, transport_manager, session):
-        BaseP2PTransport.__init__(self, transport_manager,
-                "switchboard", session)
-        SwitchboardClient.__init__(self, transport_manager._client,
-                (session.peer,))
+    def __init__(self, client, contacts, transport_manager):
+        SwitchboardClient.__init__(self, client, contacts)
+        BaseP2PTransport.__init__(self, transport_manager, "switchboard")
 
     def close(self):
         BaseP2PTransport.close(self)
@@ -49,9 +47,15 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
         return content_type == 'application/x-msnmsgrp2p'
 
     @property
+    def peer(self):
+        for peer in self.total_participants:
+            return peer
+        return None
+
+    @property
     def rating(self):
         return 0
-    
+
     @property
     def max_chunk_size(self):
         return 1250 # length of the chunk including the header but not the footer

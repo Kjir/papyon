@@ -124,6 +124,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         if presence == profile.Presence.OFFLINE:
             self.signoff()
         else:
+            if msn_object:
+                self._client._msn_object_store.publish(msn_object)
             client_id = self._client.profile.client_id
             self._transport.\
                 send_command_ex('CHG', (presence, str(client_id), 
@@ -535,23 +537,21 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 .group_by_domain()
         
         payloads = ['<ml l="1">']
-        payload_id = 0
         mask = ~(profile.Membership.REVERSE | profile.Membership.PENDING)
         for domain, contacts in contacts.iteritems():
-            payloads[payload_id] += '<d n="%s">' % domain
+            payloads[-1] += '<d n="%s">' % domain
             for contact in contacts:
                 user = contact.account.split("@", 1)[0]
                 lists = contact.memberships & mask
                 network_id = contact.network_id
                 node = '<c n="%s" l="%d" t="%d"/>' % (user, lists, network_id)
-                size = len(payloads[payload_id]) + len(node) + len('</d></ml>')
+                size = len(payloads[-1]) + len(node) + len('</d></ml>')
                 if size >= MAX_PAYLOAD_SIZE:
-                    payloads[payload_id] += '</d></ml>'
-                    payload_id += 1
-                    payloads[payload_id] = '<ml l="1"><d n="%s">' % domain
-                payloads[payload_id] += node 
-            payloads[payload_id] += '</d>'
-        payloads[payload_id] += '</ml>'
+                    payloads[-1] += '</d></ml>'
+                    payloads.append('<ml l="1"><d n="%s">' % domain)
+                payloads[-1] += node 
+            payloads[-1] += '</d>'
+        payloads[-1] += '</ml>'
         
         for payload in payloads:
             self._transport.send_command_ex("ADL", payload=payload)

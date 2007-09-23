@@ -63,7 +63,7 @@ class SwitchboardClient(object):
         self.__switchboard = weakref.proxy(switchboard)
         self._switchboard_requested = False
         self.participants = set(switchboard.participants.values())
-        
+
         self.switchboard.connect("notify::inviting",
                 lambda sb, pspec: self.__on_user_inviting_changed())
         self.switchboard.connect("user-joined",
@@ -73,7 +73,10 @@ class SwitchboardClient(object):
         self.switchboard.connect("user-invitation-failed",
                 lambda sb, contact: self.__on_user_invitation_failed(contact))
         logger.info("New switchboard attached")
-        self._process_pending_queues()
+        def process_pending_queues():
+            self._process_pending_queues()
+            return False
+        gobject.idle_add(process_pending_queues)
 
     _switchboard = property(__get_switchboard, __set_switchboard)
     switchboard = property(__get_switchboard)
@@ -186,22 +189,22 @@ class SwitchboardManager(gobject.GObject):
             @param client: the main Client instance"""
         gobject.GObject.__init__(self)
         self._client = weakref.proxy(client)
-        
-        self._handlers_class = WeakSet()
+
+        self._handlers_class = set()
         self._orphaned_handlers = WeakSet()
         self._switchboards = {}
         self._orphaned_switchboards = set()
         self._pending_switchboards = {}
-        
+
         self._client._protocol.connect("switchboard-invitation-received",
                 self._ns_switchboard_invite)
 
-    def register_handler(self, handler_class):
-        self._handlers_class.add(handler_class)
+    def register_handler(self, handler_class, *extra_arguments):
+        self._handlers_class.add((handler_class, extra_arguments))
 
     def request_switchboard(self, handler):
         handler_participants = handler.total_participants
-        
+
         # If the Handler was orphan, then it is no more
         self._orphaned_handlers.discard(handler)
 
@@ -243,7 +246,7 @@ class SwitchboardManager(gobject.GObject):
                 switchboard.leave()
                 del self._switchboards[switchboard]
                 self._orphaned_switchboards.add(switchboard)
-        
+
         for switchboard in self._pending_switchboards.keys():
             handlers = self._pending_switchboards[switchboard]
             handlers.discard(handler)
@@ -299,7 +302,7 @@ class SwitchboardManager(gobject.GObject):
                     self._orphaned_handlers.discard(handler)
                     self._orphaned_switchboards.discard(switchboard)
                     handler._switchboard = switchboard
-            
+
             # no one wants it, it is an orphan
             if len(self._switchboards[switchboard]) == 0:
                 del self._switchboards[switchboard]
@@ -317,15 +320,15 @@ class SwitchboardManager(gobject.GObject):
         if switchboard in self._switchboards.keys():
             handlers = self._switchboards[switchboard]
             for handler in handlers:
-                if not handler._can_handle_message(message):
+                if not handler._can_handle_message(message, handler):
                     continue
                 handler._on_message_received(message)
 
         if switchboard in list(self._orphaned_switchboards):
-            for handler_class in self._handlers_class:
+            for handler_class, extra_args in self._handlers_class:
                 if not handler_class._can_handle_message(message):
                     continue
-                handler = handler_class(self._client, ())
+                handler = handler_class(self._client, (), *extra_args)
                 self._switchboards[switchboard] = set([handler]) #FIXME: WeakSet ?
                 self._orphaned_switchboards.discard(switchboard)
                 handler._switchboard = switchboard

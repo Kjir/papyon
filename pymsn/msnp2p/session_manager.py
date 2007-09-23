@@ -22,6 +22,7 @@ from pymsn.msnp2p.transport import *
 from pymsn.msnp2p.exceptions import ParseError
 from pymsn.msnp2p.SLP import SLPMessage, SLPRequestMessage, SLPResponseMessage
 from pymsn.msnp2p.session import IncomingP2PSession
+from pymsn.msnp2p.constants import SLPContentType
 
 import pymsn.profile
 
@@ -76,6 +77,10 @@ class P2PSessionManager(gobject.GObject):
                 if not create_inexistant_session:
                     logger.warning('Received blob SLP INVITE, but Session spawning disabled')
                     return None
+
+                if message.body.content_type != SLPContentType.SESSION_REQUEST:
+                    # FIXME: handle transfer requests
+                    return
 
                 contacts = self._client.address_book.contacts.\
                         search_by_network_id(pymsn.profile.NetworkID.MSN).\

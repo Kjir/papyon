@@ -43,9 +43,13 @@ class P2PTransportManager(gobject.GObject):
     
     def __init__(self, client):
         gobject.GObject.__init__(self)
-    
+
         self._client = client
-        self._default_transport = SwitchboardP2PTransport
+        switchboard_manager = self._client._switchboard_manager
+        switchboard_manager.register_handler(SwitchboardP2PTransport, self)
+        self._default_transport = \
+                lambda transport_mgr, peer : \
+                        SwitchboardP2PTransport(client, (peer,), transport_mgr)
         self._transports = set()
         self._transport_signals = {}
         self._signaling_blobs = {} # blob_id => blob
@@ -66,11 +70,11 @@ class P2PTransportManager(gobject.GObject):
             transport.disconnect(signal)
         del self._transport_signals[transport]
 
-    def _get_transport(self, session):
+    def _get_transport(self, peer):
         for transport in self._transports:
-            if transport.session == session:
+            if transport.peer == peer:
                 return transport
-        return self._default_transport(self, session)
+        return self._default_transport(self, peer)
 
     def _on_chunk_received(self, transport, chunk):
         session_id = chunk.header.session_id
@@ -112,8 +116,8 @@ class P2PTransportManager(gobject.GObject):
     def _on_blob_sent(self, transport, blob):
         self.emit("blob-sent", blob)
 
-    def send(self, session, blob):
-        transport = self._get_transport(session)
+    def send(self, peer, blob):
+        transport = self._get_transport(peer)
         transport.send(blob, (self._on_blob_sent, transport, blob))
 
     def register_writable_blob(self, blob):

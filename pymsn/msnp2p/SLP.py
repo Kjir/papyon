@@ -184,8 +184,7 @@ class SLPMessageBody(HTTPMessage):
     def parse(self, data):
         if len(data) == 0:
             return
-        if data[-1:] == "\x00":
-            data = data[:-1]
+        data.rstrip('\x00')
         HTTPMessage.parse(self, data)
 
     def __str__(self):

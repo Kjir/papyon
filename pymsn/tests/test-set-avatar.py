@@ -40,12 +40,11 @@ class ClientEvents(pymsn.event.ClientEventInterface):
             self._client.profile.display_name = "Kimbix"
             self._client.profile.personal_message = "Testing pymsn, and freeing the pandas!"
 
-            path = '/home/jprieur/projects/pymsn.rewrite/pymsn/tests/avatar.jpeg'
+            path = 'pymsn/tests/avatar.png'
             f = open(path, 'r')
-            old_pos = f.tell()
             f.seek(0, 2)
             size = f.tell()
-            f.seek(old_pos,0)
+            f.seek(0, 0)
 
             msn_object = pymsn.p2p.MSNObject(self._client.profile,
                                     size, 
@@ -69,7 +68,6 @@ class Client(pymsn.Client):
         else:
             pymsn.Client.__init__(self, server, proxies = get_proxies())
         ClientEvents(self)
-        self._p2p_session_manager = P2PSessionManager(self)
         gobject.idle_add(self._connect)
 
     def _connect(self):
