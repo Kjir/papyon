@@ -1,0 +1,3 @@
+include test.py
+include setup.py
+include README COPYING AUTHORS NEWS ChangeLog
