@@ -135,6 +135,7 @@ class MSNObject(object):
         return self.__repr__()
 
     def __repr__(self):
+# FIXME : is SHA1C ever used?
 #         if self._checksum_sha is not None:
 #             dump = "<msnobj Creator=\"%s\" Size=\"%s\" Type=\"%s\" Location=\"%s\" "\
 #                 "Friendly=\"%s\" SHA1D=\"%s\" SHA1C=\"%s\"/>" % \

@@ -68,9 +68,12 @@ class BaseConversation(EventsDispatcher):
         if len(message.msn_objects) > 0:
             body = []
             for alias, msn_object in message.msn_objects.iteritems():
+                self._client._msn_object_store.publish(msn_object)
                 body.append(alias.encode("utf-8"))
                 body.append(str(msn_object))
-            self._send_message(("text/x-mms-emoticon",), '\t'.join(body))
+                # FIXME : we need to distinguish animemoticon and emoticons
+                # and send the related msn objects in separated messages
+            self._send_message(("text/x-mms-animemoticon",), '\t'.join(body))
 
         content_type = ("text/plain","utf-8")
         body = message.content.encode("utf-8")
