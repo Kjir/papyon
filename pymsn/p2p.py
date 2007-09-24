@@ -202,7 +202,6 @@ class MSNObjectStore(EventsDispatcher):
                         self._incoming_session_transfer_completed)
         self._incoming_sessions[session] = handle_id
         msn_object = MSNObject.parse(self._client, session._context)
-        print "***************", self._published_objects
         for obj in self._published_objects:
             if obj._data_sha == msn_object._data_sha:
                 session.accept(obj._data)

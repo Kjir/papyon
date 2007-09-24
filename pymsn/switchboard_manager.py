@@ -319,9 +319,20 @@ class SwitchboardManager(gobject.GObject):
         switchboard_participants = set(switchboard.participants.values())
         if switchboard in self._switchboards.keys():
             handlers = self._switchboards[switchboard]
+            handlers_class = [type(handler) for handler in handlers]
             for handler in handlers:
                 if not handler._can_handle_message(message, handler):
                     continue
+                handler._on_message_received(message)
+            for handler_class, extra_args in self._handlers_class:
+                if handler_class in handlers_class:
+                    continue
+                if not handler_class._can_handle_message(message):
+                    continue
+                handler = handler_class(self._client, (), *extra_args)
+                handlers.add(handler)
+                handler._switchboard = switchboard
+                self.emit("handler-created", handler_class, handler)
                 handler._on_message_received(message)
 
         if switchboard in list(self._orphaned_switchboards):

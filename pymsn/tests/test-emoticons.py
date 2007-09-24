@@ -51,17 +51,16 @@ class ConversationEvents(pymsn.event.ConversationEventInterface):
         gobject.timeout_add(5000, self.send_message)
     
     def send_message(self):
-        path = '/home/jprieur/projects/pymsn.rewrite/pymsn/tests/emoticon.gif'
+        path = 'pymsn/tests/emoticon.gif'
         f = open(path, 'r')
-        old_pos = f.tell()
         f.seek(0, 2)
         size = f.tell()
-        f.seek(old_pos,0)
-        
+        f.seek(0, 0)
+
         msn_object = pymsn.p2p.MSNObject(self._client._client.profile, size, 
                          pymsn.p2p.MSNObjectType.CUSTOM_EMOTICON, 0, "",
-                         data = StringIO.StringIO(f.read()))
-        
+                         data=f)
+
         msg = "lalala (CAT) hihihi hu"
         emoticons = { "(CAT)" : msn_object , "hu" : msn_object }  
         self._client.send_text_message(pymsn.ConversationMessage(
@@ -107,7 +106,7 @@ class Client(pymsn.Client):
             return True
         else:
             for contact in contacts:
-                if contact.account == "johann.prieur@gmail.com":
+                if contact.account == "im_a_jabber_monkey@hotmail.com":
                     print "Inviting %s for a conversation" % contact.display_name
                     self.conv = pymsn.Conversation(self, [contact])
                     ConversationEvents(self.conv)
