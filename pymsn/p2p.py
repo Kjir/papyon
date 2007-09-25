@@ -200,6 +200,11 @@ class MSNObjectStore(EventsDispatcher):
         callback[0](msn_object, *callback[1:])
         del self._outgoing_sessions[session]
 
+        if len(self._outgoing_sessions) < self.MAX_REQUESTS and \
+                len(self._pending_requests) > 0:
+            msn_object, callback, errback = self._pending_requests.pop(0)
+            self.request(msn_object, callback, errback)
+
     def _incoming_session_received(self, session_manager, session):
         if session._euf_guid != EufGuid.MSN_OBJECT:
             # FIXME: we should not reject here
@@ -219,7 +224,3 @@ class MSNObjectStore(EventsDispatcher):
         handle_id = self._incoming_sessions[session]
         session.disconnect(handle_id)
         del self._incoming_sessions[session]
-        if len(self._outgoing_sessions) < self.MAX_REQUESTS and \
-                len(self._pending_requests) > 0:
-            msn_object, callback, errback = self._pending_requests.pop(0)
-            self.request(msn_object, callback, errback)
