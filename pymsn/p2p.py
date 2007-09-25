@@ -154,9 +154,12 @@ class MSNObject(object):
 
 
 class MSNObjectStore(EventsDispatcher):
+    MAX_REQUESTS = 3
+
     def __init__(self, client):
         self._client = client
         self._outgoing_sessions = {} # session => (handle_id, callback, errback)
+        self._pending_requests = []
         self._incoming_sessions = {}
         self._published_objects = set()
         self._client._p2p_session_manager.connect("incoming-session",
@@ -172,12 +175,16 @@ class MSNObjectStore(EventsDispatcher):
         else:
             raise NotImplementedError
 
-        session = OutgoingP2PSession(self._client._p2p_session_manager, 
-                                     msn_object._creator, msn_object, 
-                                     EufGuid.MSN_OBJECT, application_id)
-        handle_id = session.connect("transfer-completed",
-                        self._outgoing_session_transfer_completed)
-        self._outgoing_sessions[session] = (handle_id, callback, errback, msn_object)
+        if len(self._outgoing_sessions) >= self.MAX_REQUESTS:
+            self._pending_requests.append((msn_object, callback, errback))
+        else:
+            session = OutgoingP2PSession(self._client._p2p_session_manager, 
+                    msn_object._creator, msn_object, 
+                    EufGuid.MSN_OBJECT, application_id)
+            handle_id = session.connect("transfer-completed",
+                    self._outgoing_session_transfer_completed)
+            self._outgoing_sessions[session] = \
+                    (handle_id, callback, errback, msn_object)
 
     def publish(self, msn_object):
         if msn_object._data is None:
@@ -212,4 +219,7 @@ class MSNObjectStore(EventsDispatcher):
         handle_id = self._incoming_sessions[session]
         session.disconnect(handle_id)
         del self._incoming_sessions[session]
-
+        if len(self._outgoing_sessions) < self.MAX_REQUESTS and \
+                len(self._pending_requests) > 0:
+            msn_object, callback, errback = self._pending_requests.pop(0)
+            self.request(msn_object, callback, errback)
