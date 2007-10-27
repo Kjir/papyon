@@ -121,6 +121,7 @@ class SingleSignOn(SOAPService):
         self.__pending_response = False
         self.__pending_requests = []
         SOAPService.__init__(self, "SingleSignOn", proxies)
+        self.url = self._service.url
 
     def RequestMultipleSecurityTokens(self, callback, errback, *services):
         """Requests multiple security tokens from the single sign on service.
@@ -138,7 +139,8 @@ class SingleSignOn(SOAPService):
         method = self._service.RequestMultipleSecurityTokens
 
         response_tokens = {}
-
+        
+        requested_services = services
         services = list(services)
         for service in services: # filter already available tokens
             service_url = service[0]
@@ -150,10 +152,8 @@ class SingleSignOn(SOAPService):
 
         if len(services) == 0:
             self._HandleRequestMultipleSecurityTokensResponse(callback,
-                    errback, [], response_tokens)
+                    errback, [], (requested_services, response_tokens))
             return
-
-        url = self._service.url
 
         http_headers = method.transport_headers()
         soap_action = method.soap_action()
@@ -162,12 +162,13 @@ class SingleSignOn(SOAPService):
         soap_body = method.soap_body(*services)
 
         self.__pending_response = True
-        self._send_request("RequestMultipleSecurityTokens", url,
+        self._send_request("RequestMultipleSecurityTokens", self.url,
                 soap_header, soap_body, soap_action,
-                callback, errback, http_headers, response_tokens)
+                callback, errback, http_headers, (requested_services, response_tokens))
     
     def _HandleRequestMultipleSecurityTokensResponse(self, callback, errback,
-            response, response_tokens):
+            response, user_data):
+        requested_services, response_tokens = user_data
         result = {}
         for node in response:
             token = SecurityToken()
@@ -214,6 +215,15 @@ class SingleSignOn(SOAPService):
              soap_response, user_data):
         if soap_response.fault.faultcode.endswith("FailedAuthentication"):
             errback[0](*errback[1:])
+        elif soap_response.fault.faultcode.endswith("Redirect"):
+            requested_services, response_tokens = user_data
+            self.url = soap_response.fault.tree.findtext("psf:redirectUrl")
+            self.__pending_response = False
+            self.RequestMultipleSecurityTokens(callback, errback, *requested_services)
+            
+            
+            
+        
 
 if __name__ == '__main__':
     import sys

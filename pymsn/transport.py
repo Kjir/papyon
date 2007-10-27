@@ -298,7 +298,8 @@ class DirectConnection(BaseTransport):
             self._receiver.delimiter = "\r\n"
         else:
             cmd.parse(chunk)
-            if cmd.name in msnp.Command.INCOMING_PAYLOAD:
+            if cmd.name in msnp.Command.INCOMING_PAYLOAD or \
+                    (cmd.is_error() and (cmd.arguments is not None) and len(cmd.arguments) > 0):
                 try:
                     payload_len = int(cmd.arguments[-1])
                 except:
@@ -441,7 +442,8 @@ class HTTPPollConnection(BaseTransport):
         first, rest = data.split('\r\n', 1)
         cmd = msnp.Command()
         cmd.parse(first.strip())
-        if cmd.name in msnp.Command.INCOMING_PAYLOAD:
+        if cmd.name in msnp.Command.INCOMING_PAYLOAD or \
+                (cmd.is_error() and (cmd.arguments is not None) and len(cmd.arguments) > 0):
             try:
                 payload_len = int(cmd.arguments[-1])
             except:

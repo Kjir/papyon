@@ -19,6 +19,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from pymsn.gnet.constants import *
+from pymsn.gnet.resolver import *
 from abstract import AbstractClient
 
 import gobject
@@ -85,7 +86,15 @@ class GIOChannelClient(AbstractClient):
         self._watch_remove()
 
     def _open(self, host, port):
+        resolver = HostnameResolver()
+        resolver.query(host, port, (self.__open,))
+
+    def __open(self, result):
+        host, port = result[0][-1]
         err = self._transport.connect_ex((host, port))
+        self._watch_set_cond(gobject.IO_PRI | gobject.IO_IN | gobject.IO_OUT |
+                gobject.IO_HUP | gobject.IO_ERR | gobject.IO_NVAL,
+                lambda chan, cond: self._post_open())
         if err in (0, EINPROGRESS, EALREADY, EWOULDBLOCK, EISCONN):
             return
         elif err in (EHOSTUNREACH, EHOSTDOWN, ECONNREFUSED, ECONNABORTED,
@@ -124,9 +133,6 @@ class GIOChannelClient(AbstractClient):
             return
         self._pre_open()
         self._open(self._host, self._port)
-        self._watch_set_cond(gobject.IO_PRI | gobject.IO_IN | gobject.IO_OUT |
-                gobject.IO_HUP | gobject.IO_ERR | gobject.IO_NVAL,
-                lambda chan, cond: self._post_open())
     
     def close(self):
         if self._status in (IoStatus.CLOSING, IoStatus.CLOSED):

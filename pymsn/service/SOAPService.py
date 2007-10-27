@@ -103,6 +103,7 @@ class SOAPResponse(ElementTree.XMLResponse):
             "wsi" : XMLNS.WS.ISSUE,
             "wsu" : XMLNS.WS.UTILITY,
             "ps" : XMLNS.MICROSOFT.PASSPORT,
+            "psf" : XMLNS.MICROSOFT.PASSPORT_FAULT,
             "ab" : XMLNS.MICROSOFT.LIVE.ADDRESSBOOK,
             "st" : XMLNS.MICROSOFT.LIVE.STORAGE,
             "oim" : XMLNS.MICROSOFT.LIVE.OIM,

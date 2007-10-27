@@ -52,6 +52,7 @@ class XMLNS(object):
     
     class MICROSOFT:
         PASSPORT = "http://schemas.microsoft.com/Passport/SoapServices/PPCRL"
+        PASSPORT_FAULT = "http://schemas.microsoft.com/Passport/SoapServices/SOAPFault"
 
         class LIVE:
             ADDRESSBOOK = "http://www.msn.com/webservices/AddressBook"
