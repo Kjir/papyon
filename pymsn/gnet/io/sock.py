@@ -62,7 +62,7 @@ class SocketClient(GIOChannelClient):
         
         if cond & (gobject.IO_IN | gobject.IO_PRI):
             try:
-                buf = self._channel.read(2048)
+                buf = self._channel.read(8192)
             except gobject.GError:
                 buf = ""
             if buf == "":

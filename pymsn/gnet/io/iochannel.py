@@ -87,10 +87,15 @@ class GIOChannelClient(AbstractClient):
 
     def _open(self, host, port):
         resolver = HostnameResolver()
-        resolver.query(host, port, (self.__open,))
+        resolver.query(host, (self.__open, host, port))
 
-    def __open(self, result):
-        host, port = result[0][-1]
+    def __open(self, resolve_response, host, port):
+        if resolve_response.status != 0:
+            self.emit("error", IoError.CONNECTION_FAILED)
+            self._transport.close()        
+            return
+        else:
+            host = resolve_response.answer[0][1]
         err = self._transport.connect_ex((host, port))
         self._watch_set_cond(gobject.IO_PRI | gobject.IO_IN | gobject.IO_OUT |
                 gobject.IO_HUP | gobject.IO_ERR | gobject.IO_NVAL,
@@ -100,6 +105,7 @@ class GIOChannelClient(AbstractClient):
         elif err in (EHOSTUNREACH, EHOSTDOWN, ECONNREFUSED, ECONNABORTED,
                 ENETUNREACH, ENETDOWN):
             self.emit("error", IoError.CONNECTION_FAILED)
+            self._transport.close()
 
     # convenience methods
     def _watch_remove(self):

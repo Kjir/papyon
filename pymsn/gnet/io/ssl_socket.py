@@ -43,7 +43,6 @@ class SSLSocketClient(GIOChannelClient):
             sock = socket.socket(self._domain, self._type)
         context = OpenSSL.Context(OpenSSL.SSLv23_METHOD)
         ssl_sock = OpenSSL.Connection(context, sock)
-        ssl_sock.set_connect_state()
         GIOChannelClient._pre_open(self, ssl_sock)
     
     def _post_open(self):
@@ -74,7 +73,7 @@ class SSLSocketClient(GIOChannelClient):
         elif self._status == IoStatus.OPEN:
             if cond & (gobject.IO_IN | gobject.IO_PRI):
                 try:
-                    buf = self._transport.recv(2048)
+                    buf = self._transport.recv(8192)
                 except (OpenSSL.WantX509LookupError,
                         OpenSSL.WantReadError, OpenSSL.WantWriteError):
                     return True
