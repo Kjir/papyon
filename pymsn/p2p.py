@@ -154,7 +154,7 @@ class MSNObject(object):
 
 
 class MSNObjectStore(EventsDispatcher):
-    MAX_REQUESTS = 3
+    MAX_REQUESTS = 99999999999
 
     def __init__(self, client):
         self._client = client

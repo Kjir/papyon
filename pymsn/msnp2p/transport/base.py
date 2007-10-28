@@ -69,7 +69,7 @@ class BaseP2PTransport(gobject.GObject):
             self._control_blob_queue.append((blob, callback, errback))
         else:
             self._data_blob_queue.append((blob, callback, errback))
-        gobject.timeout_add(400, self._process_send_queues)
+        gobject.timeout_add(200, self._process_send_queues)
         self._process_send_queues()
 
     def close(self):
@@ -126,10 +126,10 @@ class BaseP2PTransport(gobject.GObject):
         blob, callback, errback = queue[0]
         chunk = blob.get_chunk(self.max_chunk_size)
         if blob.is_complete():
+            # FIXME: we should keep it in the queue until we receive the ACK
+            queue.pop(0)
             if callback:
                 callback[0](*callback[1:])
-            # FIXME: we should keep it in the queue until we receive the ACK
-            queue.pop(0) 
 
         if chunk.require_ack() :
             self._add_pending_ack(chunk.header.blob_id, chunk.header.dw1)

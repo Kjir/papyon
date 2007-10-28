@@ -19,7 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from pymsn.msnp2p.transport import *
-from pymsn.msnp2p.exceptions import ParseError
+from pymsn.msnp2p.exceptions import ParseError, SLPError
 from pymsn.msnp2p.SLP import SLPMessage, SLPRequestMessage, SLPResponseMessage
 from pymsn.msnp2p.session import IncomingP2PSession
 from pymsn.msnp2p.constants import SLPContentType
@@ -61,6 +61,7 @@ class P2PSessionManager(gobject.GObject):
 
     def _blob_to_session(self, blob, create_inexistant_session=True):
         if blob.session_id == 0:
+            blob.data.seek(0, 0)
             slp_data = blob.data.read()
             blob.data.seek(0, 0)
             try:
@@ -92,9 +93,14 @@ class P2PSessionManager(gobject.GObject):
                             display_name=message.frm)
                 else:
                     peer = contacts[0]
-                session = IncomingP2PSession(self, peer, session_id, message)
-                self.emit("incoming-session", session)
-                return session
+                
+                try:
+                    session = IncomingP2PSession(self, peer, session_id, message)
+                    self.emit("incoming-session", session)
+                    return session
+                except SLPError:
+                    #TODO: answer with a 603 Decline ?
+                    return None
             else:
                 logger.warning('Received initial blob with SessionID=0 and non INVITE SLP data')
                 #TODO: answer with a 500 Internal Error ?

@@ -21,6 +21,7 @@
 from pymsn.msnp2p.constants import *
 from pymsn.msnp2p.SLP import *
 from pymsn.msnp2p.transport import *
+from pymsn.msnp2p.exceptions import *
 
 import pymsn.util.guid as guid
 
@@ -155,7 +156,10 @@ class IncomingP2PSession(P2PSession):
 
         self._cseq = message.cseq
         self._branch = message.branch
-        self._context = message.body.context.strip('\x00')
+        try:
+            self._context = message.body.context.strip('\x00')
+        except AttributeError:
+            raise SLPError("Incoming INVITE without context")
 
     def accept(self, data_file):
         gobject.idle_add(self._start_transfer, data_file)

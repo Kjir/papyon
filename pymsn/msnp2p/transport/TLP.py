@@ -167,6 +167,9 @@ class MessageBlob(object):
         if self.data is not None:
             self.data.close()
 
+    def __repr__(self):
+        return "<MessageBlob id=%x session_id=%x>" % (self.id, self.session_id)
+
     @property
     def transferred(self):
         return self.current_size
@@ -218,6 +221,9 @@ class ControlBlob(MessageBlob):
         header = TLPHeader(session_id, self.id, 0, 0, 0,
                 flags, dw1, dw2, qw1)
         self.chunk = MessageChunk(header, "")
+
+    def __repr__(self):
+        return "<ControlBlob id=%x session_id=%x>" % (self.id, self.session_id)
 
     def get_chunk(self, max_size):
         return self.chunk
