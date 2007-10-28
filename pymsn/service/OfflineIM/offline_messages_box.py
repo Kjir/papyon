@@ -99,7 +99,7 @@ class OfflineMessage(object):
             date = iso8601.parse_date(date)
             self._date = date.replace(tzinfo=None) # FIXME: do not disable the timezone
 
-        self.__text = None
+        self.__text = ''
         self.__run_id = ''
         self.__sequence_num = -1
         self.__is_mobile = False

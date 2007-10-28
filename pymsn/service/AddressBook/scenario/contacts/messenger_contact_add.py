@@ -56,7 +56,7 @@ class MessengerContactAddScenario(BaseScenario):
                             self.contact_info,
                             invite_info)
 
-    def __contact_add_callback(self, contact_guid):
+    def __contact_add_callback(self, contact_guid, delta):
         self._ab.FindAll((self.__find_all_callback, contact_guid),
                          (self.__find_all_errback, contact_guid),
                          self._scenario, True)

@@ -69,7 +69,7 @@ class AcceptInviteScenario(BaseScenario):
                                     self._scenario, 'Pending', self._type(),
                                     self.state, self.account)
             
-    def __add_contact_callback(self, contact_guid):
+    def __add_contact_callback(self, contact_guid, delta):
         self.__ab.FindAll((self.__find_all_callback, contact_guid),
                           (self.__find_all_errback, contact_guid),
                           self._scenario, True)

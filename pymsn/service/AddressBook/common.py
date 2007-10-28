@@ -26,8 +26,8 @@ def annotations_to_dict(annotations):
 
     result = {}
     for annotation in annotations:
-        key = annotation.find("./ab:Name").text
-        value = annotation.find("./ab:Value").text
+        key = annotation.findtext("./ab:Name")
+        value = annotation.findtext("./ab:Value")
         result[key] = value
     return result
 
