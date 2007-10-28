@@ -24,7 +24,7 @@ __all__ = ['DeclineInviteScenario']
 
 class DeclineInviteScenario(BaseScenario):
     def __init__(self, sharing, callback, errback, account='', 
-                 network=NetworkID.MSN, state='LivePending'):
+                 network=NetworkID.MSN, state='Accepted'):
         """Declines an invitation.
 
             @param sharing: the membership service
@@ -76,7 +76,7 @@ class DeclineInviteScenario(BaseScenario):
 
     def __add_member_reverse_callback(self):
         callback = self._callback
-        callback[0](*callback[1])
+        callback[0](*callback[1:])
 
     def __add_member_reverse_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
