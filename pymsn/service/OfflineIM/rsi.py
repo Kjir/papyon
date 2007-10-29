@@ -24,7 +24,11 @@ from pymsn.service.SOAPService import SOAPService
 
 import email
 
+import logging
+
 __all__ = ['RSI']
+
+logger = logging.getLogger('Service')
 
 class RSI(SOAPService):
     def __init__(self, sso, proxies=None):

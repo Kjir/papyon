@@ -33,18 +33,29 @@ import pymsn.util.iso8601 as iso8601
 
 import datetime
 import gobject
+
 import logging
 
 __all__ = ['OfflineMessagesBox', 'OfflineMessage']
 
 logger = logging.getLogger('Service')
 
-class OfflineMessagesStorage(set):
+class OfflineMessagesStorage(list):
     def __init__(self, initial_set=()):
-        set.__init__(self, initial_set)
+        list.__init__(self, initial_set)
 
-    def __repr__(self):
-        return "OfflineMessagesStorage : %d message(s)" % len(self)
+#     def __repr__(self):
+#         return "OfflineMessagesStorage : %d message(s)" % len(self)
+    
+    def add(self, message):
+        self.append(message)
+
+    def __iter__(self):
+        self.sort()
+        return list.__iter__(self)
+
+    def sort(self):
+        list.sort(self, cmp = lambda x,y : x <= y)
 
     def __getitem__(self, key):
         i = 0
@@ -149,17 +160,18 @@ class OfflineMessage(object):
     _is_mobile = property(__get_is_mobile, __set_is_mobile)
 
     def __str__(self):
-        return self.__text
+        return "%s %s %s" % (self.__text, self.__run_id, self.__sequence_num)
 
     def __repr__(self):
         return str(self)
 
-    def __gt__(self, other):
+    def __cmp__(self, other):
         if self.__run_id == other._run_id:
-            return self.__sequence_num >= other._sequence_num
-        else:
-            return self._date >= other._date
-            
+            if self.__sequence_num >= other._sequence_num:
+                return 1
+        elif self._date >= other._date:
+            return 1
+        return -1
 
 class Metadata(ElementTree.XMLResponse):
     def __init__(self, metadata):
@@ -339,6 +351,7 @@ class OfflineMessagesBox(gobject.GObject):
         message._text = text
 
     def __fetch_messages_cb(self, messages):
+        logger.debug('&&&&& %s' % messages)
         self.emit('messages-fetched', messages)
 
     def __send_message_cb(self, recipient, message):
