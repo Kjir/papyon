@@ -140,13 +140,13 @@ class MSNObject(object):
     def __repr__(self):
         if self._repr is not None:
             return self._repr
-        dump = "<msnobj Creator=\"%s\" Type=\"%s\" SHA1D=\"%s\" Size=\"%s\" Location=\"%s\" Friendly=\"%s\"/>" % \
-            (self._creator.account, 
-                str(self._type), 
-                base64.b64encode(self._data_sha), 
-                self._size,
+        dump = "<msnobj Creator=%s Type=%s SHA1D=%s Size=%s Location=%s Friendly=%s/>" % \
+            (xml.quoteattr(self._creator.account), 
+                xml.quoteattr(str(self._type)), 
+                xml.quoteattr(base64.b64encode(self._data_sha)), 
+                xml.quoteattr(str(self._size)),
                 xml.quoteattr(str(self._location)), 
-                base64.b64encode(self._friendly))
+                xml.quoteattr(base64.b64encode(self._friendly)))
         return dump
 
 
