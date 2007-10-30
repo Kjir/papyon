@@ -50,21 +50,6 @@ class OfflineMessagesStorage(list):
     def add(self, message):
         self.append(message)
 
-    def __iter__(self):
-        self.sort()
-        return list.__iter__(self)
-
-    def sort(self):
-        list.sort(self, cmp = lambda x,y : x <= y)
-
-    def __getitem__(self, key):
-        i = 0
-        for contact in self:
-            if i == key:
-                return contact
-            i += 1
-        return None
-
     def __getattr__(self, name):
         if name.startswith("search_by_"):
             field = name[10:]
@@ -160,16 +145,15 @@ class OfflineMessage(object):
     _is_mobile = property(__get_is_mobile, __set_is_mobile)
 
     def __str__(self):
-        return "%s %s %s" % (self.__text, self.__run_id, self.__sequence_num)
+        return self.__text
 
     def __repr__(self):
-        return str(self)
+        return "<OfflineMessage run_id=%s seq_num=%d>" % (self.run_id, self.sequence_num)
 
     def __cmp__(self, other):
-        if self.__run_id == other._run_id:
-            if self.__sequence_num >= other._sequence_num:
-                return 1
-        elif self._date >= other._date:
+        if self.run_id == other.run_id:
+            return self.sequence_num - other.sequence_num
+        elif self.date >= other.date:
             return 1
         return -1
 
@@ -351,7 +335,7 @@ class OfflineMessagesBox(gobject.GObject):
         message._text = text
 
     def __fetch_messages_cb(self, messages):
-        logger.debug('&&&&& %s' % messages)
+        messages.sort()
         self.emit('messages-fetched', messages)
 
     def __send_message_cb(self, recipient, message):
