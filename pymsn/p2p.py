@@ -68,6 +68,9 @@ class MSNObject(object):
         self.__data = data
         self._repr = None
 
+    def __ne__(self, other):
+        return not (self == other)
+
     def __eq__(self, other):
         if other == None:
             return False
