@@ -206,6 +206,7 @@ class BaseTransport(gobject.GObject):
         cmd = msnp.Command()
         cmd.build(command, self._transaction_id, payload, *arguments)
         self.send_command(cmd, increment, callback, *cb_args)
+        return cmd
 
     def _increment_transaction_id(self):
         """Increments the Transaction ID then return it.

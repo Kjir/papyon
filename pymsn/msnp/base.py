@@ -73,6 +73,11 @@ class BaseProtocol(object):
         self._client = client
         self._transport = transport
         self._proxies = proxies
+
+    def _send_command(self, command, arguments=(), payload=None, 
+            increment=True, callback=None, *cb_args):
+        self._transport.send_command_ex(command, arguments, payload, increment,
+                callback, *cb_args)
    
     # default handlers
     def _default_handler(self, command):

@@ -154,7 +154,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         assert(self.state == ProtocolState.OPEN)
         self.__invitations[self._transport.transaction_id] = contact
         self._inviting = True
-        self._transport.send_command_ex('CAL', (contact.account,) )
+        self._send_command('CAL', (contact.account,) )
 
     def send_message(self, message, ack, callback=None, cb_args=()):
         """Send a message to all contacts in this switchboard
@@ -162,7 +162,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             @param message: the message to send
             @type message: L{message.Message}"""
         assert(self.state == ProtocolState.OPEN)
-        self._transport.send_command_ex('MSG',
+        self._send_command('MSG',
                 (ack,),
                 message,
                 True,
@@ -177,7 +177,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
     def leave(self):
         """Leave the conversation"""
         assert(self.state == ProtocolState.OPEN)
-        self._transport.send_command_ex('OUT')
+        self._send_command('OUT')
     # Handlers ---------------------------------------------------------------
     # --------- Authentication -----------------------------------------------
     def _handle_ANS(self, command):
@@ -284,10 +284,10 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         account = self._client.profile.account
         if self.__key is not None:
             arguments = (account, self.__key, self.__session_id)
-            self._transport.send_command_ex('ANS', arguments)
+            self._send_command('ANS', arguments)
         else:
             arguments = (account, self.__session_id)
-            self._transport.send_command_ex('USR', arguments)
+            self._send_command('USR', arguments)
         self._state = ProtocolState.AUTHENTICATING
 
     def _disconnect_cb(self, transport, reason):

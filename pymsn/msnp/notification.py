@@ -127,16 +127,15 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             if msn_object:
                 self._client._msn_object_store.publish(msn_object)
             client_id = self._client.profile.client_id
-            self._transport.\
-                send_command_ex('CHG', (presence, str(client_id), 
-                        urllib.quote(str(msn_object))))
+            self._send_command('CHG',
+                    (presence, str(client_id), urllib.quote(str(msn_object))))
 
     def set_display_name(self, display_name):
         """Sets the new display name
 
             @param friendly_name: the new friendly name
             @type friendly_name: string"""
-        self._transport.send_command_ex('PRP',
+        self._send_command('PRP',
                 ('MFN', urllib.quote(display_name)))
 
     def set_personal_message(self, personal_message='', current_media=None):
@@ -156,7 +155,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 '<CurrentMedia>%s</CurrentMedia>'\
                 '<MachineGuid>{CAFEBABE-DEAD-BEEF-BAAD-FEEDDEADC0DE}</MachineGuid>'\
             '</Data>' % (message, cm)
-        self._transport.send_command_ex('UUX', payload=pm)
+        self._send_command('UUX', payload=pm)
         self._client.profile._server_property_changed("personal-message",
                 personal_message)
         if current_media is not None:
@@ -165,12 +164,12 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     def signoff(self):
         """Logout from the server"""
-        self._transport.send_command_ex('OUT')
+        self._send_command('OUT')
         self._transport.lose_connection()
         
     def request_switchboard(self, callback, *callback_args):
         self.__switchboard_callbacks.append((callback, callback_args))
-        self._transport.send_command_ex('XFR', ('SB',))
+        self._send_command('XFR', ('SB',))
 
     def add_contact_to_membership(self, account,
             network_id=profile.NetworkID.MSN,
@@ -191,12 +190,12 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         if network_id == profile.NetworkID.MOBILE:
             payload = '<ml><t><c n="tel:%s" l="%d" /></t></ml>' % \
                     (contact, membership)
-            self._transport.send_command_ex("ADL", payload=payload)
+            self._send_command("ADL", payload=payload)
         else:
             contact, domain = account.split("@", 1)
             payload = '<ml><d n="%s"><c n="%s" l="%d" t="%d"/></d></ml>' % \
                     (domain, contact, membership, network_id)
-            self._transport.send_command_ex("ADL", payload=payload)
+            self._send_command("ADL", payload=payload)
 
     def remove_contact_from_membership(self, account,
             network_id=profile.NetworkID.MSN,
@@ -217,12 +216,12 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         if network_id == profile.NetworkID.MOBILE:
             payload = '<ml><t><c n="tel:%s" l="%d" /></t></ml>' % \
                     (contact, membership)
-            self._transport.send_command_ex("RML", payload=payload)
+            self._send_command("RML", payload=payload)
         else:
             contact, domain = account.split("@", 1)
             payload = '<ml><d n="%s"><c n="%s" l="%d" t="%d"/></d></ml>' % \
                     (domain, contact, membership, network_id)
-            self._transport.send_command_ex("RML", payload=payload)
+            self._send_command("RML", payload=payload)
 
     def send_unmanaged_message(self, contact, message):
         content_type = message.content_type[0]
@@ -232,7 +231,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             message_type = 2
         else:
             message_type = 1
-        self._transport.send_command_ex('UUM',
+        self._send_command('UUM',
                 (contact.account, contact.network_id, message_type),
                 payload=message)
         
@@ -241,7 +240,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _handle_VER(self, command):
         assert(len(command.arguments) > 1), "Invalid VER response : " + str(command)
         self._protocol_version = int(command.arguments[0].lstrip('MSNP'))
-        self._transport.send_command_ex('CVR',
+        self._send_command('CVR',
                 ProtocolConstant.CVR + (self._client.profile.account,))
 
     def _handle_CVR(self, command):
@@ -249,7 +248,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             method = 'SSO'
         else:
             method = 'TWN'
-        self._transport.send_command_ex('USR',
+        self._send_command('USR',
                 (method, 'I', self._client.profile.account))
 
     def _handle_XFR(self, command):
@@ -442,10 +441,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     command.payload)
 
             if self._protocol_version < 15:
-                #self._transport.send_command_ex('SYN', ('0', '0'))
+                #self._send_command('SYN', ('0', '0'))
                 raise NotImplementedError, "Missing Implementation, please fix"
             else:
-                self._transport.send_command_ex("BLP",
+                self._send_command("BLP",
                         (self._client.profile.privacy,))
                 self._state = ProtocolState.SYNCHRONIZING
                 self._client.address_book.sync()
@@ -506,14 +505,14 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     def _handle_CHL(self,command):
         response = _msn_challenge(command.arguments[0])
-        self._transport.send_command_ex('QRY',
+        self._send_command('QRY',
                 (ProtocolConstant.PRODUCT_ID,), payload=response)
 
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
         self.__switchboard_callbacks = []
         self._state = ProtocolState.OPENING
-        self._transport.send_command_ex('VER', ProtocolConstant.VER)
+        self._send_command('VER', ProtocolConstant.VER)
 
     def _disconnect_cb(self, transport, reason):
         self._state = ProtocolState.CLOSED
@@ -522,7 +521,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         clear_token = tokens[SSO.LiveService.MESSENGER_CLEAR]
         blob = clear_token.mbi_crypt(nonce)
 
-        self._transport.send_command_ex("USR",
+        self._send_command("USR",
                 ("SSO", "S", clear_token.security_token, blob))
 
     def _address_book_state_changed_cb(self, address_book, pspec):
@@ -554,7 +553,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         payloads[-1] += '</ml>'
         
         for payload in payloads:
-            self._transport.send_command_ex("ADL", payload=payload)
+            self._send_command("ADL", payload=payload)
         self._state = ProtocolState.SYNCHRONIZED
 
     def _address_book_contact_added_cb(self, address_book, contact):
@@ -568,7 +567,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             account, domain = contact.account.split('@', 1)
             payload = '<ml l="2"><d n="%s"><c n="%s"/></d></ml>'% \
                     (domain, account)
-            self._transport.send_command_ex("FQY", payload=payload)
+            self._send_command("FQY", payload=payload)
 
     def _address_book_contact_deleted_cb(self, address_book, contact):
         self.remove_contact_from_membership(contact.account, contact.network_id,
