@@ -199,6 +199,14 @@ class SwitchboardManager(gobject.GObject):
         self._client._protocol.connect("switchboard-invitation-received",
                 self._ns_switchboard_invite)
 
+    def close(self):
+        for switchboard in self._orphaned_switchboards:
+            switchboard.leave()
+        for switchboard in self._pending_switchboards:
+            switchboard.leave()
+        for switchboard in self._switchboards:
+            switchboard.leave()
+
     def register_handler(self, handler_class, *extra_arguments):
         self._handlers_class.add((handler_class, extra_arguments))
 

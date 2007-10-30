@@ -166,6 +166,7 @@ class Client(EventsDispatcher):
         if self.__state != ClientState.OPEN: # FIXME: we need something better
             return
         self._protocol.signoff()
+        self._switchboard_manager.close()
         self.__state = ClientState.CLOSED
 
     ### External Conversation handling
