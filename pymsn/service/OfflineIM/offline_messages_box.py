@@ -342,7 +342,11 @@ class OfflineMessagesBox(gobject.GObject):
         self.emit('message-sent', recipient, message)
 
     def __delete_messages_cb(self, messages):
-        self._messages.difference_update(messages)
+        for message in messages:
+            try:
+                self._messages.remove(message)
+            except ValueError:
+                pass
         self.emit('messages-deleted')
 
     def __common_callback(self, signal, *args):
