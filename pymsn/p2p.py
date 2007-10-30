@@ -66,6 +66,7 @@ class MSNObject(object):
             shad = self.__compute_data_hash(data)
         self._data_sha = shad
         self.__data = data
+        self._repr = None
 
     def __eq__(self, other):
         if other == None:
@@ -111,8 +112,10 @@ class MSNObject(object):
         if shac is not None:
             shac = base64.b64decode(shac)
 
-        return MSNObject(creator, size, type, location, \
+        result = MSNObject(creator, size, type, location, \
                              friendly, shad, shac)
+        result._repr = xml_data
+        return result
 
     def __compute_data_hash(self, data):
         digest = sha.new()
@@ -135,21 +138,15 @@ class MSNObject(object):
         return self.__repr__()
 
     def __repr__(self):
-# FIXME : is SHA1C ever used?
-#         if self._checksum_sha is not None:
-#             dump = "<msnobj Creator=\"%s\" Size=\"%s\" Type=\"%s\" Location=\"%s\" "\
-#                 "Friendly=\"%s\" SHA1D=\"%s\" SHA1C=\"%s\"/>" % \
-#                 (self._creator.account, self._size, str(self._type), \
-#                      xml.quoteattr(str(self._location)), xml.quoteattr(self._friendly), \
-#                      self._data_sha, self._checksum_sha)
-#         else:
+        if self._repr is not None:
+            return self._repr
         dump = "<msnobj Creator=\"%s\" Type=\"%s\" SHA1D=\"%s\" Size=\"%s\" Location=\"%s\" Friendly=\"%s\"/>" % \
             (self._creator.account, 
-             str(self._type), 
-             base64.b64encode(self._data_sha), 
-             self._size,
-             str(self._location), 
-             base64.b64encode(self._friendly))
+                str(self._type), 
+                base64.b64encode(self._data_sha), 
+                self._size,
+                xml.quoteattr(str(self._location)), 
+                base64.b64encode(self._friendly))
         return dump
 
 
