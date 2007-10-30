@@ -199,7 +199,7 @@ class OutgoingP2PSession(P2PSession):
         body.add_header('EUF-GUID', self._euf_guid)
         body.add_header('SessionID', self._id)
         body.add_header('AppID', self._application_id)
-        body.add_header('Context', base64.standard_b64encode(str(context)))
+        body.add_header('Context', base64.b64encode(str(context) + '\x00'))
 
         message = SLPRequestMessage('INVITE',
                 "MSNMSGR:" + self._peer.account,
