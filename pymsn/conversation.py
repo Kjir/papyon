@@ -130,10 +130,15 @@ class BaseConversation(EventsDispatcher):
             message_formatting = '='
 
         if message_type == 'text/plain':
-            self._dispatch("on_conversation_message_received", sender, 
-                    ConversationMessage(unicode(message.body, message_encoding),
-                                        TextFormat.parse(message_formatting),
-                                        self.__last_received_msn_objects))
+            msg = ConversationMessage(unicode(message.body, message_encoding),
+                    TextFormat.parse(message_formatting),
+                    self.__last_received_msn_objects)
+            try:
+                display_name = message.get_header('P4-Context')
+            except KeyError:
+                display_name = sender.display_name
+            msg.display_name = display_name
+            self._dispatch("on_conversation_message_received", sender, msg)
             self.__last_received_msn_objects = {}
         elif message_type == 'text/x-msmsgscontrol':
             self._dispatch("on_conversation_user_typing", sender)
@@ -222,9 +227,10 @@ class SwitchboardConversation(BaseConversation, SwitchboardClient):
 
 class ConversationMessage(object):
     def __init__(self, content, formatting=None, msn_objects={}):
+        self.display_name = None
         self.content = content
         self.formatting = formatting
-        self.msn_objects = msn_objects    
+        self.msn_objects = msn_objects
 
 class TextFormat(object):
     
