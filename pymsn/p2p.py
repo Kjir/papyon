@@ -25,6 +25,7 @@ with a contact."""
 
 from event import EventsDispatcher
 from msnp2p import OutgoingP2PSession, EufGuid, ApplicationID
+from msnp2p.exceptions import ParseError
 from profile import NetworkID
 
 import pymsn.util.ElementTree as ElementTree
@@ -99,7 +100,10 @@ class MSNObject(object):
     @staticmethod
     def parse(client, xml_data):
         data = StringIO.StringIO(xml_data)
-        element = ElementTree.parse(data).getroot().attrib
+        try:
+            element = ElementTree.parse(data).getroot().attrib
+        except:
+            raise ParseError('Invalid MSNObject')
         
         creator = client.address_book.contacts.\
             search_by_account(element["Creator"]).\
@@ -213,7 +217,11 @@ class MSNObjectStore(EventsDispatcher):
         handle_id = session.connect("transfer-completed",
                         self._incoming_session_transfer_completed)
         self._incoming_sessions[session] = handle_id
-        msn_object = MSNObject.parse(self._client, session._context)
+        try:
+            msn_object = MSNObject.parse(self._client, session._context)
+        except ParseError:
+            session.reject()
+            return
         for obj in self._published_objects:
             if obj._data_sha == msn_object._data_sha:
                 session.accept(obj._data)

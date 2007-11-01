@@ -170,6 +170,7 @@ class SLPMessageBody(HTTPMessage):
     def context(self):
         try:
             context = self.get_header("Context")
+            context += '=' * (len(context) % 4)
             return base64.b64decode(context)
         except KeyError:
             return None

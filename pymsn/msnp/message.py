@@ -43,11 +43,8 @@ class MessageAcknowledgement(object):
 class Message(HTTPMessage):
     """Base Messages class.
     
-        @ivar account: sender account
-        @type account: string
-        
-        @ivar friendly_name: sender friendly name
-        @type friendly_name: string
+        @ivar sender: sender
+        @type sender: profile.Contact
         
         @ivar body: message body
         @type body: string
