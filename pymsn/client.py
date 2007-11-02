@@ -208,12 +208,14 @@ class Client(EventsDispatcher):
     def _on_disconnected(self, transp, reason):
         if not self.__die:
             self._dispatch("on_client_error", ClientErrorType.NETWORK, reason)
+        self.__die = False
         self._state = ClientState.CLOSED
         
     def _on_authentication_failure(self):
         self._dispatch("on_client_error", ClientErrorType.AUTHENTICATION,
                        AuthenticationError.INVALID_USERNAME_OR_PASSWORD)
-        self._state = ClientState.CLOSED
+        self.__die = True
+        self._transport.lose_connection()
 
     # - - Notification Protocol
     def _on_protocol_state_changed(self, proto, param):
