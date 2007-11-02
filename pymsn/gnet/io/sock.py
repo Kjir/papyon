@@ -42,6 +42,10 @@ class SocketClient(GIOChannelClient):
     def _pre_open(self, sock=None):
         if sock is None:
             sock = socket.socket(self._domain, self._type)
+            try:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            except AttributeError:
+                pass
         GIOChannelClient._pre_open(self, sock)
     
     def _post_open(self):

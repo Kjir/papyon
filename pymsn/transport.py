@@ -208,6 +208,9 @@ class BaseTransport(gobject.GObject):
         self.send_command(cmd, increment, callback, *cb_args)
         return cmd
 
+    def enable_ping(self):
+        pass
+
     def _increment_transaction_id(self):
         """Increments the Transaction ID then return it.
             
@@ -236,6 +239,7 @@ class DirectConnection(BaseTransport):
         self.__pending_chunk = None
         self.__resetting = False
         self.__error = False
+        self.__png_timeout = None
         
     __init__.__doc__ = BaseTransport.__init__.__doc__
 
@@ -247,6 +251,9 @@ class DirectConnection(BaseTransport):
 
     def lose_connection(self):
         self._transport.close()
+        if self.__png_timeout is not None:
+            gobject.source_remove(self.__png_timout)
+            self.__png_timeout = None
 
     def reset_connection(self, server=None):
         if server:
@@ -254,6 +261,9 @@ class DirectConnection(BaseTransport):
             self._transport.set_property("port", server[1])
             self.server = server
         self.__resetting = True
+        if self.__png_timeout is not None:
+            gobject.source_remove(self.__png_timout)
+            self.__png_timeout = None
         self._transport.close()
         self._transport.open()
 
@@ -264,10 +274,21 @@ class DirectConnection(BaseTransport):
         if increment:
             self._increment_transaction_id()
 
+    def enable_ping(self):
+        cmd = msnp.Command()
+        cmd.build("PNG", None)
+        self.send_command(cmd, False)
+        self.__png_timeout = None
+        return False
+
     def __on_command_sent(self, command, user_callback, user_cb_args):
         self.emit("command-sent", command)
         if user_callback:
             user_callback(*user_cb_args)
+
+    def __handle_ping_reply(self, command):
+        timeout = int(command.arguments[0])
+        self.__png_timeout = gobject.timeout_add(timeout * 1000, self.enable_ping)
 
     ### callbacks
     def __on_status_change(self, transport, param):
@@ -310,7 +331,10 @@ class DirectConnection(BaseTransport):
                     self._receiver.delimiter = payload_len
                     return
         logger.debug('<<< ' + repr(cmd))
-        self.emit("command-received", cmd)
+        if cmd.name == 'QNG':
+            self.__handle_ping_reply(cmd)
+        else:
+            self.emit("command-received", cmd)
 gobject.type_register(DirectConnection)
 
 

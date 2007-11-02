@@ -295,6 +295,8 @@ class Client(EventsDispatcher):
             
     def _on_addressbook_error(self, address_book, error_code):
         self._dispatch("on_client_error", ClientErrorType.ADDRESSBOOK, error_code)
+        self.__die = True
+        self._transport.lose_connection()
 
     # - - Offline messages
     def _on_oim_box_state_changed(self, oim_box, pspec):

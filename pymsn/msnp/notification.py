@@ -429,6 +429,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         if command.arguments[0] == "OK":
             if self._state != ProtocolState.OPEN: # Initial ADL
                 self._state = ProtocolState.OPEN
+                self._transport.enable_ping()
             else: # contact Added
                 pass
 

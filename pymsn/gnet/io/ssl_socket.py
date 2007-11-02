@@ -41,6 +41,10 @@ class SSLSocketClient(GIOChannelClient):
     def _pre_open(self, sock=None):
         if sock is None:
             sock = socket.socket(self._domain, self._type)
+            try:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            except AttributeError:
+                pass
         context = OpenSSL.Context(OpenSSL.SSLv23_METHOD)
         ssl_sock = OpenSSL.Connection(context, sock)
         GIOChannelClient._pre_open(self, ssl_sock)
