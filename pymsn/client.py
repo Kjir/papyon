@@ -89,6 +89,8 @@ class Client(EventsDispatcher):
         self.address_book = None
 
         self.oim_box = None
+        
+        self.__die = False
         self.__setup_callbacks()
 
     def __setup_callbacks(self):
@@ -157,6 +159,7 @@ class Client(EventsDispatcher):
             @param password: the password needed to authenticate to the account
             """
         assert(self._state == ClientState.CLOSED, "Login already in progress")
+        self.__die = False
         self.profile = profile.User((account, password), self._protocol)
         self._transport.establish_connection()
         self._state = ClientState.CONNECTING
@@ -165,6 +168,7 @@ class Client(EventsDispatcher):
         """Logout from the server."""
         if self.__state != ClientState.OPEN: # FIXME: we need something better
             return
+        self.__die = True
         self._protocol.signoff()
         self._switchboard_manager.close()
         self.__state = ClientState.CLOSED
@@ -202,7 +206,8 @@ class Client(EventsDispatcher):
         self._state = ClientState.CLOSED
 
     def _on_disconnected(self, transp, reason):
-        self._dispatch("on_client_error", ClientErrorType.NETWORK, reason)
+        if not self.__die:
+            self._dispatch("on_client_error", ClientErrorType.NETWORK, reason)
         self._state = ClientState.CLOSED
         
     def _on_authentication_failure(self):
