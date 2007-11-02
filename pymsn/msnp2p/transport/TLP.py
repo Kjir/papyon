@@ -164,8 +164,9 @@ class MessageBlob(object):
         self.id = blob_id or _generate_id()
 
     def __del__(self):
-        if self.data is not None:
-            self.data.close()
+        #if self.data is not None:
+        #    self.data.close()
+        pass
 
     def __repr__(self):
         return "<MessageBlob id=%x session_id=%x>" % (self.id, self.session_id)
