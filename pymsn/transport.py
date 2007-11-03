@@ -252,7 +252,7 @@ class DirectConnection(BaseTransport):
     def lose_connection(self):
         self._transport.close()
         if self.__png_timeout is not None:
-            gobject.source_remove(self.__png_timout)
+            gobject.source_remove(self.__png_timeout)
             self.__png_timeout = None
 
     def reset_connection(self, server=None):
@@ -262,7 +262,7 @@ class DirectConnection(BaseTransport):
             self.server = server
         self.__resetting = True
         if self.__png_timeout is not None:
-            gobject.source_remove(self.__png_timout)
+            gobject.source_remove(self.__png_timeout)
             self.__png_timeout = None
         self._transport.close()
         self._transport.open()
