@@ -49,7 +49,25 @@ class CommandPrinter(object):
             result += "\n" + repr(Message(None, str(command.payload)))
         return result
 
-    
+    def _print_QRY(self):
+        command = self.command
+        
+        result = command.name
+        if command.transaction_id is not None:
+            result += ' ' + str(command.transaction_id)
+
+        if command.arguments is not None and len(command.arguments) > 0:
+            arguments = [str(argument) for argument in command.arguments]
+            result += ' ' + ' '.join(arguments) 
+        
+        if command.payload is not None:
+            payload = repr(command.payload)
+            length = len(payload)
+            if length > 0:
+                result += ' ' + str(length) + '\r\n'
+                result += payload
+        return result
+
     def _print_default(self):
         command = self.command
         
