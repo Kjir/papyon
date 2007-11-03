@@ -285,6 +285,7 @@ class User(gobject.GObject):
             return
         if self._presence == Presence.OFFLINE:
             raise NotImplementedError
+        self._msn_object = msn_object
         self._ns_client.set_presence(self._presence, msn_object)
     def __get_msn_object(self):
         return self._msn_object
