@@ -70,7 +70,7 @@ def _msn_challenge(data):
     longs = [little_endify(abs(x), "Q") for x in longs]
     out = ""
     for value in longs:
-        value = hex(value)
+        value = hex(long(value))
         value = value[2:-1]
         value = value.zfill(16)
         out += value.lower()
