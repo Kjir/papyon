@@ -168,8 +168,18 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._transport.lose_connection()
         
     def request_switchboard(self, callback, *callback_args):
+        #FIXME: this can be heavily improved, basically, we are allowed to open
+        # 8 switchboards / 60 seconds, if we exceed this we get an error 800,
+        # for now, this is the dumbest algorithm to do it, but we can have
+        # something more clever than this
+        def req_sb():
+            self._send_command('XFR', ('SB',))
+            self._switchboard_requests_count -= 1
+            return self._switchboard_requests_count > 0
         self.__switchboard_callbacks.append((callback, callback_args))
-        self._send_command('XFR', ('SB',))
+        self._switchboard_requests_count += 1
+        if self._switchboard_requests_count == 1:
+            gobject.timeout_add(60 * 1000 / 8 + 100, req_sb)
 
     def add_contact_to_membership(self, account,
             network_id=profile.NetworkID.MSN,
@@ -310,7 +320,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         pass
 
     def _handle_OUT(self, command):
-        raise NotImplementedError, "Missing Implementation, please fix"
+        pass
 
     # --------- Presence & Privacy -------------------------------------------
     def _handle_BLP(self, command):
@@ -512,6 +522,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
         self.__switchboard_callbacks = []
+        self._switchboard_requests_count = 0
         self._state = ProtocolState.OPENING
         self._send_command('VER', ProtocolConstant.VER)
 
