@@ -405,18 +405,18 @@ class AddressBook(gobject.GObject):
             if display_name == "":
                 display_name = external_email.Email
 
-            alias = { ContactGeneral.ANNOTATIONS : contact.Annotations }
+            contact_infos = { ContactGeneral.ANNOTATIONS : contact.Annotations }
 
             c = profile.Contact(contact.Id,
                     profile.NetworkID.EXTERNAL,
                     external_email.Email.encode("utf-8"),
                     display_name.encode("utf-8"),
-                    alias,
                     contact.CID,
                     profile.Membership.FORWARD)
+            c._server_infos_changed(contact_infos)
             c._server_attribute_changed("im_contact",
                     external_email.IsMessengerEnabled)
-            
+
             for group in self.groups:
                 if group.id in contact.Groups:
                     c._add_group_ownership(group)                    
@@ -434,15 +434,14 @@ class AddressBook(gobject.GObject):
             if display_name == "":
                 display_name = contact.PassportName
 
-            alias = { ContactGeneral.ANNOTATIONS : contact.Annotations }
-
+            contact_infos = { ContactGeneral.ANNOTATIONS : contact.Annotations }
             c = profile.Contact(contact.Id,
                     profile.NetworkID.MSN,
                     contact.PassportName.encode("utf-8"),
                     display_name.encode("utf-8"),
-                    alias,
                     contact.CID,
                     profile.Membership.FORWARD)
+            c._server_infos_changed(contact_infos)
             c._server_attribute_changed("im_contact",
                     contact.IsMessengerUser)
             
@@ -539,7 +538,7 @@ class AddressBook(gobject.GObject):
         self.emit('contact-deleted', contact)
 
     def __update_contact_infos_cb(self, contact, infos):
-        contact._update_contact_infos(infos)
+        contact._server_infos_changed(infos)
         self.emit('contact-infos-updated', contact, infos)
 
     def __block_contact_cb(self, contact):

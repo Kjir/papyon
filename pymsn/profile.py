@@ -407,12 +407,12 @@ class Contact(gobject.GObject):
                 gobject.PARAM_READABLE),
             }
 
-    def __init__(self, id, network_id, account, display_name, alias, cid,
+    def __init__(self, id, network_id, account, display_name, cid=None,
             memberships=Membership.UNKNOWN):
         """Initializer"""
         gobject.GObject.__init__(self)
         self._id = id
-        self._cid = cid
+        self._cid = cid or "00000000-0000-0000-0000-000000000000"
         self._network_id = network_id
         self._account = account
 
@@ -421,13 +421,11 @@ class Contact(gobject.GObject):
         self._personal_message = ""
         self._current_media = None
         self._groups = set()
-        # FIXME : for now, we only stock the contact alias as information,
-        # need to extend this to all the other items
-        self._infos = alias
 
         self._memberships = memberships
         self._client_capabilities = ClientCapabilities()
         self._msn_object = None
+        self._infos = {}
         self._attributes = {'im_contact' : False,
                 'icon_url' : None}
 
@@ -551,7 +549,11 @@ class Contact(gobject.GObject):
 
     def _server_attribute_changed(self, name, value):
         self._attributes[name] = value
-        
+
+    def _server_infos_changed(self, updated_infos):
+        self._infos.update(updated_infos)
+        self.emit("infos-changed", updated_infos)
+
     ### group management
     def _add_group_ownership(self, group):
         self._groups.add(group)
@@ -562,11 +564,6 @@ class Contact(gobject.GObject):
     def do_get_property(self, pspec):
         name = pspec.name.lower().replace("-", "_")
         return getattr(self, name)
-    
-    ### infos management
-    def _update_contact_infos(self, updated_infos):
-        self._infos.update(updated_infos)
-        self.emit("infos-changed", updated_infos)
 
 gobject.type_register(Contact)
 
