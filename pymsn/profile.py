@@ -351,7 +351,7 @@ class Contact(gobject.GObject):
 
             "infos-changed": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object, object)),
+                (object,)),
             }
 
     __gproperties__ = {
@@ -567,7 +567,7 @@ class Contact(gobject.GObject):
     ### infos management
     def _update_contact_infos(self, updated_infos):
         self._infos.update(updated_infos)
-        self.emit("infos-changed", self, updated_infos)
+        self.emit("infos-changed", updated_infos)
 
 gobject.type_register(Contact)
 

@@ -38,7 +38,7 @@ class ContactEventInterface(BaseEventInterface):
     def on_contact_current_media_changed(self, contact):
         pass
 
-    def on_contact_infos_changed(self, contact):
+    def on_contact_infos_changed(self, contact, infos):
         pass
 
     def on_contact_client_capabilities_changed(self, contact):

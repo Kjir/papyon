@@ -175,7 +175,7 @@ class AddressBook(gobject.GObject):
 
             "contact-infos-updated"         : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE, 
-                 (object,)),
+                 (object, object)),
 
             "contact-blocked"         : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
@@ -542,7 +542,7 @@ class AddressBook(gobject.GObject):
 
     def __update_contact_infos_cb(self, contact, infos):
         contact._update_contact_infos(infos)
-        self.emit('contact-infos-updated', contact)
+        self.emit('contact-infos-updated', contact, infos)
 
     def __block_contact_cb(self, contact):
         contact._remove_membership(profile.Membership.ALLOW)

@@ -274,7 +274,7 @@ class Client(EventsDispatcher):
         event_name = args[-1]
         event_args = args[:-1]
         method_name = "on_contact_%s" % event_name.replace("-", "_")
-        self._dispatch(method_name, *event_args)
+        self._dispatch(method_name, contact, *event_args)
 
     # - - Switchboard Manager
     def _on_switchboard_handler_created(self, sb_mgr, handler_class, handler):
