@@ -407,8 +407,7 @@ class AddressBook(gobject.GObject):
 
             alias = { ContactGeneral.ANNOTATIONS : contact.Annotations }
 
-            c = profile.Contact(self,
-                    contact.Id,
+            c = profile.Contact(contact.Id,
                     profile.NetworkID.EXTERNAL,
                     external_email.Email.encode("utf-8"),
                     display_name.encode("utf-8"),
@@ -437,8 +436,7 @@ class AddressBook(gobject.GObject):
 
             alias = { ContactGeneral.ANNOTATIONS : contact.Annotations }
 
-            c = profile.Contact(self, 
-                    contact.Id,
+            c = profile.Contact(contact.Id,
                     profile.NetworkID.MSN,
                     contact.PassportName.encode("utf-8"),
                     display_name.encode("utf-8"),

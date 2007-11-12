@@ -407,11 +407,10 @@ class Contact(gobject.GObject):
                 gobject.PARAM_READABLE),
             }
 
-    def __init__(self, ab, id, network_id, account, display_name, alias, cid,
+    def __init__(self, id, network_id, account, display_name, alias, cid,
             memberships=Membership.UNKNOWN):
         """Initializer"""
         gobject.GObject.__init__(self)
-        self._ab = ab
         self._id = id
         self._cid = cid
         self._network_id = network_id
