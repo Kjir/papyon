@@ -174,7 +174,9 @@ class MSNObjectStore(EventsDispatcher):
         if msn_object._data is not None:
             callback[0](msn_object, *callback[1:])
 
-        if msn_object._type == MSNObjectType.DISPLAY_PICTURE:
+        if msn_object._type == MSNObjectType.CUSTOM_EMOTICON:
+            application_id = ApplicationID.CUSTOM_EMOTICON_TRANSFER
+        elif msn_object._type == MSNObjectType.DISPLAY_PICTURE:
             application_id = ApplicationID.DISPLAY_PICTURE_TRANSFER
         else:
             raise NotImplementedError

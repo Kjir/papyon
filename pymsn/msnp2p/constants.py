@@ -26,6 +26,7 @@ class EufGuid(object):
     WEBCAM_RECEIVER = "{1C9AA97E-9C05-4583-A3BD-908A196F1E92}"
 
 class ApplicationID(object):
+    CUSTOM_EMOTICON_TRANSFER = 11
     DISPLAY_PICTURE_TRANSFER = 12
 
 class SLPContentType(object):
