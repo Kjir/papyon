@@ -197,7 +197,7 @@ class ExternalNetworkConversation(BaseConversation):
 
 class SwitchboardConversation(BaseConversation, SwitchboardClient):
     def __init__(self, client, contacts):
-        SwitchboardClient.__init__(self, client, contacts)
+        SwitchboardClient.__init__(self, client, contacts, priority=0)
         BaseConversation.__init__(self, client)
     
     @staticmethod

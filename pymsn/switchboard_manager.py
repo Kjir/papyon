@@ -36,11 +36,12 @@ __all__ = ['SwitchboardManager']
 logger = logging.getLogger('protocol:switchboard_manager')
 
 class SwitchboardClient(object):
-    def __init__(self, client, contacts):
+    def __init__(self, client, contacts, priority=99):
         self._client = client
         self._switchboard_manager = weakref.proxy(self._client._switchboard_manager)
         self.__switchboard = None
         self._switchboard_requested = False
+        self._switchboard_priority = priority
 
         self._pending_invites = set(contacts)
         self._pending_messages = []
@@ -168,7 +169,7 @@ class SwitchboardClient(object):
         self._switchboard_requested = True
         self._pending_invites |= self.participants
         self.participants = set()
-        self._switchboard_manager.request_switchboard(self) # may set the switchboard immediatly
+        self._switchboard_manager.request_switchboard(self, self._switchboard_priority) # may set the switchboard immediatly
         return self._switchboard_requested
 
 
@@ -210,7 +211,7 @@ class SwitchboardManager(gobject.GObject):
     def register_handler(self, handler_class, *extra_arguments):
         self._handlers_class.add((handler_class, extra_arguments))
 
-    def request_switchboard(self, handler):
+    def request_switchboard(self, handler, priority=99):
         handler_participants = handler.total_participants
 
         # If the Handler was orphan, then it is no more
@@ -243,7 +244,7 @@ class SwitchboardManager(gobject.GObject):
                 return
 
         self._client._protocol.\
-                request_switchboard(self._ns_switchboard_request_response, handler)
+                request_switchboard(priority, self._ns_switchboard_request_response, handler)
 
     def close_handler(self, handler):
         self._orphaned_handlers.discard(handler)

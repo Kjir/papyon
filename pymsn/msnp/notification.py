@@ -45,6 +45,24 @@ __all__ = ['NotificationProtocol']
 
 logger = logging.getLogger('protocol:notification')
 
+import bisect
+class PriorityQueue(object):
+    def __init__(self):
+        self.queue = []
+
+    def add(self, item, priority):
+        bisect.insort(self.queue, (priority, item))
+
+    def pop(self, n):
+        return self.queue.pop(n)[1]
+
+    def __len__(self):
+        return len(self.queue)
+
+    @property
+    def empty(self):
+        return len(self.queue) == 0
+
 class NotificationProtocol(BaseProtocol, gobject.GObject):
     """Protocol used to communicate with the Notification Server
 
@@ -167,7 +185,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._send_command('OUT')
         self._transport.lose_connection()
         
-    def request_switchboard(self, callback, *callback_args):
+    def request_switchboard(self, priority, callback, *callback_args):
         #FIXME: this can be heavily improved, basically, we are allowed to open
         # 8 switchboards / 60 seconds, if we exceed this we get an error 800,
         # for now, this is the dumbest algorithm to do it, but we can have
@@ -176,7 +194,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             self._send_command('XFR', ('SB',))
             self._switchboard_requests_count -= 1
             return self._switchboard_requests_count > 0
-        self.__switchboard_callbacks.append((callback, callback_args))
+        self.__switchboard_callbacks.add((callback, callback_args), priority)
         self._switchboard_requests_count += 1
         if self._switchboard_requests_count == 1:
             gobject.timeout_add(60 * 1000 / 8 + 100, req_sb)
@@ -521,7 +539,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
-        self.__switchboard_callbacks = []
+        self.__switchboard_callbacks = PriorityQueue()
         self._switchboard_requests_count = 0
         self._state = ProtocolState.OPENING
         self._send_command('VER', ProtocolConstant.VER)
