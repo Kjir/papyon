@@ -79,19 +79,42 @@ class Client(EventsDispatcher):
         self._switchboard_manager.register_handler(SwitchboardConversation)
 
         self._p2p_session_manager = P2PSessionManager(self)
-        # TODO: attach the incoming-session signal
         self._msn_object_store = MSNObjectStore(self)
 
         self._external_conversations = {}
 
         self._sso = None
-        self.profile = None
-        self.address_book = None
 
-        self.oim_box = None
+        self._profile = None
+        self._address_book = None
+        self._oim_box = None
         
         self.__die = False
         self.__setup_callbacks()
+
+    @property
+    def msn_object_store(self):
+        return self._msn_object_store
+
+    @property
+    def profile(self):
+        return self._profile
+
+    @property
+    def address_book(self):
+        return self._address_book
+
+    @property
+    def oim_box(self):
+        return self._oim_box
+
+    def _get_state(self):
+        return self.__state
+    def _set_state(self, state):
+        self.__state = state
+        self._dispatch("on_client_state_changed", state)
+    state = property(_get_state)
+    _state = property(_get_state, _set_state)
 
     def __setup_callbacks(self):
         self._transport.connect("connection-success", self._on_connect_success)
@@ -141,14 +164,6 @@ class Client(EventsDispatcher):
         connect_signal("message-sent")
         connect_signal("messages-deleted")
 
-    def _get_state(self):
-        return self.__state
-    def _set_state(self, state):
-        self.__state = state
-        self._dispatch("on_client_state_changed", state)
-    state = property(_get_state)
-    _state = property(_get_state, _set_state)
-
     ### public methods & properties
     def login(self, account, password):
         """Login to the server.
@@ -160,7 +175,7 @@ class Client(EventsDispatcher):
             """
         assert(self._state == ClientState.CLOSED, "Login already in progress")
         self.__die = False
-        self.profile = profile.User((account, password), self._protocol)
+        self._profile = profile.User((account, password), self._protocol)
         self._transport.establish_connection()
         self._state = ClientState.CONNECTING
 
@@ -193,9 +208,9 @@ class Client(EventsDispatcher):
         self._sso = SSO.SingleSignOn(self.profile.account, 
                                      self.profile.password,
                                      self._proxies)
-        self.address_book = AB.AddressBook(self._sso, self._proxies)
+        self._address_book = AB.AddressBook(self._sso, self._proxies)
         self.__setup_addressbook_callbacks()
-        self.oim_box = OIM.OfflineMessagesBox(self._sso, self, self._proxies)
+        self._oim_box = OIM.OfflineMessagesBox(self._sso, self, self._proxies)
         self.__setup_oim_box_callbacks()
         self.spaces_service = Spaces.Spaces(self._sso, self._proxies)
 
