@@ -30,7 +30,7 @@ from challenge import _msn_challenge
 
 import pymsn
 from pymsn.gnet.message.HTTP import HTTPMessage
-import pymsn.util.ElementTree as et
+import pymsn.util.element_tree as ElementTree
 import pymsn.profile as profile
 import pymsn.service.SingleSignOn as SSO
 import pymsn.service.AddressBook as AB
@@ -433,7 +433,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             logger.warning("Contact (network_id=%d) %s not found" % \
                     (network_id, account))
         for contact in contacts:
-            cm = et.fromstring(command.payload).find("./CurrentMedia")
+            cm = ElementTree.fromstring(command.payload).find("./CurrentMedia")
             if cm is not None and cm.text is not None:
                 parts = cm.text.split('\\0')
                 if parts[1] == 'Music' and parts[2] == '1':
@@ -444,7 +444,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     contact._server_property_changed("current-media", None)
             else:
                 contact._server_property_changed("current-media", None)
-            pm = et.fromstring(command.payload).find("./PSM")
+            pm = ElementTree.fromstring(command.payload).find("./PSM")
             if pm is not None and pm.text is not None:
                 pm = pm.text.encode("utf-8")
             else:

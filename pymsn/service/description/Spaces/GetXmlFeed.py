@@ -19,7 +19,7 @@
 
 import xml.sax.saxutils as xml
 
-#from pymsn.util.ElementTree import XMLTYPE
+#from pymsn.util.element_tree import XMLTYPE
 
 def soap_header(security_token):
     """Returns the SOAP xml header"""

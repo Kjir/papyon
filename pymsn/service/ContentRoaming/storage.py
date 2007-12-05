@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from pymsn.service.SOAPService import SOAPService, url_split
-from pymsn.util.ElementTree import XMLTYPE
+from pymsn.util.element_tree import XMLTYPE
 from pymsn.service.SingleSignOn import *
 
 from pymsn.gnet.protocol import ProtocolFactory

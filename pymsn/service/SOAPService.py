@@ -23,7 +23,7 @@ import description
 from SOAPUtils import *
 
 import pymsn.gnet.protocol
-import pymsn.util.ElementTree as ElementTree
+import pymsn.util.element_tree as ElementTree
 import pymsn.util.StringIO as StringIO
 import re
 import logging

@@ -28,7 +28,7 @@ from msnp2p import OutgoingP2PSession, EufGuid, ApplicationID
 from msnp2p.exceptions import ParseError
 from profile import NetworkID
 
-import pymsn.util.ElementTree as ElementTree
+import pymsn.util.element_tree as ElementTree
 import pymsn.util.StringIO as StringIO
 
 import xml.sax.saxutils as xml

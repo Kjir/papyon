@@ -19,7 +19,7 @@
 
 """SOAP Messages structures."""
 
-import pymsn.util.ElementTree as ElementTree
+import pymsn.util.element_tree as ElementTree
 import pymsn.util.StringIO as StringIO
 
 __all__=['SOAPRequest', 'SOAPResponse']

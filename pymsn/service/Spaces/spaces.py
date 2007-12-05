@@ -22,7 +22,7 @@ import scenario
 
 from pymsn.service.SOAPUtils import *
 
-import pymsn.util.ElementTree as ElementTree
+import pymsn.util.element_tree as ElementTree
 import pymsn.util.StringIO as StringIO
 import gobject
 
