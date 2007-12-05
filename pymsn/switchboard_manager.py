@@ -29,7 +29,7 @@ import weakref
 
 import pymsn.msnp as msnp
 from pymsn.transport import ServerType
-from pymsn.util.WeakRef import WeakSet
+from pymsn.util.weak import WeakSet
 
 __all__ = ['SwitchboardManager']
 
