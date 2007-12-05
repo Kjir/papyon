@@ -29,7 +29,7 @@ from msnp2p.exceptions import ParseError
 from profile import NetworkID
 
 import pymsn.util.element_tree as ElementTree
-import pymsn.util.StringIO as StringIO
+import pymsn.util.string_io as StringIO
 
 import xml.sax.saxutils as xml
 import urllib

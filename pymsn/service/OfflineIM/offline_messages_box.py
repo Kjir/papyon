@@ -27,7 +27,7 @@ from pymsn.service.OfflineIM.constants import *
 from pymsn.profile import NetworkID
 
 import pymsn.util.element_tree as ElementTree
-import pymsn.util.StringIO as StringIO
+import pymsn.util.string_io as StringIO
 import pymsn.util.guid as guid
 import pymsn.util.iso8601 as iso8601
 

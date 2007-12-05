@@ -26,10 +26,7 @@ try:
 except ImportError:
     from pickle import Pickler, Unpickler
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+import pymsn.util.string_io as StringIO
 
 __all__=('MemoryStorage', 'DbmStorage')
 

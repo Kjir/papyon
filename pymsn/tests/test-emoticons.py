@@ -7,7 +7,7 @@ from pymsn.msnp2p.session_manager import *
 from pymsn.msnp2p.session import *
 from pymsn.msnp2p.constants import EufGuid
 
-import pymsn.util.StringIO as StringIO
+import pymsn.util.string_io as StringIO
 
 import logging
 import gobject
