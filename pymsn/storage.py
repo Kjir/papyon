@@ -18,17 +18,19 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import UserDict
-import anydbm
-
+import pymsn.util.string_io as StringIO
 try:
     from cPickle import Pickler, Unpickler
 except ImportError:
     from pickle import Pickler, Unpickler
 
-import pymsn.util.string_io as StringIO
+import UserDict
+import anydbm
+import random
+from Crypto.Hash import SHA
+from Crypto.Cipher import Blowfish
 
-__all__=('MemoryStorage', 'DbmStorage')
+__all__ = ['MemoryStorage', 'DbmStorage', 'DecryptError']
 
 _storage = None
 
@@ -40,10 +42,39 @@ def get_storage(*args):
     global _storage
     if _storage is None:
         _storage = MemoryStorage
-    if len(args) == 2:
+    if len(args) > 0:
         return _storage(*args)
     else:
         return _storage
+
+
+class BlowfishCipher:
+    def __init__(self, key):
+        self._cipher = Blowfish.new(key)
+
+    def encrypt(self, data):
+        return self._cipher.encrypt(self.__add_padding(data))
+
+    def decrypt(self, data):
+        return self.__remove_padding(self._cipher.decrypt(data))
+
+    def __add_padding(self, data):
+        padding_length = 8 - (len(data) % 8)                                 
+        for i in range(padding_length - 1):
+            data += chr(random.randrange(0, 256))
+        data += chr(padding_length)
+        return data
+
+    def __remove_padding(self, data):
+        padding_length = ord(data[-1]) % 8
+        if padding_length == 0:
+            padding_length = 8
+        return data[:-padding_length]
+
+
+class DecryptError(Exception):
+    pass
+
 
 class AbstractStorage(UserDict.DictMixin):
     """Base class for storage objects, storage objects are
@@ -51,12 +82,13 @@ class AbstractStorage(UserDict.DictMixin):
     be stored. This data included security tokens, cached
     display pictures ..."""
 
-    def __init__(self, account, identifier):
+    def __init__(self, account, password, identifier):
         """Initializer
         
         @param identifier: the identifier of this storage instance
         @type identifier: string"""
         self.account = account
+        self.cipher = BlowfishCipher(SHA.new(password).digest())
         self.storage_id = identifier
     
     def keys(self):
@@ -91,36 +123,44 @@ class AbstractStorage(UserDict.DictMixin):
     def close(self):
         pass
 
+    # Helper functions
+    def _pickle_encrypt(self, value):
+        f = StringIO.StringIO()
+        pickler = Pickler(f, -1)
+        pickler.dump(value)
+        data = self.account + f.getvalue() # prepend a known value to check decrypt
+        return self.cipher.encrypt(data)
+
+    def _unpickle_decrypt(self, data):
+        data = self.cipher.decrypt(data)
+
+        if not data.startswith(self.account):
+            raise DecryptError()
+        data = data[len(self.account):]
+        return Unpickler(StringIO.StringIO(data)).load()
+
 
 _MemoryStorageDict = {}
 class MemoryStorage(AbstractStorage):
     """In memory storage type"""
     
-    def __init__(self, account, identifier):
-        AbstractStorage.__init__(self, account, identifier)
+    def __init__(self, account, password, identifier):
+        AbstractStorage.__init__(self, account, password, identifier)
         if account + "/" + identifier not in _MemoryStorageDict:
             _MemoryStorageDict[account + "/" + identifier] = {}
+        self._dict = _MemoryStorageDict[self.account + "/" + self.storage_id]
 
     def keys(self):
-        return _MemoryStorageDict[self.account + "/" + self.storage_id].keys()
-    
-    def has_key(self, key):
-        return key in self.keys()
-
-    def __len__(self):
-        return len(self.keys)
-
-    def __contains__(self, key):
-        return self.has_key(key)
+        return self._dict.keys()
 
     def __getitem__(self, key):
-        return _MemoryStorageDict[self.account + "/" + self.storage_id][key]
+        return self._unpickle_decrypt(self._dict[key])
 
     def __setitem__(self, key, value):
-        _MemoryStorageDict[self.account + "/" + self.storage_id][key] = value
+        self._dict[key] = self._pickle_encrypt(value)
 
     def __delitem__(self, key):
-        del _MemoryStorageDict[self.account + "/" + self.storage_id][key]
+        del self._dict[key]
 
     def __del__(self):
         pass
@@ -130,13 +170,11 @@ class MemoryStorage(AbstractStorage):
 
 
 class DbmStorage(AbstractStorage):
-
-    PICKLING_PROTOCOL = -1 #use the highest possible version
     STORAGE_PATH = "~/.pymsn"
 
-    def __init__(self, account, identifier):
+    def __init__(self, account, password, identifier):
         import os.path
-        AbstractStorage.__init__(self, account, identifier)
+        AbstractStorage.__init__(self, account, password, identifier)
         
         storage_path = os.path.expanduser(self.STORAGE_PATH)
         
@@ -151,25 +189,12 @@ class DbmStorage(AbstractStorage):
     
     def keys(self):
         return self._dict.keys()
-    
-    def has_key(self, key):
-        return self._dict.has_key()
-
-    def __len__(self):
-        return len(self._dict)
-
-    def __contains__(self, key):
-        return self._dict.has_key()
 
     def __getitem__(self, key):
-        f = StringIO(self._dict[str(key)]) # some dbm don't support int keys
-        return Unpickler(f).load()
+        return self._unpickle_decrypt(self._dict[str(key)]) # some dbm don't support int keys
 
     def __setitem__(self, key, value):
-        f = StringIO()
-        pickler = Pickler(f, self.PICKLING_PROTOCOL)
-        pickler.dump(value)
-        self._dict[str(key)] = f.getvalue()
+        self._dict[str(key)] = self._pickle_encrypt(value)
         if hasattr(self._dict, 'sync'):
             self._dict.sync()
 

@@ -20,17 +20,16 @@
 
 from SOAPService import *
 from description.SingleSignOn.RequestMultipleSecurityTokens import LiveService
-
 import pymsn.storage
 
 import base64
 import struct
-import Crypto.Util.randpool as randpool
-from Crypto.Hash import HMAC, SHA
-from Crypto.Cipher import DES3
 import time
 import datetime
 import sys
+import Crypto.Util.randpool as randpool
+from Crypto.Hash import HMAC, SHA
+from Crypto.Cipher import DES3
 
 __all__ = ['SingleSignOn', 'LiveService', 'RequireSecurityTokens']
 
@@ -44,7 +43,8 @@ class SecurityToken(object):
         self.proof_token = ""
 
     def is_expired(self):
-        return datetime.datetime.utcnow() + datetime.timedelta(seconds=60) >= self.lifetime[1]
+        return datetime.datetime.utcnow() + datetime.timedelta(seconds=60) \
+                >= self.lifetime[1]
 
     def mbi_crypt(self, nonce):
         WINCRYPT_CRYPT_MODE_CBC = 1
@@ -116,7 +116,8 @@ class RequireSecurityTokens(object):
 class SingleSignOn(SOAPService):
     def __init__(self, username, password, proxies=None):
         self.__credentials = (username, password)
-        self.__storage = pymsn.storage.get_storage(username, "security-tokens")
+        self.__storage = pymsn.storage.get_storage(username, password,
+                "security-tokens")
 
         self.__pending_response = False
         self.__pending_requests = []
@@ -145,7 +146,10 @@ class SingleSignOn(SOAPService):
         for service in services: # filter already available tokens
             service_url = service[0]
             if service_url in self.__storage:
-                token = self.__storage[service_url]
+                try:
+                    token = self.__storage[service_url]
+                except pymsn.storage.DecryptError:
+                    continue
                 if not token.is_expired():
                     services.remove(service)
                     response_tokens[service] = token
