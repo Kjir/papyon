@@ -131,7 +131,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         raise AttributeError, "unknown property %s" % pspec.name
 
     # Public API -------------------------------------------------------------
-    def set_presence(self, presence, msn_object=None):
+    def set_presence(self, presence, client_id=0, msn_object=None):
         """Publish the new user presence.
 
             @param presence: the new presence
@@ -144,7 +144,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         else:
             if msn_object:
                 self._client._msn_object_store.publish(msn_object)
-            client_id = self._client.profile.client_id
             self._send_command('CHG',
                     (presence, str(client_id), urllib.quote(str(msn_object))))
 

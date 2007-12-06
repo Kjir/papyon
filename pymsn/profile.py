@@ -251,7 +251,7 @@ class User(gobject.GObject):
     def __set_presence(self, presence):
         if presence == self._presence:
             return
-        self._ns_client.set_presence(presence, self._msn_object)
+        self._ns_client.set_presence(presence, self.client_id, self._msn_object)
     def __get_presence(self):
         return self._presence
     presence = property(__get_presence, __set_presence)
@@ -265,8 +265,7 @@ class User(gobject.GObject):
     def __set_personal_message(self, personal_message):
         if personal_message == self._personal_message:
             return
-        self._ns_client.set_personal_message(personal_message,
-                                             self._current_media)
+        self._ns_client.set_personal_message(personal_message, self._current_media)
     def __get_personal_message(self):
         return self._personal_message
     personal_message = property(__get_personal_message, __set_personal_message)
@@ -283,13 +282,11 @@ class User(gobject.GObject):
     def __set_msn_object(self, msn_object):
         if msn_object == self._msn_object:
             return
-        if self._presence == Presence.OFFLINE:
-            raise NotImplementedError
-        self._msn_object = msn_object
         self._ns_client.set_presence(self._presence, msn_object)
     def __get_msn_object(self):
         return self._msn_object
     msn_object = property(__get_msn_object, __set_msn_object)            
+
 
     def __set_presence_msn_object(self, args):
         presence, msn_object = args
@@ -300,7 +297,8 @@ class User(gobject.GObject):
         return self._presence, self._msn_object
     presence_msn_object = property(__get_presence_msn_object,
                                    __set_presence_msn_object)
-    
+
+
     def __set_personal_message_current_media(self, args):
         personal_message, current_media = args
         if personal_message == self._personal_message and \
@@ -564,11 +562,10 @@ class Contact(gobject.GObject):
     def do_get_property(self, pspec):
         name = pspec.name.lower().replace("-", "_")
         return getattr(self, name)
-
 gobject.type_register(Contact)
 
-class Group(gobject.GObject):
 
+class Group(gobject.GObject):
     __gsignals__ = {
         "updated": (gobject.SIGNAL_RUN_FIRST,
                     gobject.TYPE_NONE,
@@ -602,6 +599,5 @@ class Group(gobject.GObject):
     def do_get_property(self, pspec):
         name = pspec.name.lower().replace("-", "_")
         return getattr(self, name)
-
 gobject.type_register(Group)
 
