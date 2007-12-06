@@ -22,7 +22,25 @@
 Defines the interfaces that the client can implement to benefit from the
 client event notifications."""
 
-from dispatcher import *
+class EventsDispatcher(object):
+
+    def __init__(self):
+        self._events_handlers = set()
+
+    ### Callbacks
+    def register_events_handler(self, events_handler):
+        """
+        events_handler:
+            an instance with methods as code of callbacks.
+        """
+        self._events_handlers.add(events_handler)
+
+    def _dispatch(self, name, *args):
+        count = 0
+        for event_handler in list(self._events_handlers):
+            if event_handler._dispatch_event(name, *args):
+                count += 1
+        return count
 
 from client import *
 from conversation import *
