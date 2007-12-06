@@ -42,9 +42,25 @@ class EventsDispatcher(object):
                 count += 1
         return count
 
+import weakref
+class BaseEventInterface(object):
+    def __init__(self, client):
+        self._client = weakref.proxy(client)
+        client.register_events_handler(self)
+
+    def _dispatch_event(self, event_name, *params):
+        try:
+            handler = getattr(self, event_name)
+        except Exception, e:
+            return False
+
+        handler(*params)
+        return True
+
 from client import *
 from conversation import *
 from contact import *
 from address_book import *
 from offline_messages import *
 from invite import *
+
