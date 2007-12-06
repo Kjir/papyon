@@ -32,6 +32,8 @@ import pymsn.service.AddressBook as AB
 import pymsn.service.OfflineIM as OIM
 import pymsn.service.Spaces as Spaces
 
+from pymsn.util.decorator import rw_property
+
 from transport import *
 from switchboard_manager import SwitchboardManager
 from msnp2p import P2PSessionManager
@@ -48,12 +50,7 @@ logger = logging.getLogger('client')
 
 class Client(EventsDispatcher):
     """This class provides way to connect to the notification server as well
-    as methods to manage the contact list, and the personnal settings.
-
-    Basically you should inherit from this class and implement the callbacks
-    in order to build a client.
-
-    @group Connection: login, logout"""
+    as methods to manage the contact list, and the personnal settings."""
 
     def __init__(self, server, proxies={}, transport_class=DirectConnection):
         """Initializer
@@ -90,81 +87,41 @@ class Client(EventsDispatcher):
         self._oim_box = None
         
         self.__die = False
-        self.__setup_callbacks()
+        self.__connect_transport_signals()
+        self.__connect_protocol_signals()
+        self.__connect_switchboard_manager_signals()
 
+    ### public:
     @property
     def msn_object_store(self):
+        """The MSNObjectStore instance associated with this client.
+            @see: L{pymsn.p2p.MSNObjectStore}"""
         return self._msn_object_store
 
     @property
     def profile(self):
+        """The profile of the current user
+            @see: L{pymsn.profile.User}"""
         return self._profile
 
     @property
     def address_book(self):
+        """The address book of the current user
+            @see: L{pymsn.service.AddressBook}"""
         return self._address_book
 
     @property
     def oim_box(self):
+        """The offline IM for the current user
+            @see: L{pymsn.service.OfflineIM}"""
         return self._oim_box
 
-    def _get_state(self):
+    @property
+    def state(self):
+        """The state of this Client
+            @see: L{pymsn.event.ClientState}"""
         return self.__state
-    def _set_state(self, state):
-        self.__state = state
-        self._dispatch("on_client_state_changed", state)
-    state = property(_get_state)
-    _state = property(_get_state, _set_state)
 
-    def __setup_callbacks(self):
-        self._transport.connect("connection-success", self._on_connect_success)
-        self._transport.connect("connection-failure", self._on_connect_failure)
-        self._transport.connect("connection-lost", self._on_disconnected)
-
-        self._protocol.connect("notify::state",
-                self._on_protocol_state_changed)
-        self._protocol.connect("unmanaged-message-received",
-                self._on_protocol_unmanaged_message_received)
-
-
-        self._switchboard_manager.connect("handler-created",
-                self._on_switchboard_handler_created)
-
-    def __setup_addressbook_callbacks(self):
-        self.address_book.connect('error', self._on_addressbook_error)
-
-        def connect_signal(name):
-            self.address_book.connect(name, self._on_addressbook_event, name)
-
-        connect_signal("new-pending-contact")
-
-        connect_signal("messenger-contact-added")
-        connect_signal("contact-deleted")
-
-        connect_signal("contact-blocked")
-        connect_signal("contact-unblocked")
-
-        connect_signal("group-added")
-        connect_signal("group-deleted")
-        connect_signal("group-renamed")
-        connect_signal("group-contact-added")
-        connect_signal("group-contact-deleted")
-
-    def __setup_oim_box_callbacks(self):
-        self.oim_box.connect("notify::state", 
-                             self._on_oim_box_state_changed)
-
-        self.oim_box.connect('error', self._on_oim_box_error)
-
-        def connect_signal(name):
-            self.oim_box.connect(name, self._on_oim_box_event, name)
-
-        connect_signal("messages-received")
-        connect_signal("messages-fetched")
-        connect_signal("message-sent")
-        connect_signal("messages-deleted")
-
-    ### public methods & properties
     def login(self, account, password):
         """Login to the server.
 
@@ -173,7 +130,8 @@ class Client(EventsDispatcher):
 
             @param password: the password needed to authenticate to the account
             """
-        assert(self._state == ClientState.CLOSED, "Login already in progress")
+        if (self._state != ClientState.CLOSED):
+            logger.warning('login already in progress')
         self.__die = False
         self._profile = profile.User((account, password), self._protocol)
         self._transport.establish_connection()
@@ -188,7 +146,15 @@ class Client(EventsDispatcher):
         self._switchboard_manager.close()
         self.__state = ClientState.CLOSED
 
-    ### External Conversation handling
+    ### protected:
+    @rw_property
+    def _state():
+        def fget(self):
+            return self.__state
+        def fset(self, state):
+            self.__state = state
+            self._dispatch("on_client_state_changed", state)
+
     def _register_external_conversation(self, conversation):
         for contact in conversation.participants:
             break
@@ -203,124 +169,156 @@ class Client(EventsDispatcher):
             break
         del self._external_conversations[contact]
 
-    # - - Transport
-    def _on_connect_success(self, transp):
-        self._sso = SSO.SingleSignOn(self.profile.account, 
-                                     self.profile.password,
-                                     self._proxies)
-        self._address_book = AB.AddressBook(self._sso, self._proxies)
-        self.__setup_addressbook_callbacks()
-        self._oim_box = OIM.OfflineMessagesBox(self._sso, self, self._proxies)
-        self.__setup_oim_box_callbacks()
-        self.spaces_service = Spaces.Spaces(self._sso, self._proxies)
+    ### private:
+    def __connect_contact_signals(self, contact):
+        """Connect contact signals"""
+        def event(contact, *args):
+            event_name = args[-1]
+            event_args = args[:-1]
+            method_name = "on_contact_%s" % event_name.replace("-", "_")
+            self._dispatch(method_name, contact, *event_args)
 
-        self._state = ClientState.CONNECTED
+        def property_changed(contact, pspec):
+            method_name = "on_contact_%s_changed" % pspec.name.replace("-", "_")
+            self._dispatch(method_name, contact)
 
-    def _on_connect_failure(self, transp, reason):
-        self._dispatch("on_client_error", ClientErrorType.NETWORK, reason)
-        self._state = ClientState.CLOSED
-
-    def _on_disconnected(self, transp, reason):
-        if not self.__die:
-            self._dispatch("on_client_error", ClientErrorType.NETWORK, reason)
-        self.__die = False
-        self._state = ClientState.CLOSED
-        
-    def _on_authentication_failure(self):
-        self._dispatch("on_client_error", ClientErrorType.AUTHENTICATION,
-                       AuthenticationError.INVALID_USERNAME_OR_PASSWORD)
-        self.__die = True
-        self._transport.lose_connection()
-
-    # - - Notification Protocol
-    def _on_protocol_state_changed(self, proto, param):
-        state = proto.state
-        if state == msnp.ProtocolState.AUTHENTICATING:
-            self._state = ClientState.AUTHENTICATING
-        elif state == msnp.ProtocolState.AUTHENTICATED:
-            self._state = ClientState.AUTHENTICATED
-        elif state == msnp.ProtocolState.SYNCHRONIZING:
-            self._state = ClientState.SYNCHRONIZING
-        elif state == msnp.ProtocolState.SYNCHRONIZED:
-            self._state = ClientState.SYNCHRONIZED
-        elif state == msnp.ProtocolState.OPEN:
-            self._state = ClientState.OPEN
-            im_contacts = [contact for contact in self.address_book.contacts \
-                    if contact.attributes['im_contact']]
-            for contact in im_contacts:
-                self._connect_contact_signals(contact)
-
-    def _on_protocol_unmanaged_message_received(self, proto, sender, message):
-        if sender in self._external_conversations:
-            conversation = self._external_conversations[sender]
-            conversation._on_message_received(message)
-        else:
-            conversation = ExternalNetworkConversation(self, [sender])
-            self._register_external_conversation(conversation)
-            if self._dispatch("on_invite_conversation", conversation) == 0:
-                logger.warning("No event handler attached for conversations")
-            conversation._on_message_received(message)
-
-    # - - Contact
-    def _connect_contact_signals(self, contact):
-        contact.connect("notify::presence",
-                self._on_contact_property_changed)
-        contact.connect("notify::display-name",
-                self._on_contact_property_changed)
-        contact.connect("notify::personal-message",
-                self._on_contact_property_changed)
-        contact.connect("notify::current-media",
-                self._on_contact_property_changed)        
-        contact.connect("notify::msn-object",
-                self._on_contact_property_changed)
-        contact.connect("notify::client-capabilities",
-                self._on_contact_property_changed)
+        contact.connect("notify::presence", property_changed)
+        contact.connect("notify::display-name", property_changed)
+        contact.connect("notify::personal-message", property_changed)
+        contact.connect("notify::current-media", property_changed)        
+        contact.connect("notify::msn-object", property_changed)
+        contact.connect("notify::client-capabilities", property_changed)
 
         def connect_signal(name):
-            contact.connect(name, self._on_contact_event, name)
+            contact.connect(name, event, name)
         connect_signal("infos-changed")
 
-    # - - Contact
-    def _on_contact_property_changed(self, contact, pspec):
-        method_name = "on_contact_%s_changed" % pspec.name.replace("-", "_")
-        self._dispatch(method_name, contact)
+    def __connect_transport_signals(self):
+        """Connect transport signals"""
+        def connect_success(transp):
+            self._sso = SSO.SingleSignOn(self.profile.account, 
+                                         self.profile.password,
+                                         self._proxies)
+            self._address_book = AB.AddressBook(self._sso, self._proxies)
+            self.__connect_addressbook_signals()
+            self._oim_box = OIM.OfflineMessagesBox(self._sso, self, self._proxies)
+            self.__connect_oim_box_signals()
+            self.spaces_service = Spaces.Spaces(self._sso, self._proxies)
 
-    def _on_contact_event(self, contact, *args):
-        event_name = args[-1]
-        event_args = args[:-1]
-        method_name = "on_contact_%s" % event_name.replace("-", "_")
-        self._dispatch(method_name, contact, *event_args)
+            self._state = ClientState.CONNECTED
 
-    # - - Switchboard Manager
-    def _on_switchboard_handler_created(self, sb_mgr, handler_class, handler):
-        if handler_class is SwitchboardConversation:
-            if self._dispatch("on_invite_conversation", handler) == 0:
-                logger.warning("No event handler attached for conversations")
-        else:
-            logger.warning("Unknown Switchboard Handler class %s" % handler_class)
+        def connect_failure(transp, reason):
+            self._dispatch("on_client_error", ClientErrorType.NETWORK, reason)
+            self._state = ClientState.CLOSED
 
-    # - - Address book
-    def _on_addressbook_event(self, address_book, *args):
-        event_name = args[-1]
-        event_args = args[:-1]
-        if event_name == "messenger-contact-added":
-            self._connect_contact_signals(event_args[0])
-        method_name = "on_addressbook_%s" % event_name.replace("-", "_")
-        self._dispatch(method_name, *event_args)
-            
-    def _on_addressbook_error(self, address_book, error_code):
-        self._dispatch("on_client_error", ClientErrorType.ADDRESSBOOK, error_code)
-        self.__die = True
-        self._transport.lose_connection()
+        def disconnected(transp, reason):
+            if not self.__die:
+                self._dispatch("on_client_error", ClientErrorType.NETWORK, reason)
+            self.__die = False
+            self._state = ClientState.CLOSED
 
-    # - - Offline messages
-    def _on_oim_box_state_changed(self, oim_box, pspec):
-        self._dispatch("on_oim_state_changed", oim_box.state)
+        self._transport.connect("connection-success", connect_success)
+        self._transport.connect("connection-failure", connect_failure)
+        self._transport.connect("connection-lost", disconnected)
 
-    def _on_oim_box_event(self, oim_box, *args):
-        method_name = "on_oim_%s" % args[-1].replace("-", "_")
-        self._dispatch(method_name, *args[:-1])
+    def __connect_protocol_signals(self):
+        """Connect protocol signals"""
+        def state_changed(proto, param):
+            state = proto.state
+            if state == msnp.ProtocolState.AUTHENTICATING:
+                self._state = ClientState.AUTHENTICATING
+            elif state == msnp.ProtocolState.AUTHENTICATED:
+                self._state = ClientState.AUTHENTICATED
+            elif state == msnp.ProtocolState.SYNCHRONIZING:
+                self._state = ClientState.SYNCHRONIZING
+            elif state == msnp.ProtocolState.SYNCHRONIZED:
+                self._state = ClientState.SYNCHRONIZED
+            elif state == msnp.ProtocolState.OPEN:
+                self._state = ClientState.OPEN
+                im_contacts = [contact for contact in self.address_book.contacts \
+                        if contact.attributes['im_contact']]
+                for contact in im_contacts:
+                    self.__connect_contact_signals(contact)
 
-    def _on_oim_box_error(self, oim_box, error_code):
-        self._dispatch("on_client_error", ClientErrorType.OFFLINE_MESSAGES, error_code)
+        def authentication_failed():
+            self._dispatch("on_client_error", ClientErrorType.AUTHENTICATION,
+                           AuthenticationError.INVALID_USERNAME_OR_PASSWORD)
+            self.__die = True
+            self._transport.lose_connection()
+
+        def unmanaged_message_received(proto, sender, message):
+            if sender in self._external_conversations:
+                conversation = self._external_conversations[sender]
+                conversation._on_message_received(message)
+            else:
+                conversation = ExternalNetworkConversation(self, [sender])
+                self._register_external_conversation(conversation)
+                if self._dispatch("on_invite_conversation", conversation) == 0:
+                    logger.warning("No event handler attached for conversations")
+                conversation._on_message_received(message)
+
+        self._protocol.connect("notify::state", state_changed)
+        self._protocol.connect("authentication-failed", authentication_failed)
+        self._protocol.connect("unmanaged-message-received", unmanaged_message_received)
+
+    def __connect_switchboard_manager_signals(self):
+        """Connect Switchboard Manager signals"""
+        def handler_created(switchboard_manager, handler_class, handler):
+            if handler_class is SwitchboardConversation:
+                if self._dispatch("on_invite_conversation", handler) == 0:
+                    logger.warning("No event handler attached for conversations")
+            else:
+                logger.warning("Unknown Switchboard Handler class %s" % handler_class)
+
+        self._switchboard_manager.connect("handler-created", handler_created)
+
+    def __connect_addressbook_signals(self):
+        """Connect AddressBook signals"""
+        def event(address_book, *args):
+            event_name = args[-1]
+            event_args = args[:-1]
+            if event_name == "messenger-contact-added":
+                self.__connect_contact_signals(event_args[0])
+            method_name = "on_addressbook_%s" % event_name.replace("-", "_")
+            self._dispatch(method_name, *event_args)
+        def error(address_book, error_code):
+            self._dispatch("on_client_error", ClientErrorType.ADDRESSBOOK, error_code)
+            self.__die = True
+            self._transport.lose_connection()
+
+        self.address_book.connect('error', error)
+
+        def connect_signal(name):
+            self.address_book.connect(name, event, name)
+
+        connect_signal("new-pending-contact")
+        connect_signal("messenger-contact-added")
+        connect_signal("contact-deleted")
+        connect_signal("contact-blocked")
+        connect_signal("contact-unblocked")
+        connect_signal("group-added")
+        connect_signal("group-deleted")
+        connect_signal("group-renamed")
+        connect_signal("group-contact-added")
+        connect_signal("group-contact-deleted")
+
+    def __connect_oim_box_signals(self):
+        """Connect Offline IM signals"""
+        def event(oim_box, *args):
+            method_name = "on_oim_%s" % args[-1].replace("-", "_")
+            self._dispatch(method_name, *args[:-1])
+        def state_changed(oim_box, pspec):
+            self._dispatch("on_oim_state_changed", oim_box.state)
+        def error(oim_box, error_code):
+            self._dispatch("on_client_error", ClientErrorType.OFFLINE_MESSAGES, error_code)
+
+        self.oim_box.connect("notify::state", state_changed)
+        self.oim_box.connect('error', error)
+
+        def connect_signal(name):
+            self.oim_box.connect(name, event, name)
+        connect_signal("messages-received")
+        connect_signal("messages-fetched")
+        connect_signal("message-sent")
+        connect_signal("messages-deleted")
 

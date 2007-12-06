@@ -22,6 +22,8 @@
 """Profile of the User connecting to the service, as well as the profile of
 contacts in his/her contact list."""
 
+from pymsn.util.decorator import rw_property
+
 import gobject
 
 __all__ = ['Presence', 'User', 'Contact']
@@ -151,17 +153,9 @@ class Membership(object):
     REVERSE = 8
     PENDING = 16
 
+
 class User(gobject.GObject):
-    """Profile of the User connecting to the service
-
-        @undocumented: do_get_property, do_set_property, __gproperties__
-
-        @ivar account: the account name
-        @ivar password: the password used to authenticate
-        @ivar profile: the profile sent by the server
-        @ivar display_name: the display name shown to contacts
-        @ivar presence: the presence advertised
-        @ivar personal_message: the personal message shown to contacts"""""
+    """Profile of the User connecting to the service"""
 
     __gproperties__ = {
             "display-name": (gobject.TYPE_STRING,
@@ -225,90 +219,102 @@ class User(gobject.GObject):
 
     @property
     def account(self):
+        """The user account"""
         return self._account
 
     @property
     def password(self):
+        """The user password"""
         return self._password
 
     @property
     def profile(self):
+        """The user profile retrieved from the MSN servers"""
         return self._profile
 
     @property
     def id(self):
-        """User identifier in a GUID form"""
+        """The user identifier in a GUID form"""
         return "00000000-0000-0000-0000-000000000000"
 
-    def __set_display_name(self, display_name):
-        if not display_name:
-            return
-        self._ns_client.set_display_name(display_name)
-    def __get_display_name(self):
-        return self._display_name
-    display_name = property(__get_display_name, __set_display_name)
+    @rw_property
+    def display_name():
+        """The display name shown to you contacts"""
+        def fset(self, display_name):
+            if not display_name:
+                return
+            self._ns_client.set_display_name(display_name)
+        def fget(self):
+            return self._display_name
 
-    def __set_presence(self, presence):
-        if presence == self._presence:
-            return
-        self._ns_client.set_presence(presence, self.client_id, self._msn_object)
-    def __get_presence(self):
-        return self._presence
-    presence = property(__get_presence, __set_presence)
+    @rw_property
+    def presence():
+        """The presence displayed to you contacts"""
+        def fset(self, presence):
+            if presence == self._presence:
+                return
+            self._ns_client.set_presence(presence, self.client_id, self._msn_object)
+        def fget(self):
+            return self._presence
 
-    def __set_privacy(self, privacy):
-        pass #FIXME: set the privacy setting
-    def __get_privacy(self):
-        return self._privacy
-    privacy = property(__get_privacy, __set_privacy)
+    @rw_property
+    def privacy():
+        """The default privacy, can be either Privacy.ALLOW or Privacy.BLOCK
+            @see L{Privacy}"""
+        def fset(self, privacy):
+            pass #FIXME: set the privacy setting
+        def fget(self):
+            return self._privacy
 
-    def __set_personal_message(self, personal_message):
-        if personal_message == self._personal_message:
-            return
-        self._ns_client.set_personal_message(personal_message, self._current_media)
-    def __get_personal_message(self):
-        return self._personal_message
-    personal_message = property(__get_personal_message, __set_personal_message)
+    @rw_property
+    def personal_message():
+        """The personal message displayed to you contacts"""
+        def fset(self, personal_message):
+            if personal_message == self._personal_message: return
+            self._ns_client.set_personal_message(personal_message, self._current_media)
+        def fget(self):
+            return self._personal_message
 
-    def __set_current_media(self, current_media):
-        if current_media == self._current_media:
-            return
-        self._ns_client.set_personal_message(self._personal_message,
-                                             current_media)
-    def __get_current_media(self):
-        return self._current_media
-    current_media = property(__get_current_media, __set_current_media)
+    @rw_property
+    def current_media():
+        """The current media displayed to you contacts"""
+        def fset(self, current_media):
+            if current_media == self._current_media: return
+            self._ns_client.set_personal_message(self._personal_message, current_media)
+        def fget(self):
+            return self._current_media
 
-    def __set_msn_object(self, msn_object):
-        if msn_object == self._msn_object:
-            return
-        self._ns_client.set_presence(self._presence, msn_object)
-    def __get_msn_object(self):
-        return self._msn_object
-    msn_object = property(__get_msn_object, __set_msn_object)            
+    @rw_property
+    def msn_object():
+        """The MSNObject attached to your contact, this MSNObject represents the
+        display picture to be shown to your peers
+            @see: L{pymsn.p2p.MSNObjectStore}"""
+        def fset(self, msn_object):
+            if msn_object == self._msn_object: return
+            self._ns_client.set_presence(self._presence, self.client_id, msn_object)
+        def fget(self):
+            return self._msn_object
 
+    @rw_property
+    def presence_msn_object():
+        def fset(self, args):
+            presence, msn_object = args
+            if presence == self._presence and msn_object == self._msn_object:
+                return
+            self._ns_client.set_presence(presence, self.client_id, msn_object)
+        def fget(self):
+            return self._presence, self._msn_object
 
-    def __set_presence_msn_object(self, args):
-        presence, msn_object = args
-        if presence == self._presence and msn_object == self._msn_object:
-            return
-        self._ns_client.set_presence(presence, msn_object)
-    def __get_presence_msn_object(self):
-        return self._presence, self._msn_object
-    presence_msn_object = property(__get_presence_msn_object,
-                                   __set_presence_msn_object)
-
-
-    def __set_personal_message_current_media(self, args):
-        personal_message, current_media = args
-        if personal_message == self._personal_message and \
-                current_media == self._current_media:
-            return
-        self._ns_client.set_personal_message(personal_message, current_media)
-    def __get_personal_message_current_media(self):
-        return self._personal_message, self._current_media
-    personal_message_current_media = property(__get_personal_message_current_media,
-                                              __set_personal_message_current_media)
+    @rw_property
+    def personal_message_current_media():
+        def fset(self, args):
+            personal_message, current_media = args
+            if personal_message == self._personal_message and \
+                    current_media == self._current_media:
+                return
+            self._ns_client.set_personal_message(personal_message, current_media)
+        def fget(self):
+            return self._personal_message, self._current_media
 
     def _server_property_changed(self, name, value):
         attr_name = "_" + name.lower().replace("-", "_")
@@ -324,8 +330,7 @@ gobject.type_register(User)
 
 
 class Contact(gobject.GObject):
-    """Contact related information
-        @undocumented: do_get_property, do_set_property, __gproperties__"""
+    """Contact related information"""
 
     __gsignals__ =  {
             "added": (gobject.SIGNAL_RUN_FIRST,
@@ -566,12 +571,6 @@ gobject.type_register(Contact)
 
 
 class Group(gobject.GObject):
-    __gsignals__ = {
-        "updated": (gobject.SIGNAL_RUN_FIRST,
-                    gobject.TYPE_NONE,
-                    ())
-        }
-
     __gproperties__ = {
         "name": (gobject.TYPE_STRING,
                  "Group name",
@@ -595,6 +594,13 @@ class Group(gobject.GObject):
     def name(self):
         "Group name"
         return self._name
+
+    def _server_property_changed(self, name, value):
+        attr_name = "_" + name.lower().replace("-", "_")
+        old_value = getattr(self, attr_name)
+        if value != old_value:
+            setattr(self, attr_name, value)
+            self.notify(name)
 
     def do_get_property(self, pspec):
         name = pspec.name.lower().replace("-", "_")

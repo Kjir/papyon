@@ -73,6 +73,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         @type state: integer
         @see L{base.ProtocolState}"""
     __gsignals__ = {
+            "authentication-failed" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                ()),
+
             "mail-received" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -315,7 +319,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             if command.arguments[0] == "SSO":
                 self._client._sso.RequestMultipleSecurityTokens(
                     (self._sso_cb, command.arguments[3]),
-                    (self._client._on_authentication_failure,),
+                    (lambda *args: self.emit("authentication-failed"),),
                     SSO.LiveService.MESSENGER_CLEAR)
                 
                 self._client.address_book.connect("notify::state",
