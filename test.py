@@ -74,7 +74,7 @@ class Client(pymsn.Client):
             pymsn.Client.__init__(self, server, get_proxies(), HTTPPollConnection)
         else:
             pymsn.Client.__init__(self, server, proxies = get_proxies())
-        ClientEvents(self)
+        self._event_handler = ClientEvents(self)
         gobject.idle_add(self._connect)
 
     def _connect(self):

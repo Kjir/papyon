@@ -22,11 +22,13 @@
 Defines the interfaces that the client can implement to benefit from the
 client event notifications."""
 
+from pymsn.util.weak import WeakSet
+
 class EventsDispatcher(object):
     """Abstract object from which all the objects generating events inherit"""
 
     def __init__(self):
-        self._events_handlers = set()
+        self._events_handlers = WeakSet()
 
     ### Callbacks
     def register_events_handler(self, events_handler):
