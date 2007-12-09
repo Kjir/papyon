@@ -21,6 +21,7 @@
 __all__ = ['AddressBookError', 'AddressBookState']
 
 class AddressBookError(object):
+    "Address book related errors"
     UNKNOWN = 0
 
     CONTACT_ALREADY_EXISTS  = 1

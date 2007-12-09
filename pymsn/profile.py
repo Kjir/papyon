@@ -20,16 +20,96 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """Profile of the User connecting to the service, as well as the profile of
-contacts in his/her contact list."""
+contacts in his/her contact list.
+
+    @sort: Profile, Contact, Group, ClientCapabilities
+    @group Enums: Presence, Membership, Privacy, NetworkID
+    @sort: Presence, Membership, Privacy, NetworkID"""
 
 from pymsn.util.decorator import rw_property
 
 import gobject
 
-__all__ = ['Presence', 'User', 'Contact']
+__all__ = ['Profile', 'Contact', 'Group', 
+        'Presence', 'Membership', 'Privacy', 'NetworkID', 'ClientCapabilities']
 
 
 class ClientCapabilities(object):
+    """Capabilities of the client. This allow adverstising what the User Agent
+    is capable of, for example being able to receive video stream, and being
+    able to receive nudges...
+    
+        @ivar is_bot: is the client a bot
+        @type is_bot: bool
+
+        @ivar is_mobile_device: is the client running on a mobile device
+        @type is_mobile_device: bool
+
+        @ivar is_msn_mobile: is the client an MSN Mobile device
+        @type is_msn_mobile: bool
+
+        @ivar is_msn_direct_device: is the client an MSN Direct device
+        @type is_msn_direct_device: bool
+
+        @ivar is_media_center_user: is the client running on a Media Center
+        @type is_media_center_user: bool
+
+        @ivar is_msn8_user: is the client using WLM 8
+        @type is_msn8_user: bool
+
+        @ivar is_web_client: is the client web based
+        @type is_web_client: bool
+
+        @ivar is_tgw_client: is the client a gateway
+        @type is_tgw_client: bool
+
+        @ivar has_space: does the user has a space account
+        @type has_space: bool
+
+        @ivar has_webcam: does the user has a webcam plugged in
+        @type has_webcam: bool
+
+        @ivar has_onecare: does the user has the OneCare service
+        @type has_onecare: bool
+
+        @ivar renders_gif: can the client render gif (for ink)
+        @type renders_gif: bool
+
+        @ivar renders_isf: can the client render ISF (for ink)
+        @type renders_isf: bool
+
+        @ivar supports_chunking: does the client supports chunking messages
+        @type supports_chunking: bool
+
+        @ivar supports_direct_im: does the client supports direct IM
+        @type supports_direct_im: bool
+
+        @ivar supports_winks: does the client supports Winks
+        @type supports_winks: bool
+
+        @ivar supports_shared_search: does the client supports Shared Search
+        @type supports_shared_search: bool
+
+        @ivar supports_voice_im: does the client supports voice clips
+        @type supports_voice_im: bool
+
+        @ivar supports_secure_channel: does the client supports secure channels
+        @type supports_secure_channel: bool
+
+        @ivar supports_sip_invite: does the client supports SIP
+        @type supports_sip_invite: bool
+
+        @ivar supports_shared_drive: does the client supports File sharing
+        @type supports_shared_drive: bool
+
+        @ivar p2p_supports_turn: does the client supports TURN for p2p transfer
+        @type p2p_supports_turn: bool
+
+        @ivar p2p_bootstrap_via_uun: is the client able to use and understand UUN commands
+        @type p2p_bootstrap_via_uun: bool
+
+        @undocumented: __getattr__, __setattr__, __str__
+        """
 
     _CAPABILITIES = {
             'is_bot': 0x00020000,
@@ -64,6 +144,12 @@ class ClientCapabilities(object):
             }
 
     def __init__(self, msnc=0, client_id=0):
+        """Initializer
+
+            @param msnc: The MSNC version
+            @type msnc: integer < 8 and >= 0
+
+            @param client_id: the full client ID"""
         MSNC = (0x0,        # MSNC0
                 0x10000000, # MSNC1
                 0x20000000, # MSNC2
@@ -99,12 +185,16 @@ class ClientCapabilities(object):
 
 class NetworkID(object):
     """Refers to the contact Network ID"""
+
     MSN = 1
     """Microsoft Network"""
+
     LCS = 2
-    """Microsoft Live COmmunication Server"""
+    """Microsoft Live Communication Server"""
+
     MOBILE = 4
     """Mobile phones"""
+
     EXTERNAL = 32
     """External IM etwork, currently Yahoo!"""
 
@@ -136,8 +226,8 @@ class Presence(object):
 
 
 class Privacy(object):
-    """User privacy, defines the default policy concerning contacts
-    not belonging to the ALLOW list nor to the BLOCK list
+    """User privacy, defines the default policy concerning contacts not
+    belonging to the ALLOW list nor to the BLOCK list.
 
         @cvar ALLOW: allow by default
         @cvar BLOCK: block by default"""
@@ -146,16 +236,33 @@ class Privacy(object):
 
 
 class Membership(object):
+    """Contact Membership"""
+
     UNKNOWN = 0
+    """Unknown membership"""
+
     FORWARD = 1
+    """Contact belongs to our contact list"""
+
     ALLOW   = 2
+    """Contact is explicitely allowed to see our presence regardless of the
+    currently set L{Privacy<pymsn.profile.Privacy>}"""
+
     BLOCK   = 4
+    """Contact is explicitely forbidden from seeing our presence regardless of
+    the currently set L{Privacy<pymsn.profile.Privacy>}"""
+
     REVERSE = 8
+    """We belong to the FORWARD list of the contact"""
+
     PENDING = 16
+    """Contact pending"""
 
 
-class User(gobject.GObject):
-    """Profile of the User connecting to the service"""
+class Profile(gobject.GObject):
+    """Profile of the User connecting to the service
+
+        @undocumented: __gsignals__, __gproperties__, do_get_property"""
 
     __gproperties__ = {
             "display-name": (gobject.TYPE_STRING,
@@ -219,27 +326,32 @@ class User(gobject.GObject):
 
     @property
     def account(self):
-        """The user account"""
+        """The user account
+            @type: utf-8 encoded string"""
         return self._account
 
     @property
     def password(self):
-        """The user password"""
+        """The user password
+            @type: utf-8 encoded string"""
         return self._password
 
     @property
     def profile(self):
-        """The user profile retrieved from the MSN servers"""
+        """The user profile retrieved from the MSN servers
+            @type: utf-8 encoded string"""
         return self._profile
 
     @property
     def id(self):
-        """The user identifier in a GUID form"""
+        """The user identifier in a GUID form
+            @type: GUID string"""
         return "00000000-0000-0000-0000-000000000000"
 
     @rw_property
     def display_name():
-        """The display name shown to you contacts"""
+        """The display name shown to you contacts
+            @type: utf-8 encoded string"""
         def fset(self, display_name):
             if not display_name:
                 return
@@ -249,7 +361,8 @@ class User(gobject.GObject):
 
     @rw_property
     def presence():
-        """The presence displayed to you contacts"""
+        """The presence displayed to you contacts
+            @type: L{Presence<pymsn.profile.Presence>}"""
         def fset(self, presence):
             if presence == self._presence:
                 return
@@ -260,7 +373,7 @@ class User(gobject.GObject):
     @rw_property
     def privacy():
         """The default privacy, can be either Privacy.ALLOW or Privacy.BLOCK
-            @see L{Privacy}"""
+            @type: L{Privacy<pymsn.profile.Privacy>}"""
         def fset(self, privacy):
             pass #FIXME: set the privacy setting
         def fget(self):
@@ -268,7 +381,8 @@ class User(gobject.GObject):
 
     @rw_property
     def personal_message():
-        """The personal message displayed to you contacts"""
+        """The personal message displayed to you contacts
+            @type: utf-8 encoded string"""
         def fset(self, personal_message):
             if personal_message == self._personal_message: return
             self._ns_client.set_personal_message(personal_message, self._current_media)
@@ -277,7 +391,8 @@ class User(gobject.GObject):
 
     @rw_property
     def current_media():
-        """The current media displayed to you contacts"""
+        """The current media displayed to you contacts
+            @type: (artist: string, track: string)"""
         def fset(self, current_media):
             if current_media == self._current_media: return
             self._ns_client.set_personal_message(self._personal_message, current_media)
@@ -288,7 +403,7 @@ class User(gobject.GObject):
     def msn_object():
         """The MSNObject attached to your contact, this MSNObject represents the
         display picture to be shown to your peers
-            @see: L{pymsn.p2p.MSNObjectStore}"""
+            @type: L{MSNObject<pymsn.p2p.MSNObject>}"""
         def fset(self, msn_object):
             if msn_object == self._msn_object: return
             self._ns_client.set_presence(self._presence, self.client_id, msn_object)
@@ -326,11 +441,12 @@ class User(gobject.GObject):
     def do_get_property(self, pspec):
         name = pspec.name.lower().replace("-", "_")
         return getattr(self, name)
-gobject.type_register(User)
+gobject.type_register(Profile)
 
 
 class Contact(gobject.GObject):
-    """Contact related information"""
+    """Contact related information
+        @undocumented: __gsignals__, __gproperties__, do_get_property"""
 
     __gsignals__ =  {
             "added": (gobject.SIGNAL_RUN_FIRST,
@@ -434,77 +550,92 @@ class Contact(gobject.GObject):
 
     @property
     def id(self):
-        """Contact identifier in a GUID form"""
+        """Contact identifier in a GUID form
+            @type: GUID string"""
         return self._id
 
     @property
     def attributes(self):
-        """Contact attributes"""
+        """Contact attributes
+            @type: {key: string => value: string}"""
         return self._attributes.copy()
 
     @property
     def cid(self):
-        """Contact ID"""
+        """Contact ID
+            @type: GUID string"""
         return self._cid
 
     @property
     def network_id(self):
-        """Contact network ID"""
+        """Contact network ID
+            @type: L{NetworkID<pymsn.profile.NetworkID>}"""
         return self._network_id
 
     @property
     def account(self):
-        """Contact account"""
+        """Contact account
+            @type: utf-8 encoded string"""
         return self._account
     
     @property
     def presence(self):
-        """Contact presence"""
+        """Contact presence
+            @type: L{Presence<pymsn.profile.Presence>}"""
         return self._presence
 
     @property
     def display_name(self):
-        """Contact display name"""
+        """Contact display name
+            @type: utf-8 encoded string"""
         return self._display_name
 
     @property
     def personal_message(self):
-        """Contact personal message"""
+        """Contact personal message
+            @type: utf-8 encoded string"""
         return self._personal_message
 
     @property
     def current_media(self):
-        """Contact current media"""
+        """Contact current media
+            @type: (artist: string, track: string)"""
         return self._current_media
 
     @property
     def groups(self):
-        """Contact list of groups"""
+        """Contact list of groups
+            @type: set(L{Group<pymsn.profile.Group>}...)"""
         return self._groups
 
     @property
     def infos(self):
-        """Contact informations"""
+        """Contact informations
+            @type: {key: string => value: string}"""
         return self._infos
 
     @property
     def memberships(self):
-        """Contact membership value"""
+        """Contact membership value
+            @type: bitmask of L{Membership<pymsn.profile.Membership>}s"""
         return self._memberships
 
     @property
     def client_capabilities(self):
-        """Contact client capabilities"""
+        """Contact client capabilities
+            @type: L{ClientCapabilities}"""
         return self._client_capabilities
     
     @property
     def msn_object(self):
-        """Contact MSN Object"""
+        """Contact MSN Object
+            @type: L{MSNObject<pymsn.p2p.MSNObject>}"""
         return self._msn_object
 
     @property
     def domain(self):
-        """Contact domain"""
+        """Contact domain, which is basically the part after @ in the account
+            @type: utf-8 encoded string"""
         result = self._account.split('@', 1)
         if len(result) > 1:
             return result[1]
@@ -513,6 +644,8 @@ class Contact(gobject.GObject):
 
     ### membership management
     def is_member(self, memberships):
+        """Determines if this contact belongs to the specified memberships
+            @type memberships: bitmask of L{Membership<pymsn.profile.Membership>}s"""
         return (self.memberships & memberships) == memberships
 
     def _add_membership(self, membership):
@@ -571,6 +704,9 @@ gobject.type_register(Contact)
 
 
 class Group(gobject.GObject):
+    """Group
+        @undocumented: __gsignals__, __gproperties__, do_get_property"""
+
     __gproperties__ = {
         "name": (gobject.TYPE_STRING,
                  "Group name",
@@ -587,12 +723,14 @@ class Group(gobject.GObject):
 
     @property
     def id(self):
-        "Group identifier in a GUID form"""
+        """Group identifier in a GUID form
+            @type: GUID string"""
         return self._id
 
     @property
     def name(self):
-        "Group name"
+        """Group name
+            @type: utf-8 encoded string"""
         return self._name
 
     def _server_property_changed(self, name, value):

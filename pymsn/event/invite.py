@@ -17,14 +17,25 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
+"""Invite event interfaces
+
+The interfaces defined in this module allow receiving notification events when
+we get invited into an activity with other users."""
+
 from pymsn.event import BaseEventInterface
 
 __all__ = ["InviteEventInterface"]
 
 class InviteEventInterface(BaseEventInterface):
     def __init__(self, client):
+        """Initializer
+            @param client: the client we want to be notified for its events
+            @type client: L{Client<pymsn.Client>}"""
         BaseEventInterface.__init__(self, client)
 
     def on_invite_conversation(self, conversation):
+        """Called when we get invited into a conversation
+            @param conversation: the conversation
+            @type conversation: L{Conversation<pymsn.conversation.ConversationInterface>}"""
         pass
 

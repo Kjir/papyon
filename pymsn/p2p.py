@@ -21,9 +21,10 @@
 
 """P2P
 This module contains the classes needed to engage in a peer to peer transfer
-with a contact."""
+with a contact.
+    @group MSNObject: MSNObjectStore, MSNObject, MSNObjectType
+    @sort: MSNObjectStore, MSNObject, MSNObjectType"""
 
-from event import EventsDispatcher
 from msnp2p import OutgoingP2PSession, EufGuid, ApplicationID
 from msnp2p.exceptions import ParseError
 from profile import NetworkID
@@ -42,18 +43,53 @@ __all__ = ['MSNObjectType', 'MSNObject', 'MSNObjectStore']
 logger = logging.getLogger('p2p')
 
 class MSNObjectType(object):
+    """Represent the various MSNObject types"""
+
     CUSTOM_EMOTICON = 2
+    "Custom smiley"
     DISPLAY_PICTURE = 3
+    "Display picture"
     BACKGROUND_PICTURE = 5
+    "Background picture"
     DYNAMIC_DISPLAY_PICTURE = 7
+    "Dynamic display picture"
     WINK = 8
+    "Wink"
     VOICE_CLIP = 11
+    "Void clip"
     SAVED_STATE_PROPERTY = 12
+    "Saved state property"
     LOCATION = 14
+    "Location"
 
 class MSNObject(object):
+    "Represents an MSNObject."
     def __init__(self, creator, size, type, location, friendly, 
                  shad=None, shac=None, data=None):
+        """Initializer
+        
+            @param creator: the creator of this MSNObject
+            @type creator: utf-8 encoded string representing the account
+
+            @param size: the total size of the data represented by this MSNObject
+            @type size: int
+
+            @param type: the type of the data
+            @type type: L{MSNObjectType}
+
+            @param location: a filename for the MSNObject
+            @type location: utf-8 encoded string
+
+            @param friendly: a friendly name for the MSNObject
+            @type friendly: utf-8 encoded string
+
+            @param shad: sha1 digest of the data
+
+            @param shac: sha1 digest of the MSNObject itself
+
+            @param data: file object to the data represented by this MSNObject
+            @type data: File
+        """
         self._creator = creator
         self._size = size
         self._type = type
@@ -157,18 +193,15 @@ class MSNObject(object):
         return dump
 
 
-class MSNObjectStore(EventsDispatcher):
-    MAX_REQUESTS = 99999999999
+class MSNObjectStore():
 
     def __init__(self, client):
         self._client = client
         self._outgoing_sessions = {} # session => (handle_id, callback, errback)
-        self._pending_requests = []
         self._incoming_sessions = {}
         self._published_objects = set()
         self._client._p2p_session_manager.connect("incoming-session",
                 self._incoming_session_received)
-        EventsDispatcher.__init__(self)
 
     def request(self, msn_object, callback, errback=None):
         if msn_object._data is not None:
@@ -181,16 +214,13 @@ class MSNObjectStore(EventsDispatcher):
         else:
             raise NotImplementedError
 
-        if len(self._outgoing_sessions) >= self.MAX_REQUESTS:
-            self._pending_requests.append((msn_object, callback, errback))
-        else:
-            session = OutgoingP2PSession(self._client._p2p_session_manager, 
-                    msn_object._creator, msn_object, 
-                    EufGuid.MSN_OBJECT, application_id)
-            handle_id = session.connect("transfer-completed",
-                    self._outgoing_session_transfer_completed)
-            self._outgoing_sessions[session] = \
-                    (handle_id, callback, errback, msn_object)
+        session = OutgoingP2PSession(self._client._p2p_session_manager, 
+                msn_object._creator, msn_object, 
+                EufGuid.MSN_OBJECT, application_id)
+        handle_id = session.connect("transfer-completed",
+                self._outgoing_session_transfer_completed)
+        self._outgoing_sessions[session] = \
+                (handle_id, callback, errback, msn_object)
 
     def publish(self, msn_object):
         if msn_object._data is None:
@@ -205,11 +235,6 @@ class MSNObjectStore(EventsDispatcher):
 
         callback[0](msn_object, *callback[1:])
         del self._outgoing_sessions[session]
-
-        if len(self._outgoing_sessions) < self.MAX_REQUESTS and \
-                len(self._pending_requests) > 0:
-            msn_object, callback, errback = self._pending_requests.pop(0)
-            self.request(msn_object, callback, errback)
 
     def _incoming_session_received(self, session_manager, session):
         if session._euf_guid != EufGuid.MSN_OBJECT:
@@ -234,3 +259,4 @@ class MSNObjectStore(EventsDispatcher):
         handle_id = self._incoming_sessions[session]
         session.disconnect(handle_id)
         del self._incoming_sessions[session]
+

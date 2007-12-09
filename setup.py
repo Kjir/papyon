@@ -1,19 +1,34 @@
 from distutils.core import setup
+from doc import make_doc_command, BuildAllDocCommand
 import os
+
+import pymsn
 
 
 # Metadata
 NAME = "pymsn"
-VERSION = "0.3.0"
+VERSION = pymsn.__version__
 DESCRIPTION = "Python msn client library"
 AUTHOR = "Ali Sabil"
 AUTHOR_EMAIL = "ali.sabil@gmail.com"
-URL = "http://telepathy.freedesktop.org/wiki/Pymsn"
-LICENSE = "GNU GPL"
+URL = pymsn.__url__
+LICENSE = pymsn.__license__
+
+# Documentation
+doc_commands = {
+    'doc_user_api': make_doc_command(
+        name='user_api',
+        description='the pymsn user API documentation',
+        config='doc/user-api.conf'),
+    'doc': BuildAllDocCommand
+}
+for name in doc_commands.keys():
+    if name != 'doc':
+        BuildAllDocCommand.sub_commands.append((name, None))
 
 # Compile the list of packages available, because distutils doesn't have
 # an easy way to do this.
-def fullsplit(path, result=None):
+def path_split(path, result=None):
     """
     Split a pathname into components (the opposite of os.path.join) in a
     platform-neutral way.
@@ -25,24 +40,24 @@ def fullsplit(path, result=None):
         return [tail] + result
     if head == path:
         return result
-    return fullsplit(head, [tail] + result)
+    return path_split(head, [tail] + result)
 
 packages, data_files = [], []
 root_dir = os.path.dirname(__file__)
-pymsn_dir = os.path.join(root_dir, 'pymsn')
-pieces = fullsplit(root_dir)
+pieces = path_split(root_dir)
 if pieces[-1] == '':
     len_root_dir = len(pieces) - 1
 else:
     len_root_dir = len(pieces)
 
+pymsn_dir = os.path.join(root_dir, 'pymsn')
 for dirpath, dirnames, filenames in os.walk(pymsn_dir):
     # Ignore dirnames that start with '.'
     for i, dirname in enumerate(dirnames):
         if dirname.startswith('.'):
             del dirnames[i]
     if '__init__.py' in filenames:
-        packages.append('.'.join(fullsplit(dirpath)[len_root_dir:]))
+        packages.append('.'.join(path_split(dirpath)[len_root_dir:]))
     elif filenames:
         data_files.append([dirpath, [os.path.join(dirpath, f) for f in filenames]])
 
@@ -56,6 +71,7 @@ setup(name=NAME,
       license=LICENSE,
       platforms=["any"],
       packages=packages,
+      cmdclass=doc_commands,
       classifiers=[
           'Development Status :: 3 - Alpha',
           'Environment :: Console',

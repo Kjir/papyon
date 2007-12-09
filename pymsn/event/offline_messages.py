@@ -17,11 +17,19 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
+"""Offline IM event interfaces
+
+The interfaces defined in this module allow receiving notification events about
+Offline messages."""
+
 from pymsn.event import BaseEventInterface
 
 __all__ = ["OfflineMessagesEventInterface"]
 
 class OfflineMessagesEventInterface(BaseEventInterface):
+    """interfaces allowing the user to get notified about events from the
+    Offline IM box."""
+
     def __init__(self, client):
         BaseEventInterface.__init__(self, client)
 

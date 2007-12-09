@@ -23,15 +23,16 @@ Defines the interfaces that the client can implement to benefit from the
 client event notifications."""
 
 class EventsDispatcher(object):
+    """Abstract object from which all the objects generating events inherit"""
 
     def __init__(self):
         self._events_handlers = set()
 
     ### Callbacks
     def register_events_handler(self, events_handler):
-        """
-        events_handler:
-            an instance with methods as code of callbacks.
+        """Registers an event handler with this dispatcher
+            @param events_handler: an instance with methods as code of callbacks
+            @type events_handler: L{pymsn.event.BaseEventInterface}
         """
         self._events_handlers.add(events_handler)
 
@@ -44,7 +45,12 @@ class EventsDispatcher(object):
 
 import weakref
 class BaseEventInterface(object):
+    """Event handler interface, implemented by all the event handlers"""
+
     def __init__(self, client):
+        """Initializer
+            @param client: the client we want to be notified for its events
+            @type client: an object implementing L{EventsDispatcher}"""
         self._client = weakref.proxy(client)
         client.register_events_handler(self)
 

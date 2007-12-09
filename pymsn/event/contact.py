@@ -18,32 +18,67 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
+"""Contact event interfaces
+
+The interfaces defined in this module allow receiving notification events
+from the contacts."""
+
 from pymsn.event import BaseEventInterface
 
 __all__ = ["ContactEventInterface"]
 
 class ContactEventInterface(BaseEventInterface):
+    """Interface allowing the user to get notified about the
+    L{Contact<pymsn.profile.Contact>}s events"""
+
     def __init__(self, client):
+        """Initializer
+            @param client: the client we want to be notified for its events
+            @type client: L{Client<pymsn.Client>}"""
         BaseEventInterface.__init__(self, client)
 
     def on_contact_presence_changed(self, contact):
+        """Called when the presence of a contact changes.
+            @param contact: the contact whose presence changed
+            @type contact: L{Contact<pymsn.profile.Contact>}"""
         pass
 
     def on_contact_display_name_changed(self, contact):
+        """Called when the display name of a contact changes.
+            @param contact: the contact whose presence changed
+            @type contact: L{Contact<pymsn.profile.Contact>}"""
         pass
 
     def on_contact_personal_message_changed(self, contact):
+        """Called when the personal message of a contact changes.
+            @param contact: the contact whose presence changed
+            @type contact: L{Contact<pymsn.profile.Contact>}"""
         pass
 
     def on_contact_current_media_changed(self, contact):
+        """Called when the current media of a contact changes.
+            @param contact: the contact whose presence changed
+            @type contact: L{Contact<pymsn.profile.Contact>}"""
         pass
 
     def on_contact_infos_changed(self, contact, infos):
+        """Called when the infos of a contact changes.
+            @param contact: the contact whose presence changed
+            @type contact: L{Contact<pymsn.profile.Contact>}"""
         pass
 
     def on_contact_client_capabilities_changed(self, contact):
+        """Called when the client capabilities of a contact changes.
+            @param contact: the contact whose presence changed
+            @type contact: L{Contact<pymsn.profile.Contact>}"""
         pass
 
     def on_contact_msn_object_changed(self, contact):
+        """Called when the MSNObject of a contact changes.
+            @param contact: the contact whose presence changed
+            @type contact: L{Contact<pymsn.profile.Contact>}
+
+            @see: L{MSNObjectStore<pymsn.p2p.MSNObjectStore>},
+                L{MSNObject<pymsn.p2p.MSNObject>}"""
         pass
 

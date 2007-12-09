@@ -33,6 +33,7 @@ class OfflineMessagesBoxState(object):
     """The box is already synchronized"""
 
 class OfflineMessagesBoxError(object):
+    "Offline IM related errors"
     UNKNOWN = 0
     AUTHENTICATION_FAILED = 1
     SYSTEM_UNAVAILABLE = 2

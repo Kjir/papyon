@@ -18,18 +18,32 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
+"""Client event interfaces
+
+The interfaces defined in this module allow receiving core notification events
+from the client.
+
+    @sort: ClientEventInterface
+    @group Enums: ClientState, ClientErrorType
+    @group Error Enums: NetworkError, AuthenticationError, ProtocolError,
+        AddressBookError, OfflineMessagesBoxError"""
+
 from pymsn.event import BaseEventInterface
 
 import pymsn.gnet
+import pymsn.service.AddressBook.constants
+import pymsn.service.OfflineIM.constants
 import pymsn.msnp
 
 __all__ = [ "ClientState", "ClientErrorType",
         "NetworkError", "AuthenticationError", "ProtocolError",
+        "AddressBookError", "OfflineMessagesBoxError",
         "ClientEventInterface" ]
 
 ClientState = pymsn.msnp.ProtocolState
 
 class ClientState(object):
+    "L{Client<pymsn.Client>} states"
     CLOSED = 0
     CONNECTING = 1
     CONNECTED = 2
@@ -40,30 +54,63 @@ class ClientState(object):
     OPEN = 7
 
 class ClientErrorType(object):
+    """L{Client<pymsn.Client>} error types
+        @see: L{ClientEventInterface.on_client_error}"""
+
     NETWORK = 0
+    "Network related errors"
     AUTHENTICATION = 1
+    "Authentication related errors"
     PROTOCOL = 2
+    "Protocol related errors"
     ADDRESSBOOK = 3
+    "Address book related errors"
     OFFLINE_MESSAGES = 4
+    "Offline IM related errors"
 
 NetworkError = pymsn.gnet.IoError
+"Network related errors"
 
 class AuthenticationError(object):
+    "Authentication related errors"
     UNKNOWN = 0
     INVALID_USERNAME = 1
     INVALID_PASSWORD = 2
     INVALID_USERNAME_OR_PASSWORD = 3
 
 class ProtocolError(object):
+    "Protocol related errors"
     UNKNOWN = 0
 
+AddressBookError = pymsn.service.AddressBook.constants.AddressBookError
+OfflineMessagesBoxError = pymsn.service.OfflineIM.constants.OfflineMessagesBoxError
+
+
 class ClientEventInterface(BaseEventInterface):
+    """Interface allowing the user to get notified about the
+    L{Client<pymsn.Client>} events"""
+
     def __init__(self, client):
+        """Initializer
+            @param client: the client we want to be notified for its events
+            @type client: L{Client<pymsn.Client>}"""
         BaseEventInterface.__init__(self, client)
 
     def on_client_state_changed(self, state):
+        """Called when the state of the L{Client<pymsn.Client>} changes.
+            @param state: the new state of the client
+            @type state: L{ClientState}"""
         pass
 
     def on_client_error(self, type, error):
+        """Called when an error occurs in the L{Client<pymsn.Client>}.
+
+            @param type: the error type
+            @type type: L{ClientErrorType}
+
+            @param error: the error code
+            @type error: L{NetworkError} or L{AuthenticationError} or
+                L{ProtocolError} or L{AddressBookError} or
+                L{OfflineMessagesBoxError}"""
         pass
 

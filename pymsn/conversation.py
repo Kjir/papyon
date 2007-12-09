@@ -20,7 +20,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """Conversation
-This module contains the class needed to have a conversation with a
+
+This module contains the classes needed to have a conversation with a
 contact."""
 
 import msnp
@@ -33,13 +34,26 @@ import logging
 import gobject
 from urllib import quote, unquote
 
-__all__ = ['Conversation', 'ExternalNetworkConversation',
-        'SwitchboardConversation', 'ConversationMessage', 'TextFormat']
+__all__ = ['Conversation', 'ConversationInterface', 'ConversationMessage', 'TextFormat']
 
 logger = logging.getLogger('conversation')
 
 
 def Conversation(client, contacts):
+    """Factory function used to create the appropriate conversation with the
+    given contacts.
+    
+    This is the method you need to use to start a conversation with both MSN
+    users and Yahoo! users.
+        @attention: you can only talk to one Yahoo! contact at a time, and you
+        cannot have multi-user conversations with both MSN and Yahoo! contacts.
+
+        @param contacts: The list of contacts to invite into the conversation
+        @type contacts: [L{Contact<pymsn.profile.Contact>}, ...]
+
+        @returns: a Conversation object implementing L{ConversationInterface<pymsn.conversation.ConversationInterface>}
+        @rtype: L{ConversationInterface<pymsn.conversation.ConversationInterface>}
+    """
     msn_contacts = set([contact for contact in contacts \
             if contact.network_id == NetworkID.MSN])
     external_contacts = set(contacts) - msn_contacts
@@ -56,177 +70,66 @@ def Conversation(client, contacts):
         return ExternalNetworkConversation(client, contacts)
 
 
-class BaseConversation(EventsDispatcher):
-    def __init__(self, client):
-        self._client = client
-        EventsDispatcher.__init__(self)
-
-        self.__last_received_msn_objects = {}
+class ConversationInterface(object):
+    """Interface implemented by all the Conversation objects, a Conversation
+    object allows the user to communicate with one or more peers"""
 
     def send_text_message(self, message):
-        """Build and send a message to all persons in this switchboard."""
-        if len(message.msn_objects) > 0:
-            body = []
-            for alias, msn_object in message.msn_objects.iteritems():
-                self._client._msn_object_store.publish(msn_object)
-                body.append(alias.encode("utf-8"))
-                body.append(str(msn_object))
-                # FIXME : we need to distinguish animemoticon and emoticons
-                # and send the related msn objects in separated messages
-            self._send_message(("text/x-mms-animemoticon",), '\t'.join(body))
+        """Send a message to all persons in this conversation.
 
-        content_type = ("text/plain","utf-8")
-        body = message.content.encode("utf-8")
-        ack = msnp.MessageAcknowledgement.HALF
-        headers = {}
-        if message.formatting is not None: 
-            headers["X-MMS-IM-Format"] = str(message.formatting)
-
-        self._send_message(content_type, body, headers, ack)
+            @param message: the message to send to the users on this conversation
+            @type message: L{Contact<pymsn.profile.Contact>}"""
+        raise NotImplementedError
 
     def send_nudge(self):
-        """Sends a nudge to the contacts on this switchboard."""
-        content_type = "text/x-msnmsgr-datacast"
-        body = "ID: 1\r\n\r\n".encode('UTF-8') #FIXME: we need to figure out the datacast objects :D
-        ack = msnp.MessageAcknowledgement.NONE
-        self._send_message(content_type, body, ack=ack)
+        """Sends a nudge to the contacts on this conversation."""
+        raise NotImplementedError
 
     def send_typing_notification(self):
-        """Sends an user typing notification to the contacts on this switchboard"""
-        content_type = "text/x-msmsgscontrol"
-        body = "\r\n\r\n".encode('UTF-8')
-        headers = { "TypingUser" : self._client.profile.account.encode('UTF_8') }
-        ack = msnp.MessageAcknowledgement.NONE
-        self._send_message(content_type, body, headers, ack)
+        """Sends an user typing notification to the contacts on this
+        conversation."""
+        raise NotImplementedError
     
     def invite_user(self, contact):
         """Request a contact to join in the conversation.
             
             @param contact: the contact to invite.
-            @type contact: L{profile.Contact}"""
+            @type contact: L{Contact<pymsn.profile.Contact>}"""
         raise NotImplementedError
 
     def leave(self):
         """Leave the conversation."""
         raise NotImplementedError
-    
-    def _send_message(self, content_type, body, headers={},
-            ack=msnp.MessageAcknowledgement.HALF):
-        raise NotImplementedError
 
-    def _on_contact_joined(self, contact):
-        self._dispatch("on_conversation_user_joined", contact)
-
-    def _on_contact_left(self, contact):
-        self._dispatch("on_conversation_user_left", contact)
-    
-    def _on_message_received(self, message):
-        sender = message.sender
-        message_type = message.content_type[0]
-        message_encoding = message.content_type[1]
-        try:
-            message_formatting = message.get_header('X-MMS-IM-Format')
-        except KeyError:
-            message_formatting = '='
-
-        if message_type == 'text/plain':
-            msg = ConversationMessage(unicode(message.body, message_encoding),
-                    TextFormat.parse(message_formatting),
-                    self.__last_received_msn_objects)
-            try:
-                display_name = message.get_header('P4-Context')
-            except KeyError:
-                display_name = sender.display_name
-            msg.display_name = display_name
-            self._dispatch("on_conversation_message_received", sender, msg)
-            self.__last_received_msn_objects = {}
-        elif message_type == 'text/x-msmsgscontrol':
-            self._dispatch("on_conversation_user_typing", sender)
-        elif message_type in ['text/x-mms-emoticon', 
-                              'text/x-mms-animemoticon']:
-            msn_objects = {}
-            parts = message.body.split('\t')
-            logger.debug(parts)
-            for i in [i for i in range(len(parts)) if not i % 2]:
-                if parts[i] == '': break
-                msn_objects[parts[i]] = p2p.MSNObject.parse(self._client,
-                        parts[i+1])
-            self.__last_received_msn_objects = msn_objects
-        elif message_type == 'text/x-msnmsgr-datacast' and \
-                message.body.strip() == "ID: 1":
-            self._dispatch("on_conversation_nudge_received", sender)
-
-    def _on_message_sent(self, message):
-        pass
-
-    
-class ExternalNetworkConversation(BaseConversation):
-    def __init__(self, client, contacts):
-        BaseConversation.__init__(self, client)
-        self.participants = set(contacts)
-        client._register_external_conversation(self)
-        gobject.idle_add(self._open)
-    
-    def _open(self):
-        for contact in self.participants:
-            self._on_contact_joined(contact)
-        return False
-
-    def invite_user(self, contact):
-        raise NotImplementedError("The protocol doesn't allow multiuser " \
-                "conversations for external contacts")
-
-    def leave(self):
-        """Leave the conversation."""
-        self._client._unregister_external_conversation(self)
-
-    def _send_message(self, content_type, body, headers={},
-            ack=msnp.MessageAcknowledgement.HALF):
-        if content_type[0]  in ['text/x-mms-emoticon',
-                                'text/x-mms-animemoticon']:
-            return
-        message = msnp.Message(self._client.profile)
-        for key, value in headers.iteritems():
-            message.add_header(key, value)
-        message.content_type = content_type
-        message.body = body
-        for contact in self.participants:
-            self._client._protocol.\
-                    send_unmanaged_message(contact, message)
-
-
-class SwitchboardConversation(BaseConversation, SwitchboardClient):
-    def __init__(self, client, contacts):
-        SwitchboardClient.__init__(self, client, contacts, priority=0)
-        BaseConversation.__init__(self, client)
-    
-    @staticmethod
-    def _can_handle_message(message, switchboard_client=None):
-        content_type = message.content_type[0]
-        if switchboard_client is None:
-            return content_type in ('text/plain', 'text/x-msnmsgr-datacast')
-        # FIXME : we need to not filter those 'text/x-mms-emoticon', 'text/x-mms-animemoticon'
-        return content_type in ('text/plain', 'text/x-msmsgscontrol',
-                'text/x-msnmsgr-datacast', 'text/x-mms-emoticon',
-                'text/x-mms-animemoticon')
-
-    def invite_user(self, contact):
-        """Request a contact to join in the conversation.
-            
-            @param contact: the contact to invite.
-            @type contact: L{profile.Contact}"""
-        SwitchboardClient._invite_user(self, contact)
-
-    def leave(self):
-        """Leave the conversation."""
-        SwitchboardClient._leave(self)
-
-    def _send_message(self, content_type, body, headers={},
-            ack=msnp.MessageAcknowledgement.HALF):
-        SwitchboardClient._send_message(self, content_type, body, headers, ack)
 
 class ConversationMessage(object):
+    """A Conversation message sent or received
+    
+        @ivar display_name: the display name to show for the sender of this message
+        @type display_name: utf-8 encoded string
+
+        @ivar content: the content of the message
+        @type content: utf-8 encoded string
+
+        @ivar formatting: the formatting for this message
+        @type formatting: L{TextFormat<pymsn.conversation.TextFormat>}
+
+        @ivar msn_objects: a dictionary mapping smileys
+            to an L{MSNObject<pymsn.p2p.MSNObject>}
+        @type msn_objects: {smiley: string => L{MSNObject<pymsn.p2p.MSNObject>}}
+    """
     def __init__(self, content, formatting=None, msn_objects={}):
+        """Initializer
+        
+            @param content: the content of the message
+            @type content: utf-8 encoded string
+
+            @param formatting: the formatting for this message
+            @type formatting: L{TextFormat<pymsn.conversation.TextFormat>}
+
+            @param msn_objects: a dictionary mapping smileys
+                to an L{MSNObject<pymsn.p2p.MSNObject>}
+            @type msn_objects: {smiley: string => L{MSNObject<pymsn.p2p.MSNObject>}}"""
         self.display_name = None
         self.content = content
         self.formatting = formatting
@@ -375,4 +278,167 @@ class TextFormat(object):
 
     def __repr__(self):
         return __str__(self)
+
+
+class AbstractConversation(ConversationInterface, EventsDispatcher):
+    def __init__(self, client):
+        self._client = client
+        ConversationInterface.__init__(self)
+        EventsDispatcher.__init__(self)
+
+        self.__last_received_msn_objects = {}
+
+    def send_text_message(self, message):
+        if len(message.msn_objects) > 0:
+            body = []
+            for alias, msn_object in message.msn_objects.iteritems():
+                self._client._msn_object_store.publish(msn_object)
+                body.append(alias.encode("utf-8"))
+                body.append(str(msn_object))
+                # FIXME : we need to distinguish animemoticon and emoticons
+                # and send the related msn objects in separated messages
+            self._send_message(("text/x-mms-animemoticon",), '\t'.join(body))
+
+        content_type = ("text/plain","utf-8")
+        body = message.content.encode("utf-8")
+        ack = msnp.MessageAcknowledgement.HALF
+        headers = {}
+        if message.formatting is not None: 
+            headers["X-MMS-IM-Format"] = str(message.formatting)
+
+        self._send_message(content_type, body, headers, ack)
+
+    def send_nudge(self):
+        content_type = "text/x-msnmsgr-datacast"
+        body = "ID: 1\r\n\r\n".encode('UTF-8') #FIXME: we need to figure out the datacast objects :D
+        ack = msnp.MessageAcknowledgement.NONE
+        self._send_message(content_type, body, ack=ack)
+
+    def send_typing_notification(self):
+        content_type = "text/x-msmsgscontrol"
+        body = "\r\n\r\n".encode('UTF-8')
+        headers = { "TypingUser" : self._client.profile.account.encode('UTF_8') }
+        ack = msnp.MessageAcknowledgement.NONE
+        self._send_message(content_type, body, headers, ack)
+    
+    def invite_user(self, contact):
+        raise NotImplementedError
+
+    def leave(self):
+        raise NotImplementedError
+    
+    def _send_message(self, content_type, body, headers={},
+            ack=msnp.MessageAcknowledgement.HALF):
+        raise NotImplementedError
+
+    def _on_contact_joined(self, contact):
+        self._dispatch("on_conversation_user_joined", contact)
+
+    def _on_contact_left(self, contact):
+        self._dispatch("on_conversation_user_left", contact)
+    
+    def _on_message_received(self, message):
+        sender = message.sender
+        message_type = message.content_type[0]
+        message_encoding = message.content_type[1]
+        try:
+            message_formatting = message.get_header('X-MMS-IM-Format')
+        except KeyError:
+            message_formatting = '='
+
+        if message_type == 'text/plain':
+            msg = ConversationMessage(unicode(message.body, message_encoding),
+                    TextFormat.parse(message_formatting),
+                    self.__last_received_msn_objects)
+            try:
+                display_name = message.get_header('P4-Context')
+            except KeyError:
+                display_name = sender.display_name
+            msg.display_name = display_name
+            self._dispatch("on_conversation_message_received", sender, msg)
+            self.__last_received_msn_objects = {}
+        elif message_type == 'text/x-msmsgscontrol':
+            self._dispatch("on_conversation_user_typing", sender)
+        elif message_type in ['text/x-mms-emoticon', 
+                              'text/x-mms-animemoticon']:
+            msn_objects = {}
+            parts = message.body.split('\t')
+            logger.debug(parts)
+            for i in [i for i in range(len(parts)) if not i % 2]:
+                if parts[i] == '': break
+                msn_objects[parts[i]] = p2p.MSNObject.parse(self._client,
+                        parts[i+1])
+            self.__last_received_msn_objects = msn_objects
+        elif message_type == 'text/x-msnmsgr-datacast' and \
+                message.body.strip() == "ID: 1":
+            self._dispatch("on_conversation_nudge_received", sender)
+
+    def _on_message_sent(self, message):
+        pass
+
+    
+class ExternalNetworkConversation(AbstractConversation):
+    def __init__(self, client, contacts):
+        AbstractConversation.__init__(self, client)
+        self.participants = set(contacts)
+        client._register_external_conversation(self)
+        gobject.idle_add(self._open)
+    
+    def _open(self):
+        for contact in self.participants:
+            self._on_contact_joined(contact)
+        return False
+
+    def invite_user(self, contact):
+        raise NotImplementedError("The protocol doesn't allow multiuser " \
+                "conversations for external contacts")
+
+    def leave(self):
+        self._client._unregister_external_conversation(self)
+
+    def _send_message(self, content_type, body, headers={},
+            ack=msnp.MessageAcknowledgement.HALF):
+        if content_type[0]  in ['text/x-mms-emoticon',
+                                'text/x-mms-animemoticon']:
+            return
+        message = msnp.Message(self._client.profile)
+        for key, value in headers.iteritems():
+            message.add_header(key, value)
+        message.content_type = content_type
+        message.body = body
+        for contact in self.participants:
+            self._client._protocol.\
+                    send_unmanaged_message(contact, message)
+
+
+class SwitchboardConversation(AbstractConversation, SwitchboardClient):
+    def __init__(self, client, contacts):
+        SwitchboardClient.__init__(self, client, contacts, priority=0)
+        AbstractConversation.__init__(self, client)
+    
+    @staticmethod
+    def _can_handle_message(message, switchboard_client=None):
+        content_type = message.content_type[0]
+        if switchboard_client is None:
+            return content_type in ('text/plain', 'text/x-msnmsgr-datacast')
+        # FIXME : we need to not filter those 'text/x-mms-emoticon', 'text/x-mms-animemoticon'
+        return content_type in ('text/plain', 'text/x-msmsgscontrol',
+                'text/x-msnmsgr-datacast', 'text/x-mms-emoticon',
+                'text/x-mms-animemoticon')
+
+    def invite_user(self, contact):
+        """Request a contact to join in the conversation.
+            
+            @param contact: the contact to invite.
+            @type contact: L{profile.Contact}"""
+        SwitchboardClient._invite_user(self, contact)
+
+    def leave(self):
+        """Leave the conversation."""
+        SwitchboardClient._leave(self)
+
+    def _send_message(self, content_type, body, headers={},
+            ack=msnp.MessageAcknowledgement.HALF):
+        SwitchboardClient._send_message(self, content_type, body, headers, ack)
+
         

@@ -21,11 +21,65 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """Client
-This module contains classes that clients should use in order to make use
-of the library."""
 
-import profile
-import msnp
+This module contains the main class used to login into the MSN Messenger
+network. The following example demonstrates a simple client.
+
+    >>> import pymsn
+    >>> 
+    >>> server = ('messenger.hotmail.com', 1863)
+    >>> account = ('pymsn@hotmail.com', 'pymsn is great !')
+    >>> 
+    >>> client = pymsn.Client(server)
+    >>> client.login(*account)
+    >>> 
+    >>> if __name__ == "__main__":
+    ...     import gobject
+    ...     import logging
+    ...     logging.basicConfig(level=logging.DEBUG) # allows us to see the protocol debug
+    ... 
+    ...     mainloop = gobject.MainLoop()
+    ...     mainloop.run()
+
+This client will try to login, but will probably fail because of the wrong
+password, so let's enhance this client so that it displays an error if the
+password was wrong, this will lead us to use the L{pymsn.event} interfaces:
+
+    >>> import pymsn
+    >>> import pymsn.event
+    >>> 
+    >>> class ClientEventHandler(pymsn.event.ClientEventInterface):
+    ...     def on_client_error(self, error_type, error):
+    ...         if error_type == pymsn.event.ClientErrorType.AUTHENTICATION:
+    ...             print ""
+    ...             print "********************************************************"
+    ...             print "* You bummer ! you did input a wrong username/password *"
+    ...             print "********************************************************"
+    ...         else:
+    ...             print "ERROR :", error_type, " ->", error
+    >>> 
+    >>> 
+    >>> server = ('messenger.hotmail.com', 1863)
+    >>> account = ('pymsn@hotmail.com', 'pymsn is great !')
+    >>> 
+    >>> client = pymsn.Client(server)
+    >>> client_events_handler = ClientEventHandler(client)
+    >>> 
+    >>> client.login(*account)
+    >>> 
+    >>> if __name__ == "__main__":
+    ...     import gobject
+    ...     import logging
+    ... 
+    ...     logging.basicConfig(level=logging.DEBUG) # allows us to see the protocol debug
+    ... 
+    ...     mainloop = gobject.MainLoop()
+    ...     mainloop.run()
+
+"""
+
+import pymsn.profile as profile
+import pymsn.msnp as msnp
 
 import pymsn.service.SingleSignOn as SSO
 import pymsn.service.AddressBook as AB
@@ -33,12 +87,12 @@ import pymsn.service.OfflineIM as OIM
 import pymsn.service.Spaces as Spaces
 
 from pymsn.util.decorator import rw_property
-
-from transport import *
-from switchboard_manager import SwitchboardManager
-from msnp2p import P2PSessionManager
-from p2p import MSNObjectStore
-from conversation import SwitchboardConversation, ExternalNetworkConversation
+from pymsn.transport import *
+from pymsn.switchboard_manager import SwitchboardManager
+from pymsn.msnp2p import P2PSessionManager
+from pymsn.p2p import MSNObjectStore
+from pymsn.conversation import SwitchboardConversation, \
+    ExternalNetworkConversation
 from pymsn.event import ClientState, ClientErrorType, \
     AuthenticationError, EventsDispatcher
 
@@ -50,7 +104,9 @@ logger = logging.getLogger('client')
 
 class Client(EventsDispatcher):
     """This class provides way to connect to the notification server as well
-    as methods to manage the contact list, and the personnal settings."""
+    as methods to manage the contact list, and the personnal settings.
+        @sort: __init__, login, logout, state, profile, address_book,
+                msn_object_store, oim_box, spaces"""
 
     def __init__(self, server, proxies={}, transport_class=DirectConnection):
         """Initializer
@@ -59,16 +115,21 @@ class Client(EventsDispatcher):
             @type server: tuple(host, port)
 
             @param proxies: proxies that we can use to connect
-            @type proxies: {type: string => L{gnet.proxy.ProxyInfos}}"""
+            @type proxies: {type: string => L{gnet.proxy.ProxyInfos}}
+
+            @param transport_class: the transport class to use for the network
+                    connection
+            @type transport_class: L{pymsn.transport.AbstractTransport}"""
         EventsDispatcher.__init__(self)
 
         self.__state = ClientState.CLOSED
+
         self._proxies = proxies
         self._transport_class = transport_class
         self._proxies = proxies
+
         self._transport = transport_class(server, ServerType.NOTIFICATION,
                 self._proxies)
-
         self._protocol = msnp.NotificationProtocol(self, self._transport,
                 self._proxies)
 
@@ -95,45 +156,52 @@ class Client(EventsDispatcher):
     @property
     def msn_object_store(self):
         """The MSNObjectStore instance associated with this client.
-            @see: L{pymsn.p2p.MSNObjectStore}"""
+            @type: L{MSNObjectStore<pymsn.p2p.MSNObjectStore>}"""
         return self._msn_object_store
 
     @property
     def profile(self):
         """The profile of the current user
-            @see: L{pymsn.profile.User}"""
+            @type: L{User<pymsn.profile.Profile>}"""
         return self._profile
 
     @property
     def address_book(self):
         """The address book of the current user
-            @see: L{pymsn.service.AddressBook}"""
+            @type: L{AddressBook<pymsn.service.AddressBook>}"""
         return self._address_book
 
     @property
     def oim_box(self):
         """The offline IM for the current user
-            @see: L{pymsn.service.OfflineIM}"""
+            @type: L{OfflineIM<pymsn.service.OfflineIM>}"""
         return self._oim_box
+
+    @property
+    def spaces(self):
+        """The MSN Spaces of the current user
+            @type: L{Spaces<pymsn.service.Spaces>}"""
+        return self._spaces
 
     @property
     def state(self):
         """The state of this Client
-            @see: L{pymsn.event.ClientState}"""
+            @type: L{pymsn.event.ClientState}"""
         return self.__state
 
     def login(self, account, password):
         """Login to the server.
 
             @param account: the account to use for authentication.
-            @type account: string
+            @type account: utf-8 encoded string
 
             @param password: the password needed to authenticate to the account
+            @type password: utf-8 encoded string
             """
         if (self._state != ClientState.CLOSED):
             logger.warning('login already in progress')
         self.__die = False
-        self._profile = profile.User((account, password), self._protocol)
+        self._profile = profile.Profile((account, password), self._protocol)
         self._transport.establish_connection()
         self._state = ClientState.CONNECTING
 
@@ -203,7 +271,7 @@ class Client(EventsDispatcher):
             self.__connect_addressbook_signals()
             self._oim_box = OIM.OfflineMessagesBox(self._sso, self, self._proxies)
             self.__connect_oim_box_signals()
-            self.spaces_service = Spaces.Spaces(self._sso, self._proxies)
+            self._spaces = Spaces.Spaces(self._sso, self._proxies)
 
             self._state = ClientState.CONNECTED
 
@@ -240,7 +308,7 @@ class Client(EventsDispatcher):
                 for contact in im_contacts:
                     self.__connect_contact_signals(contact)
 
-        def authentication_failed():
+        def authentication_failed(proto):
             self._dispatch("on_client_error", ClientErrorType.AUTHENTICATION,
                            AuthenticationError.INVALID_USERNAME_OR_PASSWORD)
             self.__die = True

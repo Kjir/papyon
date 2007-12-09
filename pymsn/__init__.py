@@ -21,10 +21,15 @@
 pymsn is a library, written in Python, for accessing the MSN
 instant messaging service.
     
-    @group High Level Interface: client, profile, transport
+    @group High Level Interface: client, profile, conversation, event
     @group Low Level Interface: msnp, msnp2p, service
     @group Network Layer: gnet
 """
+
+__version__ = "0.3.0"
+__author__ = "Ali Sabil <ali.sabil@gmail.com>"
+__url__ = "http://telepathy.freedesktop.org/wiki/Pymsn"
+__license__ = "GNU GPL"
 
 from client import *
 from conversation import *
