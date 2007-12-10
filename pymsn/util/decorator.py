@@ -21,6 +21,10 @@
 
 import sys
 import warnings
+import time
+
+import gobject
+
 
 def decorator(function):
     """decorator to be used on decorators, it preserves the docstring and
@@ -81,5 +85,50 @@ def unstable(func):
                       category=FutureWarning)
         return func(*args, **kwargs)
     return new_function
+
+@decorator
+def async(func):
+    """Make a function mainloop friendly. the function will be called at the
+    next mainloop idle state."""
+    def new_function(*args, **kwargs):
+        def async_function():
+            func(*args, **kwargs)
+            return False
+        gobject.idle_add(async_function)
+    return new_function
+
+class throttled(object):
+    """Throttle the calls to a function by queueing all the calls that happen
+    before the minimum delay."""
+
+    def __init__(self, min_delay, queue):
+        self._min_delay = min_delay
+        self._queue = queue
+        self._last_call_time = None
+
+    def __call__(self, func):
+        def process_queue():
+            if len(self._queue) != 0:
+                func, args, kwargs = self._queue.pop(0)
+                self._last_call_time = time.time() * 1000
+                func(*args, **kwargs)
+            return False
+
+        def new_function(*args, **kwargs):
+            now = time.time() * 1000
+            if self._last_call_time is None or \
+                    now - self._last_call_time >= self._min_delay:
+                self._last_call_time = now
+                func(*args, **kwargs)
+            else:
+                self._queue.append((func, args, kwargs))
+                last_call_delta = now - self._last_call_time
+                process_queue_timeout = int(self._min_delay * len(self._queue) - last_call_delta)
+                gobject.timeout_add(process_queue_timeout, process_queue)
+                
+        new_function.__name__ = func.__name__
+        new_function.__doc__ = func.__doc__
+        new_function.__dict__.update(func.__dict__)
+        return new_function
 
 

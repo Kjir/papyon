@@ -110,6 +110,7 @@ class RequireSecurityTokens(object):
                     None, *self._tokens)
         method.__name__ = func.__name__
         method.__doc__ = func.__doc__
+        method.__dict__.update(func.__dict__)
         return method
 
 

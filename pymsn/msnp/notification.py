@@ -30,6 +30,8 @@ from challenge import _msn_challenge
 
 import pymsn
 from pymsn.gnet.message.HTTP import HTTPMessage
+from pymsn.util.queue import PriorityQueue, LastElementQueue
+from pymsn.util.decorator import throttled
 import pymsn.util.element_tree as ElementTree
 import pymsn.profile as profile
 import pymsn.service.SingleSignOn as SSO
@@ -45,23 +47,6 @@ __all__ = ['NotificationProtocol']
 
 logger = logging.getLogger('protocol:notification')
 
-import bisect
-class PriorityQueue(object):
-    def __init__(self):
-        self.queue = []
-
-    def add(self, item, priority):
-        bisect.insort(self.queue, (priority, item))
-
-    def pop(self, n):
-        return self.queue.pop(n)[1]
-
-    def __len__(self):
-        return len(self.queue)
-
-    @property
-    def empty(self):
-        return len(self.queue) == 0
 
 class NotificationProtocol(BaseProtocol, gobject.GObject):
     """Protocol used to communicate with the Notification Server
@@ -135,6 +120,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         raise AttributeError, "unknown property %s" % pspec.name
 
     # Public API -------------------------------------------------------------
+    @throttled(2000, LastElementQueue())
     def set_presence(self, presence, client_id=0, msn_object=None):
         """Publish the new user presence.
 
@@ -151,6 +137,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             self._send_command('CHG',
                     (presence, str(client_id), urllib.quote(str(msn_object))))
 
+    @throttled(2000, LastElementQueue())
     def set_display_name(self, display_name):
         """Sets the new display name
 
@@ -159,6 +146,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._send_command('PRP',
                 ('MFN', urllib.quote(display_name)))
 
+    @throttled(2000, LastElementQueue())
     def set_personal_message(self, personal_message='', current_media=None):
         """Sets the new personal message
 
@@ -187,20 +175,11 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         """Logout from the server"""
         self._send_command('OUT')
         self._transport.lose_connection()
-        
+
+    @throttled(7600, list())
     def request_switchboard(self, priority, callback, *callback_args):
-        #FIXME: this can be heavily improved, basically, we are allowed to open
-        # 8 switchboards / 60 seconds, if we exceed this we get an error 800,
-        # for now, this is the dumbest algorithm to do it, but we can have
-        # something more clever than this
-        def req_sb():
-            self._send_command('XFR', ('SB',))
-            self._switchboard_requests_count -= 1
-            return self._switchboard_requests_count > 0
         self.__switchboard_callbacks.add((callback, callback_args), priority)
-        self._switchboard_requests_count += 1
-        if self._switchboard_requests_count == 1:
-            gobject.timeout_add(60 * 1000 / 8 + 100, req_sb)
+        self._send_command('XFR', ('SB',))
 
     def add_contact_to_membership(self, account,
             network_id=profile.NetworkID.MSN,
@@ -543,7 +522,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
         self.__switchboard_callbacks = PriorityQueue()
-        self._switchboard_requests_count = 0
         self._state = ProtocolState.OPENING
         self._send_command('VER', ProtocolConstant.VER)
 
