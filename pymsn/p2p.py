@@ -193,7 +193,7 @@ class MSNObject(object):
         return dump
 
 
-class MSNObjectStore():
+class MSNObjectStore(object):
 
     def __init__(self, client):
         self._client = client
