@@ -97,7 +97,7 @@ class Client(pymsn.Client):
                 if contact.account == "johann.prieur@gmail.com":
                     print "Inviting %s for a conversation" % contact.display_name
                     self.conv = pymsn.Conversation(self, [contact])
-                    AnnoyingConversation(self.conv)
+                    self._convo_events = AnnoyingConversation(self.conv)
             return False
 
 def main():
