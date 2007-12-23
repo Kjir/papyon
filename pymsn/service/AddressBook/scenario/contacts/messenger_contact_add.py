@@ -56,7 +56,7 @@ class MessengerContactAddScenario(BaseScenario):
                             self.contact_info,
                             invite_info)
 
-    def __contact_add_callback(self, contact_guid, delta):
+    def __contact_add_callback(self, contact_guid):
         self._ab.FindAll((self.__find_all_callback, contact_guid),
                          (self.__find_all_errback, contact_guid),
                          self._scenario, True)
@@ -71,9 +71,9 @@ class MessengerContactAddScenario(BaseScenario):
         args = self._errback[1:]
         errback(errcode, *args)
 
-    def __find_all_callback(self, delta, contact_guid):
+    def __find_all_callback(self, address_book_delta, contact_guid):
         callback = self._callback
-        callback[0](contact_guid, delta, *callback[1:])
+        callback[0](contact_guid, address_book_delta, *callback[1:])
 
     def __find_all_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
