@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__all__ = ['ProtocolError', 'ParseError', 'SLPError']
+__all__ = ['ProtocolError', 'ParseError', 'SLPError', 'SLPSessionError']
 
 class Error(Exception):
     """Generic exception type"""
@@ -49,6 +49,11 @@ class ParseError(Error):
 
 class SLPError(Error):
     """MSNSLP error, used by the msnp2p protocol"""
+    def __init__(self, message):
+        Error.__init__(self, 2, message)
+
+class SLPSessionError(Error):
+    """SLP Session error, used by the msnp2p protocol"""
     def __init__(self, message):
         Error.__init__(self, 2, message)
 

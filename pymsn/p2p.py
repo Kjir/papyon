@@ -238,8 +238,6 @@ class MSNObjectStore(object):
 
     def _incoming_session_received(self, session_manager, session):
         if session._euf_guid != EufGuid.MSN_OBJECT:
-            # FIXME: we should not reject here
-            session.reject()
             return
         handle_id = session.connect("transfer-completed",
                         self._incoming_session_transfer_completed)

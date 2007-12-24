@@ -240,7 +240,7 @@ if __name__ == '__main__':
     def sso_cb(tokens):
         print "Received tokens : "
         for token in tokens:
-            print token
+            print "token %s : %s" % (token, str(tokens[token]))
 
     logging.basicConfig(level=logging.DEBUG)
 
@@ -260,7 +260,7 @@ if __name__ == '__main__':
             lambda *args: gobject.idle_add(mainloop.quit()))
 
     sso = SingleSignOn(account, password)
-    sso.RequestMultipleSecurityTokens((sso_cb,), None, LiveService.CONTACTS)
+    sso.RequestMultipleSecurityTokens((sso_cb,), None, LiveService.VOICE)
 
     while mainloop.is_running():
         try:

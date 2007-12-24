@@ -78,17 +78,17 @@ class P2PSession(gobject.GObject):
         return self._peer
 
     def _close(self):
-        body = SLPMessageBody(SLPContentType.SESSION_CLOSE)
+        body = SLPSessionCloseBody()
 
         self._cseq = 0
         self._branch = "{%s}" % guid.generate_guid()
-        message = SLPRequestMessage('BYE',
+        message = SLPRequestMessage(SLPRequestMethod.BYE,
                 "MSNMSGR:" + self._peer.account,
-                to = self._peer.account,
-                frm = self._session_manager._client.profile.account,
-                branch = self._branch,
-                cseq = self._cseq,
-                call_id = self._call_id)
+                to=self._peer.account,
+                frm=self._session_manager._client.profile.account,
+                branch=self._branch,
+                cseq=self._cseq,
+                call_id=self._call_id)
         message.body = body
         self._send_p2p_data(message)
         self._session_manager._unregister_session(self)
@@ -168,16 +168,15 @@ class IncomingP2PSession(P2PSession):
         self._respond(603)
 
     def _respond(self, status_code):
-        body = SLPMessageBody(SLPContentType.SESSION_REQUEST)
-        body.add_header('SessionID', self._id)
+        body = SLPSessionRequestBody(session_id=self._id)
 
         self._cseq += 1
         response = SLPResponseMessage(status_code,
-            to = self._peer.account,
-            frm = self._session_manager._client.profile.account,
-            cseq = self._cseq,
-            branch = self._branch,
-            call_id = self._call_id)
+            to=self._peer.account,
+            frm=self._session_manager._client.profile.account,
+            cseq=self._cseq,
+            branch=self._branch,
+            call_id=self._call_id)
         response.body = body
         self._send_p2p_data(response)
 
@@ -191,23 +190,20 @@ class IncomingP2PSession(P2PSession):
 class OutgoingP2PSession(P2PSession):
     def __init__(self, session_manager, peer, context, euf_guid, application_id):
         P2PSession.__init__(self, session_manager, peer, euf_guid, application_id)
-        gobject.idle_add(self._invite, context)
+        gobject.idle_add(self._invite, str(context))
 
     def _invite(self, context):
         self._session_manager._register_session(self)
-        body = SLPMessageBody(SLPContentType.SESSION_REQUEST)
-        body.add_header('EUF-GUID', self._euf_guid)
-        body.add_header('SessionID', self._id)
-        body.add_header('AppID', self._application_id)
-        body.add_header('Context', base64.b64encode(str(context) + '\x00'))
+        body = SLPSessionRequestBody(self._euf_guid, self._application_id,
+                context, self._id)
 
-        message = SLPRequestMessage('INVITE',
+        message = SLPRequestMessage(SLPRequestMethod.INVITE,
                 "MSNMSGR:" + self._peer.account,
-                to = self._peer.account,
-                frm = self._session_manager._client.profile.account,
-                branch = self._branch,
-                cseq = self._cseq,
-                call_id = self._call_id)
+                to=self._peer.account,
+                frm=self._session_manager._client.profile.account,
+                branch=self._branch,
+                cseq=self._cseq,
+                call_id=self._call_id)
 
         message.body = body
         self._send_p2p_data(message)

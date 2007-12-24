@@ -51,20 +51,9 @@ def rw_property(function):
                 return self._my_property
             def fset(self, value):
                 self._my_property = value
+            return locals()
     """
-    keys = 'fget', 'fset', 'fdel'
-    func_locals = {'doc' : function.__doc__}
-
-    def probe_func(frame, event, arg):
-        if event == 'return':
-            locals = frame.f_locals
-            func_locals.update(dict((k,locals.get(k)) for k in keys))
-            sys.settrace(None)
-        return probe_func
-    sys.settrace(probe_func)
-    function()
-    return property(**func_locals)
-
+    return property(**function())
 
 @decorator
 def deprecated(func):

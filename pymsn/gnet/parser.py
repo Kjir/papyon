@@ -87,14 +87,13 @@ class DelimiterParser(AbstractParser):
         self._process_recv_cache()
 
     def _process_recv_cache(self):
-        
         if len(self._recv_cache) == 0:
             return
         if self._chunk_delimiter is None or self._chunk_delimiter == "":
             self.emit("received", self._recv_cache)
             self._recv_cache = ""
             return
-        
+
         previous_length = len(self._recv_cache)
         while len(self._recv_cache) != 0:
             if isinstance(self._chunk_delimiter, int):
@@ -152,6 +151,7 @@ class HTTPParser(AbstractParser):
         if status == IoStatus.OPEN:
             self._reset_state()
         elif status == IoStatus.CLOSING:
+            self._receive_buffer += self._parser._recv_cache
             self.__emit_result()
 
     def _on_chunk_received(self, parser, chunk):

@@ -24,7 +24,9 @@ from pymsn.msnp2p.constants import SLPContentType
 
 import base64
 
-__all__ = ['SLPMessage', 'SLPRequestMessage', 'SLPResponseMessage', 'SLPMessageBody']
+__all__ = ['SLPMessage', 'SLPRequestMessage', 'SLPResponseMessage',
+           'SLPMessageBody', 'SLPNullBody', 'SLPSessionRequestBody',
+           'SLPSessionCloseBody', 'SLPSessionFailureResponseBody']
 
 
 class SLPMessage(HTTPMessage):
@@ -40,6 +42,9 @@ class SLPMessage(HTTPMessage):
         if call_id:
             self.add_header("Call-ID", call_id)
         self.add_header("Max-Forwards", str(max_forwards))
+
+        # Make the body a SLP Message wih "null" content type
+        self.body = SLPNullBody()
 
     @property
     def to(self):
@@ -76,9 +81,22 @@ class SLPMessage(HTTPMessage):
         except KeyError:
             return ""
 
+    def parse(self, chunk):
+        HTTPMessage.parse(self, chunk)
+
+        content_type = self.headers.get("Content-Type", "null")
+        
+        raw_body = self.body
+        self.body = SLPMessageBody.build(content_type, raw_body)
+        
     def __str__(self):
-        self.add_header("Content-Type", self.body.content_type)
-        self.add_header("Content-Length", len(str(self.body)))
+        if self.body is None:
+            self.add_header("Content-Type", "null")
+            self.add_header("Content-Length", 0)
+        else:
+            self.add_header("Content-Type", self.body.content_type)
+            self.add_header("Content-Length", len(str(self.body)))
+            
         return HTTPMessage.__str__(self)
 
     @staticmethod
@@ -88,19 +106,15 @@ class SLPMessage(HTTPMessage):
         start_line, content = raw_message.split("\r\n", 1)
         start_line = start_line.split(" ")
 
-        if start_line[0].strip() in ("INVITE", "BYE", "ACK"):
+        if start_line[0].strip() == "MSNSLP/1.0":
+            status = int(start_line[1].strip())
+            reason = " ".join(start_line[2:]).strip()
+            slp_message = SLPResponseMessage(status, reason)
+        else:
             method = start_line[0].strip()
             resource = start_line[1].strip()
             slp_message = SLPRequestMessage(method, resource)
-        else:
-            status = int(start_line[1].strip())
-            slp_message = SLPResponseMessage(status)
         slp_message.parse(content)
-
-        content_type = slp_message.headers.get("Content-Type", "")
-        raw_body = slp_message.body
-
-        slp_message.body = SLPMessageBody(content_type, raw_body)
         
         return slp_message
 
@@ -135,23 +149,103 @@ class SLPResponseMessage(SLPMessage):
             603 : "Decline",
             606 : "Unacceptable"}
 
-    def __init__(self, status, *args, **kwargs):
+    def __init__(self, status, reason=None, *args, **kwargs):
         SLPMessage.__init__(self, *args, **kwargs)
         self.status = int(status)
+        self.reason = reason
     
     def __str__(self):
         message = SLPMessage.__str__(self)
-        reason = SLPResponseMessage.STATUS_MESSAGE[self.status]
+        
+        if self.reason is None:
+            reason = SLPResponseMessage.STATUS_MESSAGE[self.status]
+        else:
+            reason = self.reason
+            
         start_line = "MSNSLP/1.0 %d %s" % (self.status, reason)
         return start_line + "\r\n" + message
 
 
 class SLPMessageBody(HTTPMessage):
-    def __init__(self, content_type, data=""):
+    content_classes = {}
+    
+    def __init__(self, content_type, session_id=None, s_channel_state=0, capabilities_flags=1):
         HTTPMessage.__init__(self)
         self.content_type = content_type
-        self.parse(data)
 
+        if session_id is not None:
+            self.add_header("SessionID", session_id)
+        if s_channel_state is not None:
+            self.add_header("SChannelState", s_channel_state)
+        if capabilities_flags is not None:
+            self.add_header("Capabilities-Flags", capabilities_flags)
+
+          
+    @property
+    def session_id(self):
+        try:
+            return int(self.get_header("SessionID"))
+        except (KeyError, ValueError):
+            return 0
+        
+    @property
+    def s_channel_state(self):
+        try:
+            return int(self.get_header("SChannelState"))
+        except (KeyError, ValueError):
+            return 0
+        
+    @property
+    def capabilities_flags(self):
+        try:
+            return int(self.get_header("Capabilities-Flags"))
+        except (KeyError, ValueError):
+            return 0
+  
+    def parse(self, data):
+        if len(data) == 0:
+            return
+        data.rstrip('\x00')
+        HTTPMessage.parse(self, data)
+
+    def __str__(self):
+        return HTTPMessage.__str__(self) + "\x00"
+    
+    @staticmethod
+    def register_content(content_type, cls):
+        SLPMessageBody.content_classes[content_type] = cls
+
+    @staticmethod
+    def build(content_type, content):
+        if content_type in SLPMessageBody.content_classes.keys():
+            cls = SLPMessageBody.content_classes[content_type]
+            body = cls();
+        else:
+            body = SLPMessageBody(content_type)
+
+        body.parse(content)
+        return body
+
+
+class SLPNullBody(SLPMessageBody):
+    def __init__(self):
+        SLPMessageBody.__init__(self, SLPContentType.NULL)
+SLPMessageBody.register_content(SLPContentType.NULL, SLPNullBody)
+    
+
+class SLPSessionRequestBody(SLPMessageBody):
+    def __init__(self, euf_guid=None, app_id=None, context=None,
+            session_id=None, s_channel_state=0, capabilities_flags=1):
+        SLPMessageBody.__init__(self, SLPContentType.SESSION_REQUEST,
+                                    session_id, s_channel_state, capabilities_flags)
+        
+        if euf_guid is not None:
+            self.add_header("EUF-GUID", euf_guid)
+        if app_id is not None:
+            self.add_header("AppID", app_id)
+        if context is not None:
+            self.add_header("Context",  base64.b64encode(context))
+            
     @property
     def euf_guid(self):
         try:
@@ -160,16 +254,11 @@ class SLPMessageBody(HTTPMessage):
             return ""
 
     @property
-    def session_id(self):
-        try:
-            return int(self.get_header("SessionID"))
-        except (KeyError, ValueError):
-            return 0
-
-    @property
     def context(self):
         try:
             context = self.get_header("Context")
+            # Make the b64 string correct by append '=' to get a length as a
+            # multiple of 4. Kopete client seems to use incorrect b64 strings.
             context += '=' * (len(context) % 4)
             return base64.b64decode(context)
         except KeyError:
@@ -182,11 +271,36 @@ class SLPMessageBody(HTTPMessage):
         except (KeyError, ValueError):
             return 0
 
-    def parse(self, data):
-        if len(data) == 0:
-            return
-        data.rstrip('\x00')
-        HTTPMessage.parse(self, data)
+SLPMessageBody.register_content(SLPContentType.SESSION_REQUEST, SLPSessionRequestBody)
 
-    def __str__(self):
-        return HTTPMessage.__str__(self) + "\x00"
+
+class SLPSessionCloseBody(SLPMessageBody):
+    def __init__(self, context=None, session_id=None, s_channel_state=0,
+            capabilities_flags=1):
+        SLPMessageBody.__init__(self, SLPContentType.SESSION_CLOSE,
+                session_id, s_channel_state, capabilities_flags)
+        
+        if context is not None:
+            self.add_header("Context",  base64.b64encode(context));
+
+    @property
+    def context(self):
+        try:
+            context = self.get_header("Context")
+            # Make the b64 string correct by append '=' to get a length as a
+            # multiple of 4. Kopete client seems to use incorrect b64 strings.
+            context += '=' * (len(context) % 4)
+            return base64.b64decode(context)
+        except KeyError:
+            return None
+
+SLPMessageBody.register_content(SLPContentType.SESSION_CLOSE, SLPSessionCloseBody)
+
+
+class SLPSessionFailureResponseBody(SLPMessageBody):
+    def __init__(self, session_id=None, s_channel_state=0, capabilities_flags=1):
+        SLPMessageBody.__init__(self, SLPContentType.SESSION_FAILURE,
+                session_id, s_channel_state, capabilities_flags)
+
+SLPMessageBody.register_content(SLPContentType.SESSION_FAILURE, SLPSessionFailureResponseBody)
+

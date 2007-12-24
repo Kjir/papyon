@@ -168,8 +168,22 @@ class MessageBlob(object):
         #    self.data.close()
         pass
 
+    def __str__(self):
+        return repr(self)
+    
     def __repr__(self):
-        return "<MessageBlob id=%x session_id=%x>" % (self.id, self.session_id)
+        return """<MessageBlob :
+                  id=%x == %d
+                  session_id=%x
+                  current_size=%d
+                  total_size=%d
+                  app id=%d
+                  data=%s>""" % (self.id, self.id,
+                              self.session_id,
+                              self.current_size,
+                              self.total_size,
+                              self.application_id,
+                              str(self.data))
 
     @property
     def transferred(self):

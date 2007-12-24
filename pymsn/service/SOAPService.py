@@ -214,7 +214,7 @@ class SOAPService(object):
 
     def _error_handler(self, transport, error):
         logger.warning("Transport Error :" + str(error))
-        request_id, callback, errback = self._unref_transport(transport)
+        request_id, callback, errback, user_data = self._unref_transport(transport)
         return request_id, callback, errback #FIXME: do something sensible here
 
     # Handlers

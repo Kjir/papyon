@@ -18,12 +18,13 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__all__ = ['EufGuid', 'ApplicationID', 'SLPContentType']
+__all__ = ['EufGuid', 'ApplicationID', 'SLPContentType', 'SLPRequestMethod']
 
 class EufGuid(object):
     MSN_OBJECT = "{A4268EEC-FEC5-49E5-95C3-F126696BDBF6}"
     FILE_TRANSFER = "{5D3E02AB-6190-11D3-BBBB-00C04F795683}"
-    WEBCAM_RECEIVER = "{1C9AA97E-9C05-4583-A3BD-908A196F1E92}"
+    MEDIA_RECEIVE_ONLY = "{1C9AA97E-9C05-4583-A3BD-908A196F1E92}"
+    MEDIA_SESSION = "{4BD96FC0-AB17-4425-A14A-439185962DC8}"
 
 class ApplicationID(object):
     CUSTOM_EMOTICON_TRANSFER = 11
@@ -38,3 +39,11 @@ class SLPContentType(object):
     TRANSFER_REQUEST = "application/x-msnmsgr-transreqbody"
     TRANSFER_RESPONSE = "application/x-msnmsgr-transrespbody"
 
+    TRANS_UDP_SWITCH = "application/x-msnmsgr-transudpswitch"
+    
+    NULL = "null"
+    
+class SLPRequestMethod(object):
+    INVITE = 'INVITE'
+    BYE = 'BYE'
+    ACK = 'ACK'

@@ -173,9 +173,9 @@ class ClientCapabilities(object):
         if name in self._CAPABILITIES:
             mask = self._CAPABILITIES[name]
             if value:
-                self.client_id |= mask
+                object.__setattr__(self, 'client_id', self.client_id | mask)
             else:
-                self.client_id ^= mask
+                object.__setattr__(self, 'client_id', self.client_id ^ mask)
         else:
             raise AttributeError("object 'ClientCapabilities' has no attribute '%s'" % name)
 
@@ -322,6 +322,9 @@ class Profile(gobject.GObject):
         self._current_media = None
 
         self.client_id = ClientCapabilities(7)
+        self.client_id.supports_sip_invite = True
+        self.client_id.has_webcam = True #FIXME: this should only be advertised when a webcam is plugged
+
         self._msn_object = None
 
     @property
@@ -358,6 +361,7 @@ class Profile(gobject.GObject):
             self._ns_client.set_display_name(display_name)
         def fget(self):
             return self._display_name
+        return locals()
 
     @rw_property
     def presence():
@@ -369,6 +373,7 @@ class Profile(gobject.GObject):
             self._ns_client.set_presence(presence, self.client_id, self._msn_object)
         def fget(self):
             return self._presence
+        return locals()
 
     @rw_property
     def privacy():
@@ -378,6 +383,7 @@ class Profile(gobject.GObject):
             pass #FIXME: set the privacy setting
         def fget(self):
             return self._privacy
+        return locals()
 
     @rw_property
     def personal_message():
@@ -388,6 +394,7 @@ class Profile(gobject.GObject):
             self._ns_client.set_personal_message(personal_message, self._current_media)
         def fget(self):
             return self._personal_message
+        return locals()
 
     @rw_property
     def current_media():
@@ -398,6 +405,7 @@ class Profile(gobject.GObject):
             self._ns_client.set_personal_message(self._personal_message, current_media)
         def fget(self):
             return self._current_media
+        return locals()
 
     @rw_property
     def msn_object():
@@ -409,6 +417,7 @@ class Profile(gobject.GObject):
             self._ns_client.set_presence(self._presence, self.client_id, msn_object)
         def fget(self):
             return self._msn_object
+        return locals()
 
     @rw_property
     def presence_msn_object():
@@ -419,6 +428,7 @@ class Profile(gobject.GObject):
             self._ns_client.set_presence(presence, self.client_id, msn_object)
         def fget(self):
             return self._presence, self._msn_object
+        return locals()
 
     @rw_property
     def personal_message_current_media():
@@ -430,6 +440,7 @@ class Profile(gobject.GObject):
             self._ns_client.set_personal_message(personal_message, current_media)
         def fget(self):
             return self._personal_message, self._current_media
+        return locals()
 
     def _server_property_changed(self, name, value):
         attr_name = "_" + name.lower().replace("-", "_")

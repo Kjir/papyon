@@ -222,6 +222,7 @@ class Client(EventsDispatcher):
         def fset(self, state):
             self.__state = state
             self._dispatch("on_client_state_changed", state)
+        return locals()
 
     def _register_external_conversation(self, conversation):
         for contact in conversation.participants:
