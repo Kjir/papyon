@@ -65,7 +65,11 @@ class SocketClient(GIOChannelClient):
             return False
         
         if cond & (gobject.IO_IN | gobject.IO_PRI):
-            buf = self._channel.read(2048)
+            buf = ""
+            try:
+                buf = self._channel.read(2048)
+            except gobject.GError:
+                pass
             if buf == "":
                 self.close()
                 return False

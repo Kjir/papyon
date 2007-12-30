@@ -25,9 +25,6 @@ class AddressBookEventInterface(BaseEventInterface):
     def __init__(self, client):
         BaseEventInterface.__init__(self, client)
 
-    def on_addressbook_new_pending_contact(self, pending_contact):
-        pass
-
     def on_addressbook_messenger_contact_added(self, contact):
         pass
 
