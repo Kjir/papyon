@@ -35,6 +35,8 @@ class ClientEvents(pymsn.event.ClientEventInterface):
             self._client.profile.display_name = "Kimbix"
             self._client.profile.presence = pymsn.Presence.ONLINE
             self._client.profile.current_media = ("I listen to", "Nothing")
+            for contact in self._client.address_book.contacts:
+                print contact
             #self._client.profile.personal_message = "Testing pymsn, and freeing the pandas!"
             gobject.timeout_add(5000, self._client.start_conversation)
 

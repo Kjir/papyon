@@ -238,8 +238,8 @@ class Privacy(object):
 class Membership(object):
     """Contact Membership"""
 
-    UNKNOWN = 0
-    """Unknown membership"""
+    NONE = 0
+    """Contact doesn't belong to the contact list, but belongs to the address book"""
 
     FORWARD = 1
     """Contact belongs to our contact list"""
@@ -538,7 +538,7 @@ class Contact(gobject.GObject):
             }
 
     def __init__(self, id, network_id, account, display_name, cid=None,
-            memberships=Membership.UNKNOWN):
+            memberships=Membership.NONE):
         """Initializer"""
         gobject.GObject.__init__(self)
         self._id = id
@@ -556,8 +556,25 @@ class Contact(gobject.GObject):
         self._client_capabilities = ClientCapabilities()
         self._msn_object = None
         self._infos = {}
-        self._attributes = {'im_contact' : False,
-                'icon_url' : None}
+        self._attributes = {'icon_url' : None}
+
+    def __repr__(self):
+        def memberships_str():
+            m = []
+            memberships = self._memberships
+            if memberships & Membership.FORWARD:
+                m.append('FORWARD')
+            if memberships & Membership.ALLOW:
+                m.append('ALLOW')
+            if memberships & Membership.BLOCK:
+                m.append('BLOCK')
+            if memberships & Membership.REVERSE:
+                m.append('REVERSE')
+            if memberships & Membership.PENDING:
+                m.append('PENDING')
+            return " | ".join(m)
+        template = "<pymsn.Contact id='%s' network='%u' account='%s' memberships='%s'>"
+        return template % (self._id, self._network_id, self._account, memberships_str())
 
     @property
     def id(self):

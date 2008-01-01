@@ -407,15 +407,17 @@ class AddressBook(gobject.GObject):
 
             contact_infos = { ContactGeneral.ANNOTATIONS : contact.Annotations }
 
+            if contact.IsMessengerUser:
+                memberships = profile.Membership.FORWARD
+            else:
+                memberships = profile.Membership.NONE
             c = profile.Contact(contact.Id,
                     profile.NetworkID.EXTERNAL,
                     external_email.Email.encode("utf-8"),
                     display_name.encode("utf-8"),
                     contact.CID,
-                    profile.Membership.FORWARD)
+                    memberships)
             c._server_infos_changed(contact_infos)
-            c._server_attribute_changed("im_contact",
-                    external_email.IsMessengerEnabled)
 
             for group in self.groups:
                 if group.id in contact.Groups:
@@ -435,15 +437,17 @@ class AddressBook(gobject.GObject):
                 display_name = contact.PassportName
 
             contact_infos = { ContactGeneral.ANNOTATIONS : contact.Annotations }
+            if contact.IsMessengerUser:
+                memberships = profile.Membership.FORWARD
+            else:
+                memberships = profile.Membership.NONE
             c = profile.Contact(contact.Id,
                     profile.NetworkID.MSN,
                     contact.PassportName.encode("utf-8"),
                     display_name.encode("utf-8"),
                     contact.CID,
-                    profile.Membership.FORWARD)
+                    memberships)
             c._server_infos_changed(contact_infos)
-            c._server_attribute_changed("im_contact",
-                    contact.IsMessengerUser)
             
             for group in self.groups:
                 if group.id in contact.Groups:
