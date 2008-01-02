@@ -306,6 +306,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
                 self._client.address_book.connect("messenger-contact-added",
                         self._address_book_contact_added_cb)
+                self._client.address_book.connect("contact-accepted",
+                        self._address_book_contact_accepted_cb)
+                self._client.address_book.connect("contact-rejected",
+                        self._address_book_contact_rejected_cb)
                 self._client.address_book.connect("contact-deleted",
                         self._address_book_contact_deleted_cb)
                 self._client.address_book.connect("contact-blocked",
@@ -594,6 +598,20 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
         self.remove_contact_from_membership(contact.account, contact.network_id,
                                             profile.Membership.FORWARD)
+
+    def _address_book_contact_accepted_cb(self, address_book, contact):
+        mask = ~(profile.Membership.REVERSE | profile.Membership.PENDING)
+        memberships = contact.memberships & mask
+        if memberships:
+            self.add_contact_to_membership(contact.account, contact.network_id,
+                    memberships)
+
+    def _address_book_contact_rejected_cb(self, address_book, contact):
+        mask = ~(profile.Membership.REVERSE | profile.Membership.PENDING)
+        memberships = contact.memberships & mask
+        if memberships:
+            self.add_contact_to_membership(contact.account, contact.network_id,
+                    memberships)
 
     def _address_book_contact_blocked_cb(self, address_book, contact):
         self.remove_contact_from_membership(contact.account, contact.network_id,

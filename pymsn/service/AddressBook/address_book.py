@@ -138,6 +138,14 @@ class AddressBook(gobject.GObject):
                 gobject.TYPE_NONE,
                  (object,)),
 
+            # FIXME: those signals will be removed in the future and will be
+            # moved to profile.Contact
+            "contact-accepted"         : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            "contact-rejected"       : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
             "contact-blocked"         : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -483,6 +491,7 @@ class AddressBook(gobject.GObject):
         contact._add_membership(profile.Membership.ALLOW)
         contact._add_membership(profile.Membership.REVERSE)
         contact.thaw_notify()
+        self.emit('contact-accepted', contact)
 
     def __decline_contact_invitation_cb(self, contact):
         #FIXME: Here, we just guess, we would prefer if we could do a
@@ -492,6 +501,7 @@ class AddressBook(gobject.GObject):
         contact._add_membership(profile.Membership.BLOCK)
         contact._add_membership(profile.Membership.REVERSE)
         contact.thaw_notify()
+        self.emit('contact-rejected', contact)
 
     def __add_messenger_contact_cb(self, contact_guid, address_book_delta, groups):
         contacts = address_book_delta.contacts

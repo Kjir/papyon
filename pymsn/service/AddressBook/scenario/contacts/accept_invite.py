@@ -70,9 +70,8 @@ class AcceptInviteScenario(BaseScenario):
                                     self.state, self.account)
 
     def __add_contact_callback(self, contact_guid, delta):
-        self.__ab.FindAll((self.__find_all_callback, contact_guid),
-                          (self.__find_all_errback, contact_guid),
-                          self._scenario, True)
+        callback = self._callback
+        callback[0](contact_guid, delta, *callback[1:])
 
     def __add_contact_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
@@ -85,32 +84,9 @@ class AcceptInviteScenario(BaseScenario):
         errback(errcode, *args)
 
     def __delete_member_callback(self):
-        self.__sharing.AddMember((self.__add_member_callback,),
-                                 (self.__add_member_errback,),
-                                 self._scenario, 'Allow', self._type(), 
-                                 self.state, self.account)
+        pass
 
     def __delete_member_errback(self, error_code):
-        errcode = AddressBookError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
-    
-    def __add_member_callback(self):
-        callback = self._callback
-        callback[0](*callback[1:])
-
-    def __add_member_errback(self, error_code):
-        errcode = AddressBookError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
-
-    def __find_all_callback(self, delta, contact_guid):
-        callback = self._callback
-        callback[0](contact_guid, delta, *callback[1:])
-
-    def __find_all_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
         errback = self._errback[0]
         args = self._errback[1:]
