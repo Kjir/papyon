@@ -455,7 +455,7 @@ class AddressBook(gobject.GObject):
                     raise NotImplementedError("Unknown Membership Type : " + membership)
                 contact._add_membership(membership)
 
-            if new_contact:
+            if new_contact and self.state == AddressBookState.SYNCHRONIZED:
                 self.emit('messenger-contact-added', contact)
 
     # Callbacks
