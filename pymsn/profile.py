@@ -460,25 +460,6 @@ class Contact(gobject.GObject):
         @undocumented: __gsignals__, __gproperties__, do_get_property"""
 
     __gsignals__ =  {
-            "added": (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-            "added-me": (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-            "removed": (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-            "removed-me": (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-            "blocked": (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-            "allowed": (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-
             "infos-changed": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -677,13 +658,6 @@ class Contact(gobject.GObject):
         return (self.memberships & memberships) == memberships
 
     def _add_membership(self, membership):
-        if not self.is_member(Membership.REVERSE) and \
-                membership == Membership.REVERSE:
-            self.emit("added-me")
-        elif not self.is_member(Membership.FORWARD) and \
-                membership == Membership.FORWARD:
-            self.emit("added")
-
         self._memberships |= membership
         self.notify("memberships")
 
@@ -692,13 +666,6 @@ class Contact(gobject.GObject):
 
             @param membership: the membership to remove
             @type membership: int L{Membership}"""
-        if self.is_member(Membership.REVERSE) and \
-                membership == Membership.REVERSE:
-            self.emit("removed-me")
-        elif self.is_member(Membership.FORWARD) and \
-                membership == Membership.FORWARD:
-            self.emit("removed")
-
         self._memberships ^= membership
         self.notify("memberships")
 
@@ -717,6 +684,7 @@ class Contact(gobject.GObject):
     def _server_infos_changed(self, updated_infos):
         self._infos.update(updated_infos)
         self.emit("infos-changed", updated_infos)
+        self.notify("infos")
 
     ### group management
     def _add_group_ownership(self, group):

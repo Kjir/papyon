@@ -121,7 +121,7 @@ class Command(object):
 
     INCOMING_PAYLOAD = (
             'GCF', 'MSG', 'UBN', 'UBM', 'UBX', 'IPG',
-            'NOT', 'ADL', 'FQY',
+            'NOT', 'ADL', 'RML', 'FQY',
             
             '241', '509')
 

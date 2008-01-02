@@ -37,6 +37,13 @@ class ContactEventInterface(BaseEventInterface):
             @type client: L{Client<pymsn.Client>}"""
         BaseEventInterface.__init__(self, client)
 
+    def on_contact_memberships_changed(self, contact):
+        """Called when the memberships of a contact changes.
+            @param contact: the contact whose presence changed
+            @type contact: L{Contact<pymsn.profile.Contact>}
+            @see: L{Memberships<pymsn.profile.Membership>}"""
+        pass
+
     def on_contact_presence_changed(self, contact):
         """Called when the presence of a contact changes.
             @param contact: the contact whose presence changed

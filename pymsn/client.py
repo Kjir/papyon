@@ -251,10 +251,11 @@ class Client(EventsDispatcher):
             method_name = "on_contact_%s_changed" % pspec.name.replace("-", "_")
             self._dispatch(method_name, contact)
 
+        contact.connect("notify::memberships", property_changed)
         contact.connect("notify::presence", property_changed)
         contact.connect("notify::display-name", property_changed)
         contact.connect("notify::personal-message", property_changed)
-        contact.connect("notify::current-media", property_changed)        
+        contact.connect("notify::current-media", property_changed)
         contact.connect("notify::msn-object", property_changed)
         contact.connect("notify::client-capabilities", property_changed)
 
@@ -360,7 +361,6 @@ class Client(EventsDispatcher):
         def connect_signal(name):
             self.address_book.connect(name, event, name)
 
-        connect_signal("new-pending-contact")
         connect_signal("messenger-contact-added")
         connect_signal("contact-deleted")
         connect_signal("contact-blocked")

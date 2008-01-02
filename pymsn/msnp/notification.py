@@ -440,8 +440,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     # --------- Contact List -------------------------------------------------
     def _handle_ADL(self, command):
         if command.transaction_id == 0: # incoming ADL from the server
-            self._client.address_book._check_pending_invitations()
-        if command.arguments[0] == "OK":
+            self._client.address_book.check_pending_invitations()
+        if len(command.arguments) > 0 and command.arguments[0] == "OK":
             if self._state != ProtocolState.OPEN: # Initial ADL
                 self._state = ProtocolState.OPEN
                 self._transport.enable_ping()
