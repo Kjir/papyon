@@ -37,7 +37,7 @@ def soap_action():
 def soap_body(passport_name, is_messenger_user, contact_type, first_name, 
               last_name, birth_date, email, phone, location, web_site,  
               annotation, comment, anniversary, display_name, invite_message,
-              capability):
+              capability, enable_allow_list_management=True):
     """Returns the SOAP xml body
 
             @param passport_name: the passport adress if the contact to add
@@ -175,11 +175,12 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
             </contacts>
             <options>
                 <EnableAllowListManagement>
-                    true
+                    %(allow_list_management)s
                 </EnableAllowListManagement>
             </options>
         </ABContactAdd>""" % { 'contact_info' : contact_info,
-                               'invite_info' : invite_info }
+                               'invite_info' : invite_info,
+                               'allow_list_management' : str(enable_allow_list_management).lower()}
 
 def process_response(soap_response):
     body = soap_response.body

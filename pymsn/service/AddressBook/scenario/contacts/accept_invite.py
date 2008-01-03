@@ -44,6 +44,9 @@ class AcceptInviteScenario(BaseScenario):
         self.network = network
         self.state = state
 
+        self._added_contact = None
+        self._memberships = set(['Pending'])
+
     def _type(self):
         if self.network == NetworkID.MSN:
             return 'Passport'
@@ -65,13 +68,25 @@ class AcceptInviteScenario(BaseScenario):
                          self.account)
                 em()
         self.__sharing.DeleteMember((self.__delete_member_callback,),
-                                    (self.__delete_member_errback,),
+                                    (self.__common_errback,),
                                     self._scenario, 'Pending', self._type(),
                                     self.state, self.account)
+        if not self.__add_to_contact_list:
+            self.__sharing.AddMember((self.__add_member_callback,),
+                                     (self.__common_errback,),
+                                     self._scenario, 'Allow', self._type(), 
+                                     self.state, self.account)
 
-    def __add_contact_callback(self, contact_guid, delta):
-        callback = self._callback
-        callback[0](contact_guid, delta, *callback[1:])
+    def __add_contact_callback(self, contact_guid, address_book_delta):
+        contacts = address_book_delta.contacts
+        self._memberships.add('Forward')
+        self._memberships.add('Allow')
+        for contact in contacts:
+            if contact.Id != contact_guid:
+                continue
+            self._added_contact = contact
+            return
+        self.__try_emit_result()
 
     def __add_contact_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
@@ -84,11 +99,25 @@ class AcceptInviteScenario(BaseScenario):
         errback(errcode, *args)
 
     def __delete_member_callback(self):
-        pass
+        self._memberships.discard('Pending')
+        self.__try_emit_result()
 
-    def __delete_member_errback(self, error_code):
+    def __add_member_callback(self):
+        self._memberships.add('Allow')
+        self.__try_emit_result()
+
+    def __common_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
         errback = self._errback[0]
         args = self._errback[1:]
         errback(errcode, *args)
+
+    def __try_emit_result(self):
+        if 'Allow' not in self._memberships:
+            return
+        # FIXME: handle this using a final FindMemberships
+        self._memberships.add('Reverse')
+        contact = self._added_contact
+        memberships = self._memberships
+        callback[0](contact, memberships, *callback[1:])
 

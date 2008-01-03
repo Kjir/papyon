@@ -213,7 +213,7 @@ class AddressBook(gobject.GObject):
         if self._state != AddressBookState.NOT_SYNCHRONIZED:
             return
         self._state = AddressBookState.SYNCHRONIZING
-        
+
         initial_sync = scenario.InitialSyncScenario(self._ab, self._sharing,
                 (self.__initial_sync_callback,),
                 (self.__common_errback,))
@@ -470,7 +470,6 @@ class AddressBook(gobject.GObject):
 
         for contact in contacts:
             c = self.__build_contact(contact)
-        
             if c is None:
                 continue
 
@@ -482,14 +481,21 @@ class AddressBook(gobject.GObject):
         self.__update_memberships(memberships)
         self._state = AddressBookState.SYNCHRONIZED
 
-    def __accept_contact_invitation_cb(self, contact_guid, address_book_delta, contact):
-        #FIXME: Here, we just guess, we would prefer if we could do a
-        # FindMembership and update the infos accordingly
+    def __accept_contact_invitation_cb(self, contact_infos, memberships, contact):
+        mapping = {'Forward' : profile.Membership.FORWARD,
+                   'Allow' : profile.Membership.ALLOW,
+                   'Block': profile.Membership.BLOCK,
+                   'Pending': profile.Membership.PENDING,
+                   'Reverse': profile.Membership.REVERSE}
         contact.freeze_notify()
-        contact._remove_membership(profile.Membership.PENDING)
-        contact._add_membership(profile.Membership.FORWARD)
-        contact._add_membership(profile.Membership.ALLOW)
-        contact._add_membership(profile.Membership.REVERSE)
+        for membership in memberships:
+            contact._add_membership(mapping[membership])
+
+        for membership in mapping.keys():
+            if membership not in memberships:
+                contact._remove_membership(mapping[membership])
+        contact._id = contact_infos.Id
+        contact._cid = contact_infos.CID
         contact.thaw_notify()
         self.emit('contact-accepted', contact)
 

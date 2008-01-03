@@ -23,9 +23,12 @@ from pymsn.service.AddressBook.constants import *
 __all__ = ['MessengerContactAddScenario']
 
 class MessengerContactAddScenario(BaseScenario):
-    def __init__(self, ab, callback, errback, account='', 
-                 contact_type='LivePending', contact_info={},
-                 invite_display_name='', invite_message=''):
+    def __init__(self, ab, callback, errback,
+                 account='', 
+                 contact_type='LivePending',
+                 contact_info={},
+                 invite_display_name='',
+                 invite_message=''):
         """Adds a messenger contact and updates the address book.
 
             @param ab: the address book service
@@ -42,6 +45,7 @@ class MessengerContactAddScenario(BaseScenario):
 
         self.invite_display_name = invite_display_name
         self.invite_message = invite_message
+        self.auto_manage_allow_list = True
 
     def execute(self):
         invite_info = { 'display_name' : self.invite_display_name ,
@@ -54,7 +58,8 @@ class MessengerContactAddScenario(BaseScenario):
                             (self.__contact_add_errback,),
                             self._scenario, 
                             self.contact_info,
-                            invite_info)
+                            invite_info,
+                            self.auto_manage_allow_list)
 
     def __contact_add_callback(self, contact_guid):
         self._ab.FindAll((self.__find_all_callback, contact_guid),

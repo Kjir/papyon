@@ -230,12 +230,13 @@ class AB(SOAPService):
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def ContactAdd(self, callback, errback, scenario,
-            contact_info, invite_info):
+            contact_info, invite_info, auto_manage_allow_list=True):
         """Adds a contact to the contact list.
 
             @param scenario: "ContactSave" | "ContactMsgrAPI"
             @param contact_info: info dict concerning the new contact
             @param invite_info: info dict concerning the sent invite
+            @param auto_manage_allow_list: whether to auto add to Allow role or not
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
@@ -258,7 +259,8 @@ class AB(SOAPService):
                     contact_info.get('anniversary', None),
                     invite_info.get('display_name', ''),
                     invite_info.get('invite_message', ''),
-                    contact_info.get('capability', None)),
+                    contact_info.get('capability', None),
+                    auto_manage_allow_list),
                 callback, errback)
 
     def _HandleABContactAddResponse(self, callback, errback, response, user_data):
