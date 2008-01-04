@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
+# Copyright (C) 2007-2008 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,69 +17,44 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from pymsn.service.AddressBook.scenario.base import BaseScenario
-from pymsn.service.AddressBook.constants import *
+from pymsn.service.AddressBook.scenario.base import Scenario
+
+from pymsn.profile import Membership
 from pymsn.profile import NetworkID
 
 __all__ = ['DeclineInviteScenario']
 
 class DeclineInviteScenario(BaseScenario):
     def __init__(self, sharing, callback, errback, account='', 
-                 network=NetworkID.MSN, state='Accepted'):
+                 network=NetworkID.MSN, membership=Membership.NONE,
+                 state='Accepted', block=True):
         """Declines an invitation.
 
             @param sharing: the membership service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        BaseScenario.__init__(self, 'Timer', callback, errback)
+        BaseScenario.__init__(self, Scenario.TIMER, callback, errback)
         self.__sharing = sharing
 
         self.account = account
         self.network = network
+        self.membership = membership
         self.state = state
-
-    def _type(self):
-        if self.network == NetworkID.MSN:
-            return 'Passport'
-        elif self.network == NetworkID.EXTERNAL:
-            return 'Email'
+        self.block = block
 
     def execute(self):
-        self.__sharing.DeleteMember((self.__delete_member_callback,),
-                                    (self.__delete_member_errback,),
-                                    self._scenario, 'Pending', self._type(),
-                                    self.state, self.account)
+        new_membership = self.membership & ~Membership.PENDING
+        if self.block:
+            new_membership |= Membership.BLOCK
+        um = UpdateMembershipScenario(self.__sharing, 
+                                      self._callback, self._errback,
+                                      self._scenario,
+                                      self.account,
+                                      self.network,
+                                      self.state,
+                                      self.account,
+                                      self.membership,
+                                      new_membership)
+        um()
 
-    def __delete_member_callback(self):
-        self.__sharing.AddMember((self.__add_member_block_callback,),
-                                 (self.__add_member_block_errback,),
-                                 self._scenario, 'Block', self._type(), 
-                                 self.state, self.account)
-
-    def __delete_member_errback(self, error_code):
-        errcode = AddressBookError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
-    
-    def __add_member_block_callback(self):
-        self.__sharing.AddMember((self.__add_member_reverse_callback,),
-                                 (self.__add_member_reverse_errback,),
-                                 self._scenario, 'Reverse', self._type(), 
-                                 self.state, self.account)
-
-    def __add_member_block_errback(self, error_code):
-        errcode = AddressBookError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(reason, *args)
-
-    def __add_member_reverse_callback(self):
-        callback = self._callback
-        callback[0](*callback[1:])
-
-    def __add_member_reverse_errback(self, error_code):
-        errcode = AddressBookError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)

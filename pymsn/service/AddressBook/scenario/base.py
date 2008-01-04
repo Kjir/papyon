@@ -17,7 +17,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-__all__ = ['BaseScenario']
+__all__ = ['BaseScenario', 'Scenario']
 
 class BaseScenario(object):
     def __init__(self, partner_scenario, callback, errback):
@@ -37,3 +37,13 @@ class BaseScenario(object):
     def __call__(self):
         return self.execute()
 
+class Scenario(object):
+    """Scenario label"""
+
+    INITIAL = "Initial"
+    TIMER = "Timer"
+    CONTACT_SAVE = "ContactSave"
+    GROUP_SAVE = "GroupSave"
+    BLOCK_UNBLOCK = "BlockUnblock"
+    CONTACT_MSGR_API = "ContactMsgrAPI"
+    

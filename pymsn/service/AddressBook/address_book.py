@@ -229,12 +229,14 @@ class AddressBook(gobject.GObject):
         ai.network = pending_contact.network_id
         ai()
 
-    def decline_contact_invitation(self, pending_contact):
+    def decline_contact_invitation(self, pending_contact, block=True):
         di = scenario.DeclineInviteScenario(self._sharing,
                  (self.__decline_contact_invitation_cb, pending_contact),
                  (self.__common_errback,))
         di.account = pending_contact.account
         di.network = pending_contact.network_id
+        di.membership = pending_contact.memberships
+        di.block = block
         di()
 
     def add_messenger_contact(self, account, invite_display_name='', 
@@ -295,6 +297,7 @@ class AddressBook(gobject.GObject):
                 (self.__common_errback,))
         bc.account = contact.account
         bc.network = contact.network_id
+        bc.membership = contact.memberships
         bc()
 
     def unblock_contact(self, contact):
@@ -303,6 +306,7 @@ class AddressBook(gobject.GObject):
                 (self.__common_errback,))
         uc.account = contact.account
         uc.network = contact.network_id
+        uc.membership = contact.memberships
         uc()
 
     def add_group(self, group_name):
