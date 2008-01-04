@@ -46,4 +46,5 @@ class Scenario(object):
     GROUP_SAVE = "GroupSave"
     BLOCK_UNBLOCK = "BlockUnblock"
     CONTACT_MSGR_API = "ContactMsgrAPI"
-    
+    MOBILE_CONTACT_MSGR_API = "MobileContactMsgrAPI"
+    MESSENGER_PENDING_LIST = "MessengerPendingList"

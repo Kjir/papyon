@@ -18,16 +18,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__all__ = ['ContactAnnotations', 'ContactEmailType', 'ContactType',
-           'ContactPhoneType', 'ContactLocation', 'ContactWebSiteType',
-           'ContactGeneral']
-
-class ContactType(object):
-    REGULAR = "Regular"
-    LIVE_PENDING = "LivePending"
-    LIVE_ACCEPTED = "LiveAccepted"
-    LIVE_DROPPED = "LiveDropped"
-    YAHOO = "Messenger2"
+__all__ = ['ContactAnnotations', 'ContactEmailType', 'ContactPhoneType', 
+           'ContactLocation', 'ContactWebSiteType', 'ContactGeneral']
 
 class ContactGeneral(object):
     FIRST_NAME  = 0

@@ -18,14 +18,17 @@
 #
 
 from pymsn.service.AddressBook.scenario.base import BaseScenario
+from pymsn.service.AddressBook.scenario.base import Scenario
+
 from pymsn.service.AddressBook.constants import *
+from pymsn.profile import ContactType
 
 __all__ = ['MessengerContactAddScenario']
 
 class MessengerContactAddScenario(BaseScenario):
     def __init__(self, ab, callback, errback,
                  account='', 
-                 contact_type='LivePending',
+                 contact_type=ContactType.REGULAR,
                  contact_info={},
                  invite_display_name='',
                  invite_message=''):
@@ -34,7 +37,7 @@ class MessengerContactAddScenario(BaseScenario):
             @param ab: the address book service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)"""
-        BaseScenario.__init__(self, 'ContactSave', callback, errback)
+        BaseScenario.__init__(self, Scenario.CONTACT_SAVE, callback, errback)
 
         self._ab = ab
 

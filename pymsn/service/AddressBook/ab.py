@@ -2,7 +2,7 @@
 #
 # pymsn - a python client library for Msn
 #
-# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
+# Copyright (C) 2007-2008 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -137,43 +137,6 @@ class Contact(object):
         self.Deleted = contact.findtext("./ab:fDeleted", "bool")
         self.LastChanged = contact.findtext("./ab:lastChanged", "datetime")
 
-    @staticmethod
-    def new(contact):
-        contact_type = contact.findtext("./ab:contactInfo/ab:contactType")
-
-        if contact_type == "Live":
-            return LiveContact(contact)
-        if contact_type == "LivePending":
-            return LivePendingContact(contact)
-        if contact_type == "LiveRejected":
-            return LiveRejectedContact(contact)
-        if contact_type == "LiveDropped":
-            return LiveDroppedContact(contact)
-        elif contact_type == "Me":
-            return MeContact(contact)
-        elif contact_type == "Regular":
-            return RegularContact(contact)
-        else:
-            raise NotImplementedError("Contact Type not implemented : " + contact_type)
-
-class LiveContact(Contact):
-    pass
-
-class LivePendingContact(LiveContact):
-    pass
-
-class LiveRejectedContact(LiveContact):
-    pass
-
-class LiveDroppedContact(LiveContact):
-    pass
-
-class MeContact(LiveContact):
-    pass
-
-class RegularContact(Contact):
-    pass
-
 
 class AB(SOAPService):
     def __init__(self, sso, proxies=None):
@@ -223,7 +186,7 @@ class AB(SOAPService):
             groups.append(Group(group))
 
         for contact in response[2]:
-            contacts.append(Contact.new(contact))
+            contacts.append(Contact(contact))
         
         address_book =  ABResult(None, contacts, groups) #FIXME: add support for the ab param
         callback[0](address_book, *callback[1:])

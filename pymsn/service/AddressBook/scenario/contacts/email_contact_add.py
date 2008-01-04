@@ -17,7 +17,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from pymsn.service.AddressBook.scenario.base import BaseScenario
-from pymsn.service.description.AB import ContactType
+from pymsn.service.AddressBook.scenario.base import Scenario
 
 __all__ = ['EmailContactAddScenario']
 
@@ -28,7 +28,7 @@ class EmailContactAddScenario(BaseScenario):
             @param ab: the adress book service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)"""
-        BaseScenario.__init__(self, 'ContactSave', callback, errback)
+        BaseScenario.__init__(self, Scenario.CONTACT_SAVE, callback, errback)
         self.__ab = ab
 
         self.__email_address = email_address

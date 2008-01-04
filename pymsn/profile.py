@@ -3,7 +3,7 @@
 # pymsn - a python client library for Msn
 #
 # Copyright (C) 2005-2006 Ali Sabil <ali.sabil@gmail.com>
-# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
+# Copyright (C) 2007-2008 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ from pymsn.util.decorator import rw_property
 import gobject
 
 __all__ = ['Profile', 'Contact', 'Group', 
-        'Presence', 'Membership', 'Privacy', 'NetworkID', 'ClientCapabilities']
+        'Presence', 'Membership', 'ContactType', 'Privacy', 'NetworkID', 'ClientCapabilities']
 
 
 class ClientCapabilities(object):
@@ -257,6 +257,36 @@ class Membership(object):
 
     PENDING = 16
     """Contact pending"""
+
+
+class ContactType(object):
+    """Automatic update status flag"""
+
+    ME = "Me"
+    """Contact is the user so there's no automatic update relationship"""
+
+    EXTERNAL = "Messenger2"
+    """Contact is part of an external messenger service so there's no automatic
+    update relationship with the user"""
+
+    REGULAR = "Regular"
+    """Contact has no automatic update relationship with the user"""
+
+    LIVE = "Live"
+    """Contact has an automatic update relationship with the user and an 
+    automatic update already occured"""
+
+    LIVE_PENDING = "LivePending"
+    """Contact was requested automatic update from the user and didn't
+    give its authorization yet"""
+
+    LIVE_REJECTED = "LiveRejected"
+    """Contact was requested automatic update from the user and rejected
+    the request"""
+
+    LIVE_DROPPED = "LiveDropped"
+    """Contact had an automatic update relationship with the user but
+    the contact dropped it"""
 
 
 class Profile(gobject.GObject):
@@ -504,6 +534,11 @@ class Contact(gobject.GObject):
                 "The contact informations",
                 gobject.PARAM_READABLE),
 
+            "contact-type": (gobject.TYPE_PYOBJECT,
+                "Contact type",
+                "The contact automatic update status flag",
+                 gobject.PARAM_READABLE),        
+
             "client-capabilities": (gobject.TYPE_UINT64,
                 "Client capabilities",
                 "The client capabilities of the contact 's client",
@@ -519,7 +554,7 @@ class Contact(gobject.GObject):
             }
 
     def __init__(self, id, network_id, account, display_name, cid=None,
-            memberships=Membership.NONE):
+            memberships=Membership.NONE, contact_type=ContactType.Regular):
         """Initializer"""
         gobject.GObject.__init__(self)
         self._id = id
@@ -534,6 +569,7 @@ class Contact(gobject.GObject):
         self._groups = set()
 
         self._memberships = memberships
+        self._contact_type = contact_type
         self._client_capabilities = ClientCapabilities()
         self._msn_object = None
         self._infos = {}
@@ -628,6 +664,12 @@ class Contact(gobject.GObject):
         """Contact membership value
             @type: bitmask of L{Membership<pymsn.profile.Membership>}s"""
         return self._memberships
+
+    @property
+    def contact_type(self):
+        """Contact automatic update status flag
+            @type: L{ContactType<pymsn.profile.ContactType>}"""
+        return self._contact_type
 
     @property
     def client_capabilities(self):

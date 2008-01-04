@@ -17,6 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from pymsn.service.AddressBook.scenario.base import BaseScenario
+from pymsn.service.AddressBook.scenario.base import Scenario
+
 from pymsn.service.AddressBook.constants import *
 
 __all__ = ['CheckPendingInviteScenario']
@@ -29,7 +31,7 @@ class CheckPendingInviteScenario(BaseScenario):
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        BaseScenario.__init__(self, 'MessengerPendingList', callback, errback)
+        BaseScenario.__init__(self, Scenario.MESSENGER_PENDING_LIST, callback, errback)
         self.__sharing = sharing
 
     def execute(self):

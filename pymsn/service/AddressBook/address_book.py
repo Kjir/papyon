@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2006-2007 Ali Sabil <ali.sabil@gmail.com>
-# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
+# Copyright (C) 2007-2008 Johann Prieur <johann.prieur@gmail.com>
 # Copyright (C) 2007 Ole André Vadla Ravnås <oleavr@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -26,6 +26,7 @@ import scenario
 
 import pymsn
 import pymsn.profile as profile
+from pymsn.profile import ContactType
 from pymsn.service.AddressBook.constants import *
 from pymsn.service.description.AB.constants import *
 
@@ -377,7 +378,8 @@ class AddressBook(gobject.GObject):
                     external_email.Email.encode("utf-8"),
                     display_name.encode("utf-8"),
                     contact.CID,
-                    memberships)
+                    memberships,
+                    contact.Type)
             c._server_infos_changed(contact_infos)
 
             for group in self.groups:
@@ -386,8 +388,8 @@ class AddressBook(gobject.GObject):
             
             return c
 
-        elif (not contact.IsMessengerUser and contact.Type != "Me") or \
-                contact.PassportName == "":
+        elif (not contact.IsMessengerUser and contact.Type != ContactType.ME) \
+                or contact.PassportName == "":
             # FIXME : mobile phone and mail contacts here
             return None
         else:
@@ -477,7 +479,7 @@ class AddressBook(gobject.GObject):
             if c is None:
                 continue
 
-            if contact.Type == "Me":
+            if contact.Type == ContactType.ME:
                 self._profile = c
             else:
                 self.contacts.add(c)

@@ -17,6 +17,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from pymsn.service.AddressBook.scenario.base import BaseScenario
+from pymsn.service.AddressBook.scenario.base import Scenario
 from messenger_contact_add import MessengerContactAddScenario
 from external_contact_add import ExternalContactAddScenario
 
@@ -35,7 +36,7 @@ class AcceptInviteScenario(BaseScenario):
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        BaseScenario.__init__(self, 'ContactMsgrAPI', callback, errback)
+        BaseScenario.__init__(self, Scenario.CONTACT_MSGR_API, callback, errback)
         self.__ab = ab
         self.__sharing = sharing
         self.__add_to_contact_list = add_to_contact_list

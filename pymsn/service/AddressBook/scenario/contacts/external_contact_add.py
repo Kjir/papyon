@@ -18,6 +18,8 @@
 #
 
 from pymsn.service.AddressBook.scenario.base import BaseScenario
+from pymsn.service.AddressBook.scenario.base import Scenario
+
 from pymsn.service.AddressBook.constants import *
 from pymsn.service.description.AB.constants import ContactEmailType
 from pymsn.profile import NetworkID
@@ -33,7 +35,7 @@ class ExternalContactAddScenario(BaseScenario):
             @param ab: the address book service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)"""
-        BaseScenario.__init__(self, 'ContactMsgrAPI', callback, errback)
+        BaseScenario.__init__(self, Scenario.CONTACT_MSGR_API, callback, errback)
 
         self._ab = ab
 

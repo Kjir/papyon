@@ -17,7 +17,9 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from pymsn.service.AddressBook.scenario.base import BaseScenario
-from pymsn.service.description.AB import ContactType, ContactPhoneType
+from pymsn.service.AddressBook.scenario.base import Scenario
+
+from pymsn.service.description.AB import ContactPhoneType
 
 __all__ = ['MobileContactAddScenario']
 
@@ -29,7 +31,7 @@ class MobileContactAddScenario(BaseScenario):
             @param ab: the adress book service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)"""
-        BaseScenario.__init__(self, 'MobileContactMsgrAPI', callback, errback)
+        BaseScenario.__init__(self, Scenario.MOBILE_CONTACT_MSGR_API, callback, errback)
         self.__ab = ab
 
         self.__phone_number = phone_number
