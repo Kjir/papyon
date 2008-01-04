@@ -25,16 +25,16 @@ from pymsn.profile import Membership
 __all__ = ['UpdateMembershipScenario']
 
 class UpdateMembershipScenario(BaseScenario):
-    """Scenario used to update contact memberships in a safe way
+    """Scenario used to update contact memberships in a safe way.
         @undocumented: __membership_mapping, __contact_type"""
 
     __membership_mapping = { Membership.FORWARD: "Forward",
-                             Membership.ALLOW: "Allow",
-                             Membership.BLOCK: "Block",
+                             Membership.ALLOW:   "Allow",
+                             Membership.BLOCK:   "Block",
                              Membership.REVERSE: "Reverse",
                              Membership.PENDING: "Pending" }
     
-    __contact_type = { NetworkID.MSN: "Passport",
+    __contact_type = { NetworkID.MSN:      "Passport",
                        NetworkID.EXTERNAL: "Email" }
 
     def __init__(self, sharing, callback, errback, scenario,
@@ -55,47 +55,56 @@ class UpdateMembershipScenario(BaseScenario):
         self.new = new_membership
         self.state = state
 
-    def execute(self):
-        self.__process_delete([2**p for p in range(5)])
+        # We keep a trace of what changes are actually done to pass it through 
+        # the callback or the errback so that the executor of the scenario can
+        # update the memberships property of the contact.
+        self.__done = old_membership
 
-    def __process_delete(self, memberships):
+    def execute(self):
+        self.__process_delete([2**p for p in range(5)], Membership.NONE)
+
+    def __process_delete(self, memberships, last):
+        self.__done &= ~last
+
         if memberships == []:
-            self.__process_add([2**p for p in range(5)])
+            self.__process_add([2**p for p in range(5)], Membership.NONE)
             return
 
         current = memberships.pop()
         if current & (self.old ^ self.new):
             if current & self.old:
                 membership = UpdateMembershipScenario.__membership_mapping[current]
-                self.__sharing.DeleteMember((self.__process_delete, memberships),
-                                            (self.__common_errback,),
+                self.__sharing.DeleteMember((self.__process_delete, memberships, current),
+                                            (self.__common_errback, self.__done),
                                             self._scenario, membership,
                                             self.contact_type, self.state,
                                             self.account)
         else:
-            self.__process_delete(memberships)
+            self.__process_delete(memberships, Membership.NONE)
 
-    def __process_add(self, memberships):
+    def __process_add(self, memberships, last):
+        self.__done |= last
+
         if memberships == []:
             callback = self._callback
-            callback[0](*callback[1:])
+            callback[0](self.__done, *callback[1:])
             return
         
         current = memberships.pop()
         if current & (self.old ^ self.new):
             if current & self.new:
                 membership = UpdateMembershipScenario.__membership_mapping[current]
-                self.__sharing.AddMember((self.__process_add, memberships),
-                                         (self.__common_errback,),
+                self.__sharing.AddMember((self.__process_add, memberships, current),
+                                         (self.__common_errback, self.__done),
                                          self._scenario, membership,
                                          self.contact_type, self.state,
                                          self.account)
         else:
-            self.__process_add(memberships)
+            self.__process_add(memberships, Membership.NONE)
 
-    def __common_errback(self, error_code):
+    def __common_errback(self, error_code, done):
         # TODO : identify membership error codes
         errcode = AddressBookError.UNKNOWN
         errback = self._errback[0]
         args = self._errback[1:]
-        errback(errcode, *args)
+        errback(errcode, done, *args)
