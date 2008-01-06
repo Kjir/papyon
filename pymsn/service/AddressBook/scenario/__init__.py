@@ -24,4 +24,3 @@ from sync import *
 from contacts import *
 from groups import *
 
-from update_membership import *

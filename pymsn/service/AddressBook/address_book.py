@@ -229,10 +229,10 @@ class AddressBook(gobject.GObject):
     def accept_contact_invitation(self, pending_contact, add_to_contact_list=True):
         ai = scenario.AcceptInviteScenario(self._ab, self._sharing,
                  (self.__accept_contact_invitation_cb, pending_contact),
-                 (self.__common_errback,),
-                 add_to_contact_list)
+                 (self.__common_errback,))
         ai.account = pending_contact.account
         ai.network = pending_contact.network_id
+        ai.add_to_contact_list = add_to_contact_list
         ai()
 
     def decline_contact_invitation(self, pending_contact, block=True):

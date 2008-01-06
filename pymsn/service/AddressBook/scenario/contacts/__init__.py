@@ -21,6 +21,7 @@ from accept_invite import *
 from decline_invite import *
 from check_pending_invite import *
 
+from update_memberships import *
 from block_contact import *
 from unblock_contact import *
 

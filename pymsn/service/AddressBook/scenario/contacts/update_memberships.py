@@ -22,9 +22,9 @@ from pymsn.service.AddressBook.constants import *
 from pymsn.profile import NetworkID
 from pymsn.profile import Membership
 
-__all__ = ['UpdateMembershipScenario']
+__all__ = ['UpdateMembershipsScenario']
 
-class UpdateMembershipScenario(BaseScenario):
+class UpdateMembershipsScenario(BaseScenario):
     """Scenario used to update contact memberships in a safe way.
         @undocumented: __membership_mapping, __contact_type"""
 
@@ -50,7 +50,7 @@ class UpdateMembershipScenario(BaseScenario):
         self.__sharing = sharing
 
         self.account = account
-        self.contact_type = UpdateMembershipScenario.__contact_type[network]
+        self.contact_type = UpdateMembershipsScenario.__contact_type[network]
         self.old = old_membership
         self.new = new_membership
         self.state = state
@@ -73,7 +73,7 @@ class UpdateMembershipScenario(BaseScenario):
         current = memberships.pop()
         if current & (self.old ^ self.new):
             if current & self.old:
-                membership = UpdateMembershipScenario.__membership_mapping[current]
+                membership = UpdateMembershipsScenario.__membership_mapping[current]
                 self.__sharing.DeleteMember((self.__process_delete, memberships, current),
                                             (self.__common_errback, self.__done),
                                             self._scenario, membership,
@@ -93,7 +93,7 @@ class UpdateMembershipScenario(BaseScenario):
         current = memberships.pop()
         if current & (self.old ^ self.new):
             if current & self.new:
-                membership = UpdateMembershipScenario.__membership_mapping[current]
+                membership = UpdateMembershipsScenario.__membership_mapping[current]
                 self.__sharing.AddMember((self.__process_add, memberships, current),
                                          (self.__common_errback, self.__done),
                                          self._scenario, membership,

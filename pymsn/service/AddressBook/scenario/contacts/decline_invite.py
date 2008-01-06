@@ -26,7 +26,7 @@ __all__ = ['DeclineInviteScenario']
 
 class DeclineInviteScenario(BaseScenario):
     def __init__(self, sharing, callback, errback, account='', 
-                 network=NetworkID.MSN, membership=Membership.NONE,
+                 network=NetworkID.MSN, memberships=Membership.NONE,
                  state='Accepted', block=True):
         """Declines an invitation.
 
@@ -39,14 +39,14 @@ class DeclineInviteScenario(BaseScenario):
 
         self.account = account
         self.network = network
-        self.membership = membership
+        self.memberships = memberships
         self.state = state
         self.block = block
 
     def execute(self):
-        new_membership = self.membership & ~Membership.PENDING
+        new_memberships = self.memberships & ~Membership.PENDING
         if self.block:
-            new_membership |= Membership.BLOCK
+            new_memberships |= Membership.BLOCK
         um = UpdateMembershipScenario(self.__sharing, 
                                       self._callback, self._errback,
                                       self._scenario,
@@ -54,7 +54,7 @@ class DeclineInviteScenario(BaseScenario):
                                       self.network,
                                       self.state,
                                       self.account,
-                                      self.membership,
-                                      new_membership)
+                                      self.memberships,
+                                      new_memberships)
         um()
 
