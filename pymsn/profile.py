@@ -554,7 +554,7 @@ class Contact(gobject.GObject):
             }
 
     def __init__(self, id, network_id, account, display_name, cid=None,
-            memberships=Membership.NONE, contact_type=ContactType.Regular):
+            memberships=Membership.NONE, contact_type=ContactType.REGULAR):
         """Initializer"""
         gobject.GObject.__init__(self)
         self._id = id
