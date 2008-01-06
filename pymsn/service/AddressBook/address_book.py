@@ -101,8 +101,13 @@ class AddressBookStorage(set):
 
     def search_by(self, field, value):
         result = []
+        if isinstance(value, basestring):
+            value = value.lower()
         for contact in self:
-            if getattr(contact, field) == value:
+            contact_field_value = getattr(contact, field)
+            if isinstance(contact_field_value, basestring):
+                contact_field_value = contact_field_value.lower()
+            if contact_field_value == value:
                 result.append(contact)
                 # Do not break here, as the account
                 # might exist in multiple networks
