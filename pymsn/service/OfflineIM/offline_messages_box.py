@@ -26,6 +26,9 @@ from pymsn.service.OfflineIM.constants import *
 
 from pymsn.profile import NetworkID
 
+from pymsn.util.queue import LastElementQueue
+from pymsn.util.decorator import throttled
+
 import pymsn.util.element_tree as ElementTree
 import pymsn.util.string_io as StringIO
 import pymsn.util.guid as guid
@@ -292,6 +295,7 @@ class OfflineMessagesBox(gobject.GObject):
         fm.message_ids = [m.id for m in messages]
         fm()
 
+    @throttled(1000, LastElementQueue())
     def send_message(self, recipient, message):
         if recipient.network_id == NetworkID.EXTERNAL:
             return
@@ -391,27 +395,9 @@ if __name__ == '__main__':
         pass
 
     sso = SingleSignOn(account, password)
-#    address_book = AddressBook(sso)
-#    address_book.connect("notify::state", address_book_state_changed)
-#    address_book.connect("messenger-contact-added", messenger_contact_added)
-#    address_book.sync()
+
     box = OfflineMessagesBox(sso)
     box.sync()
-
-#     sso.RequestMultipleSecurityTokens((sso_callback,), (sso_errback,),
-#                                       LiveService.CONTACTS)
-#     sso.RequestMultipleSecurityTokens((sso_callback,), (sso_errback,),
-#                                       LiveService.MESSENGER)
-#     sso.RequestMultipleSecurityTokens((sso_callback,), (sso_errback,),
-#                                       LiveService.MESSENGER_CLEAR)
-#     sso.RequestMultipleSecurityTokens((sso_callback,), (sso_errback,),
-#                                       LiveService.MESSENGER_SECURE)
-#     sso.RequestMultipleSecurityTokens((sso_callback,), (sso_errback,),
-#                                       LiveService.SPACES)
-#     sso.RequestMultipleSecurityTokens((sso_callback,), (sso_errback,),
-#                                       LiveService.TB)
-#     sso.RequestMultipleSecurityTokens((sso_callback,), (sso_errback,),
-#                                       LiveService.VOICE)
 
     while mainloop.is_running():
         try:
