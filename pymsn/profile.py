@@ -699,6 +699,10 @@ class Contact(gobject.GObject):
             @type memberships: bitmask of L{Membership<pymsn.profile.Membership>}s"""
         return (self.memberships & memberships) == memberships
 
+    def _set_memberships(self, memberships):
+        self._memberships = memberships
+        self.notify("memberships")
+
     def _add_membership(self, membership):
         self._memberships |= membership
         self.notify("memberships")

@@ -23,6 +23,7 @@ from pymsn.service.ContentRoaming.constants import *
 from pymsn.service.ContentRoaming.scenario import *
 
 import gobject
+import imghdr
 
 __all__ = ['ContentRoaming', 'ContentRoamingState', 'ContentRoamingError']
 
@@ -111,6 +112,11 @@ class ContentRoaming(gobject.GObject):
         if personal_message is None:
             personal_message = self.__personal_message
 
+        if display_picture is not None:
+            type = imghdr.what('', display_picture)
+            if type is None: type = 'png'
+            display_picture = ('image/%s' % type, display_picture)
+
         def store_profile_cb():
             self.__display_name = display_name
             self.__personal_message = personal_message
@@ -131,6 +137,7 @@ class ContentRoaming(gobject.GObject):
         up()
     # End of public API
 
+    # Callbacks
     def __get_dn_and_pm_cb(self, profile_id, expression_profile_id, 
                            display_name, personal_message, display_picture_id):
         self._profile_id = profile_id
@@ -152,7 +159,6 @@ class ContentRoaming(gobject.GObject):
 
         self._state = ContentRoamingState.SYNCHRONIZED
 
-    # Callbacks
     def __common_errback(self, error_code, *args):
         print "The content roaming service got the error (%s)" % error_code
 
@@ -191,15 +197,15 @@ if __name__ == '__main__':
                  if cr.state == ContentRoamingState.SYNCHRONIZED:
                      print "Content roaming service is now synchronized"
                      
+#                     print cr.display_picture
 #                      type, data = cr.display_picture
-#                      path = '/home/jprieur/projects/pymsn.rewrite/pymsn/service/ContentRoaming/test2.%s' % type
+#                      path = '/home/jprieur/projects/pymsn.rewrite/pymsn/service/ContentRoaming/argh.%s' % type.split('/')[1]
 #                      f = open(path, 'w')
 #                      f.write(data)
 
-#                      path = '/home/jprieur/projects/pymsn.rewrite/pymsn/service/ContentRoaming/test2.jpeg'
+#                      path = '/home/jprieur/projects/pymsn.rewrite/pymsn/service/ContentRoaming/test.jpeg'
 #                      f = open(path, 'r')
-#                      cr.store("Pouet pouet", "Brainy lala brainy...",
-#                               ('jpeg', f.read()))
+#                      cr.store("Pouet pouet", "Brainy lala brainy...", f.read())
 
             cr = ContentRoaming(sso, address_book)
             cr.connect("notify::state", content_roaming_state_changed)

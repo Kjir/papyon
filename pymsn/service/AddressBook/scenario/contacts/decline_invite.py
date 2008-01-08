@@ -18,6 +18,7 @@
 #
 from pymsn.service.AddressBook.scenario.base import BaseScenario
 from pymsn.service.AddressBook.scenario.base import Scenario
+from update_memberships import UpdateMembershipsScenario
 
 from pymsn.profile import Membership
 from pymsn.profile import NetworkID
@@ -47,14 +48,20 @@ class DeclineInviteScenario(BaseScenario):
         new_memberships = self.memberships & ~Membership.PENDING
         if self.block:
             new_memberships |= Membership.BLOCK
-        um = UpdateMembershipScenario(self.__sharing, 
-                                      self._callback, self._errback,
-                                      self._scenario,
-                                      self.account,
-                                      self.network,
-                                      self.state,
-                                      self.account,
-                                      self.memberships,
-                                      new_memberships)
+        um = UpdateMembershipsScenario(self.__sharing,
+                                       self._callback,
+                                       (self.__update_memberships_errback,),
+                                       self._scenario,
+                                       self.account,
+                                       self.network,
+                                       self.state,
+                                       self.memberships,
+                                       new_memberships)
         um()
+
+    def __update_memberships_errback(self, error_code, done, failed):
+        errcode = AddressBookError.UNKNOWN
+        errback = self._errback[0]
+        args = self._errback[1:]
+        errback(errcode, *args)
 

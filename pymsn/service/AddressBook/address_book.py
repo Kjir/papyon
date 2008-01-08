@@ -232,6 +232,7 @@ class AddressBook(gobject.GObject):
                  (self.__common_errback,))
         ai.account = pending_contact.account
         ai.network = pending_contact.network_id
+        ai.memberships = pending_contact.memberships
         ai.add_to_contact_list = add_to_contact_list
         ai()
 
@@ -241,7 +242,7 @@ class AddressBook(gobject.GObject):
                  (self.__common_errback,))
         di.account = pending_contact.account
         di.network = pending_contact.network_id
-        di.membership = pending_contact.memberships
+        di.memberships = pending_contact.memberships
         di.block = block
         di()
 
@@ -493,31 +494,15 @@ class AddressBook(gobject.GObject):
         self._state = AddressBookState.SYNCHRONIZED
 
     def __accept_contact_invitation_cb(self, contact_infos, memberships, contact):
-        mapping = {'Forward' : profile.Membership.FORWARD,
-                   'Allow' : profile.Membership.ALLOW,
-                   'Block': profile.Membership.BLOCK,
-                   'Pending': profile.Membership.PENDING,
-                   'Reverse': profile.Membership.REVERSE}
         contact.freeze_notify()
-        for membership in memberships:
-            contact._add_membership(mapping[membership])
-
-        for membership in mapping.keys():
-            if membership not in memberships:
-                contact._remove_membership(mapping[membership])
         contact._id = contact_infos.Id
         contact._cid = contact_infos.CID
+        contact._set_memberships(memberships)
         contact.thaw_notify()
         self.emit('contact-accepted', contact)
 
-    def __decline_contact_invitation_cb(self, contact):
-        #FIXME: Here, we just guess, we would prefer if we could do a
-        # FindMembership and update the infos accordingly
-        contact.freeze_notify()
-        contact._remove_membership(profile.Membership.PENDING)
-        contact._add_membership(profile.Membership.BLOCK)
-        contact._add_membership(profile.Membership.REVERSE)
-        contact.thaw_notify()
+    def __decline_contact_invitation_cb(self, memberships, contact):
+        contact._set_memberships(memberships)
         self.emit('contact-rejected', contact)
 
     def __add_messenger_contact_cb(self, contact_guid, address_book_delta, groups):
@@ -543,14 +528,12 @@ class AddressBook(gobject.GObject):
     def __update_contact_infos_cb(self, contact, infos):
         contact._server_infos_changed(infos)
 
-    def __block_contact_cb(self, contact):
-        contact._remove_membership(profile.Membership.ALLOW)
-        contact._add_membership(profile.Membership.BLOCK)
+    def __block_contact_cb(self, memberships, contact):
+        contact._set_memberships(memberships)
         self.emit('contact-blocked', contact)
 
-    def __unblock_contact_cb(self, contact):
-        contact._add_membership(profile.Membership.ALLOW)
-        contact._remove_membership(profile.Membership.BLOCK)
+    def __unblock_contact_cb(self, memberships, contact):
+        contact._set_memberships(memberships)
         self.emit('contact-unblocked', contact)
 
     def __add_group_cb(self, group_id, group_name):

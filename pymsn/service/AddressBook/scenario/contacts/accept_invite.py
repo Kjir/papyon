@@ -52,7 +52,7 @@ class AcceptInviteScenario(BaseScenario):
         self.state = state
 
     def execute(self):
-        if self.add_to_contact_list:
+        if self.add_to_contact_list and not (self.memberships & Membership.FORWARD):
             if self.network == NetworkID.MSN:
                 am = MessengerContactAddScenario(self.__ab,
                          (self.__add_contact_callback,),
@@ -110,7 +110,7 @@ class AcceptInviteScenario(BaseScenario):
         contact = self._added_contact
         callback[0](contact, memberships, *callback[1:])
 
-    def __update_memberships_errback(self, error_code):
+    def __update_memberships_errback(self, error_code, done, failed):
         errcode = AddressBookError.UNKNOWN
         errback = self._errback[0]
         args = self._errback[1:]

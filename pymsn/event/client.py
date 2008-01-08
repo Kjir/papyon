@@ -40,8 +40,6 @@ __all__ = [ "ClientState", "ClientErrorType",
         "AddressBookError", "OfflineMessagesBoxError",
         "ClientEventInterface" ]
 
-ClientState = pymsn.msnp.ProtocolState
-
 class ClientState(object):
     "L{Client<pymsn.Client>} states"
     CLOSED = 0

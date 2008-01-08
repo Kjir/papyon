@@ -33,12 +33,11 @@ __all__ = ['Spaces']
 class Spaces(gobject.GObject):
 
     __gsignals__ = {
-            "contact-card-retreived" : (gobject.SIGNAL_RUN_FIRST,
-                                      gobject.TYPE_NONE,
-                                      (object, object))
+            "contact-card-retrieved" : (gobject.SIGNAL_RUN_FIRST,
+                                        gobject.TYPE_NONE,
+                                        (object, object))
             }
 
-    __gproperties__ = {}
     def __init__(self, sso, proxies=None):
         gobject.GObject.__init__(self)
 
@@ -46,15 +45,61 @@ class Spaces(gobject.GObject):
 
     # Public API
     def get_contact_card(self, contact):
-        ccs = scenario.GetContactCardScenario(self._ccard,
-                                              contact,
+        ccs = scenario.GetContactCardScenario(self._ccard, contact,
                                               (self.__get_contact_card_cb, contact),
-                                              (self.__get_contact_card_errback,))
+                                              (self.__common_errback,))
         ccs()
+    # End of public API
 
+    # Callbacks
     def __get_contact_card_cb(self, ccard, contact):
-        print "Contact card retreived : \n%s\n"  % str(ccard)
-        self.emit('contact-card-retreived', contact, ccard)
+        print "Contact card retrieved : \n%s\n"  % str(ccard)
+        self.emit('contact-card-retrieved', contact, ccard)
 
-    def __get_contact_card_errback(self, error_code, *args):
+    def __common_errback(self, error_code, *args):
         print "The fetching of the contact card returned an error (%s)" % error_code
+
+
+gobject.type_register(Spaces)
+
+if __name__ == '__main__':
+    import sys
+    import getpass
+    import signal
+    import gobject
+    import logging
+    from pymsn.service.SingleSignOn import *
+    from pymsn.service.AddressBook import *
+
+    logging.basicConfig(level=logging.DEBUG)
+
+    if len(sys.argv) < 2:
+        account = raw_input('Account: ')
+    else:
+        account = sys.argv[1]
+
+    if len(sys.argv) < 3:
+        password = getpass.getpass('Password: ')
+    else:
+        password = sys.argv[2]
+
+    mainloop = gobject.MainLoop(is_running=True)
+    
+    signal.signal(signal.SIGTERM,
+            lambda *args: gobject.idle_add(mainloop.quit()))
+
+    def address_book_state_changed(address_book, pspec, sso):
+        if address_book.state == AddressBookState.SYNCHRONIZED:
+            pass
+
+    sso = SingleSignOn(account, password)
+
+    address_book = AddressBook(sso)
+    address_book.connect("notify::state", address_book_state_changed, sso)
+    address_book.sync()
+
+    while mainloop.is_running():
+        try:
+            mainloop.run()
+        except KeyboardInterrupt:
+            mainloop.quit()

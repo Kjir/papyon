@@ -28,11 +28,11 @@ class UpdateMembershipsScenario(BaseScenario):
     """Scenario used to update contact memberships in a safe way.
         @undocumented: __membership_mapping, __contact_type"""
 
-    __membership_mapping = { Membership.FORWARD: "Forward",
-                             Membership.ALLOW:   "Allow",
-                             Membership.BLOCK:   "Block",
-                             Membership.REVERSE: "Reverse",
-                             Membership.PENDING: "Pending" }
+    __mapping = { Membership.FORWARD: "Forward",
+                  Membership.ALLOW:   "Allow",
+                  Membership.BLOCK:   "Block",
+                  Membership.REVERSE: "Reverse",
+                  Membership.PENDING: "Pending" }
     
     __contact_type = { NetworkID.MSN:      "Passport",
                        NetworkID.EXTERNAL: "Email" }
@@ -60,25 +60,46 @@ class UpdateMembershipsScenario(BaseScenario):
         # update the memberships property of the contact.
         self.__done = old_membership
 
+        # Subscription to the REVERSE or ALLOW lists can only occur when the 
+        # contact is member of the PENDING list, so when a subscription to the
+        # REVERSE or ALLOW membership is detected, we delay the eventual deletion 
+        # from the PENDING membership list.
+        self.__late_pending_delete = False
+
+    def _change(self, membership):
+        return (membership & (self.old ^ self.new))
+
+    def _add(self, membership):
+        return (self._change(membership) and (membership & self.new)) 
+
+    def _delete(self, membership):
+        return (self._change(membership) and (membership & self.old))
+
     def execute(self):
-        self.__process_delete([2**p for p in range(5)], Membership.NONE)
+        if (self._add(Membership.REVERSE) or self._add(Membership.ALLOW)) and \
+                self._delete(Membership.PENDING):
+            self.__late_pending_delete = True
+
+        self.__process_delete(UpdateMembershipsScenario.__mapping.keys(), 
+                              Membership.NONE)
 
     def __process_delete(self, memberships, last):
         self.__done &= ~last
 
         if memberships == []:
-            self.__process_add([2**p for p in range(5)], Membership.NONE)
+            self.__process_add(UpdateMembershipsScenario.__mapping.keys(), 
+                               Membership.NONE)
             return
 
         current = memberships.pop()
-        if current & (self.old ^ self.new):
-            if current & self.old:
-                membership = UpdateMembershipsScenario.__membership_mapping[current]
-                self.__sharing.DeleteMember((self.__process_delete, memberships, current),
-                                            (self.__common_errback, self.__done),
-                                            self._scenario, membership,
-                                            self.contact_type, self.state,
-                                            self.account)
+        if self._delete(current) and not (current == Membership.PENDING and \
+                                         self.__late_pending_delete):
+            membership = UpdateMembershipsScenario.__mapping[current]
+            self.__sharing.DeleteMember((self.__process_delete, memberships, current),
+                                        (self.__common_errback, self.__done, current),
+                                        self._scenario, membership,
+                                        self.contact_type, self.state,
+                                        self.account)
         else:
             self.__process_delete(memberships, Membership.NONE)
 
@@ -86,25 +107,36 @@ class UpdateMembershipsScenario(BaseScenario):
         self.__done |= last
 
         if memberships == []:
-            callback = self._callback
-            callback[0](self.__done, *callback[1:])
+            if self.__late_pending_delete:
+                membership = UpdateMembershipsScenario.__mapping[Membership.PENDING]
+                self.__sharing.DeleteMember(self._callback,
+                                            (self.__common_errback, self.__done,
+                                             Membership.PENDING),
+                                            self._scenario, membership,
+                                            self.contact_type, self.state,
+                                            self.account)
+            else:
+                callback = self._callback
+                callback[0](self.__done, *callback[1:])
             return
-        
+
         current = memberships.pop()
-        if current & (self.old ^ self.new):
-            if current & self.new:
-                membership = UpdateMembershipsScenario.__membership_mapping[current]
-                self.__sharing.AddMember((self.__process_add, memberships, current),
-                                         (self.__common_errback, self.__done),
-                                         self._scenario, membership,
-                                         self.contact_type, self.state,
-                                         self.account)
+        if self._add(current):
+            membership = UpdateMembershipsScenario.__mapping[current]
+            self.__sharing.AddMember((self.__process_add, memberships, current),
+                                     (self.__common_errback, self.__done, current),
+                                     self._scenario, membership,
+                                     self.contact_type, self.state,
+                                     self.account)
         else:
             self.__process_add(memberships, Membership.NONE)
 
-    def __common_errback(self, error_code, done):
-        # TODO : identify membership error codes
+    def __common_errback(self, error_code, done, failed):
         errcode = AddressBookError.UNKNOWN
+        if error_code == 'MemberAlreadyExists':
+            errcode = AddressBookError.MEMBER_ALREADY_EXISTS
+        elif error_code == 'MemberDoesNotExist':
+            errcode = AddressBookError.MEMBER_DOES_NOT_EXIST
         errback = self._errback[0]
         args = self._errback[1:]
-        errback(errcode, done, *args)
+        errback(errcode, done, failed, *args)
