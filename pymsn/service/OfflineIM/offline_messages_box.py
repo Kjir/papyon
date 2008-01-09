@@ -26,7 +26,6 @@ from pymsn.service.OfflineIM.constants import *
 
 from pymsn.profile import NetworkID
 
-from pymsn.util.queue import LastElementQueue
 from pymsn.util.decorator import throttled
 
 import pymsn.util.element_tree as ElementTree
@@ -295,7 +294,7 @@ class OfflineMessagesBox(gobject.GObject):
         fm.message_ids = [m.id for m in messages]
         fm()
 
-    @throttled(1000, LastElementQueue())
+    @throttled(1000, list())
     def send_message(self, recipient, message):
         if recipient.network_id == NetworkID.EXTERNAL:
             return
