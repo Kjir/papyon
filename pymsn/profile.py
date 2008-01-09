@@ -353,9 +353,13 @@ class Profile(gobject.GObject):
 
         self.client_id = ClientCapabilities(7)
         self.client_id.supports_sip_invite = True
-        self.client_id.has_webcam = True #FIXME: this should only be advertised when a webcam is plugged
+        #FIXME: this should only be advertised when a webcam is plugged
+        self.client_id.has_webcam = True
 
         self._msn_object = None
+
+        self.__pending_set_presence = [self._presence, self.client_id, self._msn_object]
+        self.__pending_set_personal_message = [self._personal_message, self._current_media]
 
     @property
     def account(self):
@@ -400,7 +404,8 @@ class Profile(gobject.GObject):
         def fset(self, presence):
             if presence == self._presence:
                 return
-            self._ns_client.set_presence(presence, self.client_id, self._msn_object)
+            self.__pending_set_presence[0] = presence
+            self._ns_client.set_presence(*self.__pending_set_presence)
         def fget(self):
             return self._presence
         return locals()
@@ -420,8 +425,10 @@ class Profile(gobject.GObject):
         """The personal message displayed to you contacts
             @type: utf-8 encoded string"""
         def fset(self, personal_message):
-            if personal_message == self._personal_message: return
-            self._ns_client.set_personal_message(personal_message, self._current_media)
+            if personal_message == self._personal_message:
+                return
+            self.__pending_set_personal_message[0] = personal_message
+            self._ns_client.set_personal_message(*self.__pending_set_personal_message)
         def fget(self):
             return self._personal_message
         return locals()
@@ -431,8 +438,10 @@ class Profile(gobject.GObject):
         """The current media displayed to you contacts
             @type: (artist: string, track: string)"""
         def fset(self, current_media):
-            if current_media == self._current_media: return
-            self._ns_client.set_personal_message(self._personal_message, current_media)
+            if current_media == self._current_media:
+                return
+            self.__pending_set_personal_message[1] = current_media
+            self._ns_client.set_personal_message(*self.__pending_set_personal_message)
         def fget(self):
             return self._current_media
         return locals()
@@ -443,8 +452,10 @@ class Profile(gobject.GObject):
         display picture to be shown to your peers
             @type: L{MSNObject<pymsn.p2p.MSNObject>}"""
         def fset(self, msn_object):
-            if msn_object == self._msn_object: return
-            self._ns_client.set_presence(self._presence, self.client_id, msn_object)
+            if msn_object == self._msn_object:
+                return
+            self.__pending_set_presence[2] = msn_object
+            self._ns_client.set_presence(*self.__pending_set_presence)
         def fget(self):
             return self._msn_object
         return locals()
@@ -455,7 +466,9 @@ class Profile(gobject.GObject):
             presence, msn_object = args
             if presence == self._presence and msn_object == self._msn_object:
                 return
-            self._ns_client.set_presence(presence, self.client_id, msn_object)
+            self.__pending_set_presence[0] = presence
+            self.__pending_set_presence[2] = msn_object
+            self._ns_client.set_presence(*self.__pending_set_presence)
         def fget(self):
             return self._presence, self._msn_object
         return locals()
@@ -467,7 +480,9 @@ class Profile(gobject.GObject):
             if personal_message == self._personal_message and \
                     current_media == self._current_media:
                 return
-            self._ns_client.set_personal_message(personal_message, current_media)
+            self.__pending_set_personal_message[0] = personal_message
+            self.__pending_set_personal_message[1] = current_media
+            self._ns_client.set_personal_message(*self.__pending_set_personal_message)
         def fget(self):
             return self._personal_message, self._current_media
         return locals()
