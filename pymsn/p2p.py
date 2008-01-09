@@ -141,9 +141,13 @@ class MSNObject(object):
         except:
             raise ParseError('Invalid MSNObject')
         
-        creator = client.address_book.contacts.\
-            search_by_account(element["Creator"]).\
-            search_by_network_id(NetworkID.MSN)[0]
+        try:
+            creator = client.address_book.contacts.\
+                search_by_account(element["Creator"]).\
+                search_by_network_id(NetworkID.MSN)[0]
+        except IndexError:
+            creator = None
+
         size = int(element["Size"])
         type = int(element["Type"])
         location = xml.unescape(element["Location"])

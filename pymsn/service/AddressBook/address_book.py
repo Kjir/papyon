@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2006-2007 Ali Sabil <ali.sabil@gmail.com>
@@ -26,10 +25,12 @@ import scenario
 
 import pymsn
 import pymsn.profile as profile
+from pymsn.profile import NetworkID
 from pymsn.util.decorator import rw_property
 from pymsn.profile import ContactType
 from pymsn.service.AddressBook.constants import *
 from pymsn.service.description.AB.constants import *
+from pymsn.service.AddressBook.scenario.base import Scenario
 
 import gobject
 
@@ -48,7 +49,7 @@ class AddressBookStorage(set):
             if i == key:
                 return contact
             i += 1
-        return None
+        raise IndexError("Index out of range")
 
     def __getattr__(self, name):
         if name.startswith("search_by_"):
@@ -277,7 +278,7 @@ class AddressBook(gobject.GObject):
         di()
 
     def add_messenger_contact(self, account, invite_display_name='', 
-            invite_message='', groups=[]):
+            invite_message='', groups=[], network_id=NetworkID.MSN):
         def callback(contact_guid, address_book_delta):
             contacts = address_book_delta.contacts
             for contact in contacts:
@@ -290,27 +291,53 @@ class AddressBook(gobject.GObject):
                 self.emit('messenger-contact-added', c)
                 for group in groups:
                     self.add_contact_to_group(group, c)
-        am = scenario.MessengerContactAddScenario(self._ab,
-                (callback,),
-                (self.__common_errback,))
-        am.account = account
-        am.invite_display_name = invite_display_name
-        am.invite_message = invite_message
-        am()
-        # FIXME: how do we add YMSGR contacts ?
-        #if account.split("@", 1)[1].startswith("yahoo"):
-        #    accounts = self.contacts.search_by_account(account)
-        #    for contact in accounts:
-        #        if contact.network_id == profile.NetworkID.EXTERNAL:
-        #            return
 
-        #    ae = scenario.ExternalContactAddScenario(self._ab,
-        #            (callback,),
-        #            (self.__common_errback,))
-        #    ae.account = account
-        #    ae.invite_display_name = invite_display_name
-        #    ae.invite_message = invite_message
-        #    ae()
+        try:
+            contact = self.contacts.search_by_account(account).\
+                search_by_network_id(NetworkID.MSN)[0]
+            if contact.memberships == Membership.NONE:
+                self.__upgrade_mail_contact(account, groups)
+            else:
+                return
+            
+        except IndexError:
+            if network_id == NetworkID.MSN:
+		scenario_class = MessengerContactAddScenario
+	    elif network_id == NetworkID.EXTERNAL:
+		scenario_class = ExternalContactAddScenario
+            s = scenario.scenario_class(self._ab, (callback,), (self.__common_errback,))
+            s.account = account
+            s.invite_display_name = invite_display_name
+            s.invite_message = invite_message
+            s()
+
+    def __upgrade_mail_contact(self, account, groups=[]):
+        def memberships_callback(memberships):
+            contact._set_memberships(memberships)
+            
+            for group in groups:
+                self.add_contact_to_group(group, contact)
+
+
+        def update_callback():
+            memberships = contact.memberships | Membership.ALLOW
+            um = UpdateMembershipsScenario(self._sharing, 
+                                           (memberships_callback,),
+                                           (self.__common_errback,),
+                                           Scenario.CONTACT_MSGR_API,
+                                           contact.account,
+                                           contact.network,
+                                           'Accepted',
+                                           contact.memberships,
+                                           memberships)
+            um()
+
+        up = scenario.ContactUpdatePropertiesScenario(self._ab,
+                                                      (update_callback,),
+                                                      (self.__common_errback,))
+        up.contact_guid = contact.id
+        up.contact_properties = { 'is_messenger_user' : True }
+        up()
 
 #     def add_email_contact(self, email_address):
 #         ae = scenario.EmailContactAddScenario(self._ab,
@@ -452,7 +479,7 @@ class AddressBook(gobject.GObject):
             else:
                 memberships = profile.Membership.NONE
             c = profile.Contact(contact.Id,
-                    profile.NetworkID.EXTERNAL,
+                    NetworkID.EXTERNAL,
                     external_email.Email.encode("utf-8"),
                     display_name.encode("utf-8"),
                     contact.CID,
@@ -482,7 +509,7 @@ class AddressBook(gobject.GObject):
             else:
                 memberships = profile.Membership.NONE
             c = profile.Contact(contact.Id,
-                    profile.NetworkID.MSN,
+                    NetworkID.MSN,
                     contact.PassportName.encode("utf-8"),
                     display_name.encode("utf-8"),
                     contact.CID,
@@ -499,14 +526,17 @@ class AddressBook(gobject.GObject):
     def __update_memberships(self, memberships):
         for member in memberships:
             if isinstance(member, sharing.PassportMember):
-                network = profile.NetworkID.MSN
+                network = NetworkID.MSN
             elif isinstance(member, sharing.EmailMember):
-                network = profile.NetworkID.EXTERNAL
+                network = NetworkID.EXTERNAL
             else:
                 continue
 
-            contact = self.contacts.search_by_account(member.Account).\
-                search_by_network_id(network)[0]
+            try:
+                contact = self.contacts.search_by_account(member.Account).\
+                    search_by_network_id(network)[0]
+            except IndexError:
+                contact = None
 
             new_contact = False
             if contact is None:
