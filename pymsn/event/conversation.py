@@ -25,7 +25,39 @@ from a L{Conversation<pymsn.conversation.ConversationInterface>} object."""
 
 from pymsn.event import BaseEventInterface
 
-__all__ = ["ConversationEventInterface"]
+__all__ = ["ConversationEventInterface", "ConversationErrorType",
+        "ContactInviteError", "MessageError"]
+
+
+class ConversationErrorType(object):
+    """L{Client<pymsn.Client>} error types
+        @see: L{ClientEventInterface.on_client_error}"""
+
+    NETWORK = 0
+    "Network related errors"
+    AUTHENTICATION = 1
+    "Authentication related errors"
+    PROTOCOL = 2
+    "Protocol related errors"
+    CONTACT_INVITE = 3
+    "Contact invitation related errors"
+    MESSAGE = 4
+    "Message sending related errors"
+
+
+class ContactInviteError(object):
+    "Contact invitation related errors"
+    UNKNOWN = 0
+
+    NOT_AVAILABLE = 1
+
+
+class MessageError(object):
+    "Message related errors"
+    UNKNOWN = 0
+
+    DELIVERY_FAILED = 1
+
 
 class ConversationEventInterface(BaseEventInterface):
     """interfaces allowing the user to get notified about events
@@ -42,7 +74,15 @@ class ConversationEventInterface(BaseEventInterface):
         pass
 
     def on_conversation_error(self, type, error):
-        """@attention: not implemented"""
+        """Called when an error occurs in the L{Client<pymsn.Conversation>}.
+
+            @param type: the error type
+            @type type: L{ClientErrorType}
+
+            @param error: the error code
+            @type error: L{NetworkError} or L{AuthenticationError} or
+                L{ProtocolError} or L{ContactInviteError} or
+                L{MessageError}"""
         pass
 
     def on_conversation_user_joined(self, contact):

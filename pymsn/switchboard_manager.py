@@ -30,6 +30,7 @@ import weakref
 import pymsn.msnp as msnp
 from pymsn.transport import ServerType
 from pymsn.util.weak import WeakSet
+from pymsn.event import ConversationErrorType, ContactInviteError, MessageError
 
 __all__ = ['SwitchboardManager']
 
@@ -73,6 +74,8 @@ class SwitchboardClient(object):
                 lambda sb, contact: self.__on_user_left(contact))
         self.switchboard.connect("user-invitation-failed",
                 lambda sb, contact: self.__on_user_invitation_failed(contact))
+        self.switchboard.connect("message-undelivered",
+                lambda sb, command: self.__on_message_undelivered(command))
         logger.info("New switchboard attached")
         def process_pending_queues():
             self._process_pending_queues()
@@ -114,7 +117,7 @@ class SwitchboardClient(object):
     def _on_contact_left(self, contact):
         raise NotImplementedError
 
-    def _on_error(self, switchboard, error_type, error):
+    def _on_error(self, error_type, error):
         raise NotImplementedError
 
     # private
@@ -139,7 +142,13 @@ class SwitchboardClient(object):
 
     def __on_user_invitation_failed(self, contact):
         self._pending_invites.discard(contact)
-    
+        self._on_error(ConversationErrorType.CONTACT_INVITE,
+                ContactInviteError.NOT_AVAILABLE)
+
+    def __on_message_undelivered(self, command):
+        self._on_error(ConversationErrorType.MESSAGE,
+                MessageError.DELIVERY_FAILED)
+
     # Helper functions
     def _process_pending_queues(self):
         if len(self._pending_invites) == 0 and \

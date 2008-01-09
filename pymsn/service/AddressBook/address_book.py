@@ -31,6 +31,7 @@ from pymsn.profile import ContactType
 from pymsn.service.AddressBook.constants import *
 from pymsn.service.description.AB.constants import *
 from pymsn.service.AddressBook.scenario.base import Scenario
+from pymsn.service.AddressBook.scenario.contacts import UpdateMembershipsScenario
 
 import gobject
 
@@ -295,32 +296,43 @@ class AddressBook(gobject.GObject):
         try:
             contact = self.contacts.search_by_account(account).\
                 search_by_network_id(NetworkID.MSN)[0]
-            if contact.memberships == Membership.NONE:
-                self.__upgrade_mail_contact(account, groups)
+            if contact.memberships == profile.Membership.NONE:
+                self.__upgrade_mail_contact(contact, groups)
             else:
-                return
-            
+                def memberships_callback(memberships):
+                    contact._set_memberships(memberships)
+                    for group in groups:
+                        self.add_contact_to_group(group, contact)
+                memberships = contact.memberships | profile.Membership.ALLOW
+                um = UpdateMembershipsScenario(self._sharing, 
+                                               (memberships_callback,),
+                                               (self.__common_errback,),
+                                               Scenario.CONTACT_MSGR_API,
+                                               contact.account,
+                                               contact.network,
+                                               'Accepted',
+                                               contact.memberships,
+                                               memberships)
+                um()
         except IndexError:
             if network_id == NetworkID.MSN:
-		scenario_class = MessengerContactAddScenario
-	    elif network_id == NetworkID.EXTERNAL:
-		scenario_class = ExternalContactAddScenario
+                scenario_class = MessengerContactAddScenario
+            elif network_id == NetworkID.EXTERNAL:
+                scenario_class = ExternalContactAddScenario
             s = scenario.scenario_class(self._ab, (callback,), (self.__common_errback,))
             s.account = account
             s.invite_display_name = invite_display_name
             s.invite_message = invite_message
             s()
 
-    def __upgrade_mail_contact(self, account, groups=[]):
+    def __upgrade_mail_contact(self, contact, groups=[]):
         def memberships_callback(memberships):
             contact._set_memberships(memberships)
-            
             for group in groups:
                 self.add_contact_to_group(group, contact)
 
-
         def update_callback():
-            memberships = contact.memberships | Membership.ALLOW
+            memberships = contact.memberships | profile.Membership.ALLOW
             um = UpdateMembershipsScenario(self._sharing, 
                                            (memberships_callback,),
                                            (self.__common_errback,),

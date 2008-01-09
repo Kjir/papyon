@@ -376,7 +376,10 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
     def _on_message_sent(self, message):
         pass
 
-    
+    def _on_error(self, error_type, error):
+        self._dispatch("on_conversation_error", error_type, error)
+
+
 class ExternalNetworkConversation(AbstractConversation):
     def __init__(self, client, contacts):
         AbstractConversation.__init__(self, client)
@@ -441,4 +444,4 @@ class SwitchboardConversation(AbstractConversation, SwitchboardClient):
             ack=msnp.MessageAcknowledgement.HALF):
         SwitchboardClient._send_message(self, content_type, body, headers, ack)
 
-        
+
