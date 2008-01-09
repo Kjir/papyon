@@ -31,7 +31,7 @@ class ContactUpdatePropertiesScenario(BaseScenario):
             @param ab: the address book service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
-            @param contact_guid: the guid of the contact to delete"""
+            @param contact_guid: the guid of the contact to update"""
         BaseScenario.__init__(self, Scenario.CONTACT_SAVE, callback, errback)
         self.__ab = ab
 
