@@ -30,8 +30,7 @@ from pymsn.util.decorator import rw_property
 from pymsn.profile import ContactType
 from pymsn.service.AddressBook.constants import *
 from pymsn.service.description.AB.constants import *
-from pymsn.service.AddressBook.scenario.base import Scenario
-from pymsn.service.AddressBook.scenario.contacts import UpdateMembershipsScenario
+from pymsn.service.AddressBook.scenario.contacts import *
 
 import gobject
 
@@ -296,59 +295,32 @@ class AddressBook(gobject.GObject):
         try:
             contact = self.contacts.search_by_account(account).\
                 search_by_network_id(NetworkID.MSN)[0]
-            if contact.memberships == profile.Membership.NONE:
+            if not contact.is_member(profile.Membership.FORWARD):
                 self.__upgrade_mail_contact(contact, groups)
             else:
-                def memberships_callback(memberships):
-                    contact._set_memberships(memberships)
-                    for group in groups:
-                        self.add_contact_to_group(group, contact)
-                memberships = contact.memberships | profile.Membership.ALLOW
-                um = UpdateMembershipsScenario(self._sharing, 
-                                               (memberships_callback,),
-                                               (self.__common_errback,),
-                                               Scenario.CONTACT_MSGR_API,
-                                               contact.account,
-                                               contact.network,
-                                               'Accepted',
-                                               contact.memberships,
-                                               memberships)
-                um()
+                return
         except IndexError:
             if network_id == NetworkID.MSN:
                 scenario_class = MessengerContactAddScenario
             elif network_id == NetworkID.EXTERNAL:
                 scenario_class = ExternalContactAddScenario
-            s = scenario.scenario_class(self._ab, (callback,), (self.__common_errback,))
+            s = scenario_class(self._ab, (callback,), (self.__common_errback,))
             s.account = account
             s.invite_display_name = invite_display_name
             s.invite_message = invite_message
             s()
 
     def __upgrade_mail_contact(self, contact, groups=[]):
-        def memberships_callback(memberships):
-            contact._set_memberships(memberships)
+        def callback():
+            contact._add_memberships(profile.Membership.ALLOW)
             for group in groups:
                 self.add_contact_to_group(group, contact)
 
-        def update_callback():
-            memberships = contact.memberships | profile.Membership.ALLOW
-            um = UpdateMembershipsScenario(self._sharing, 
-                                           (memberships_callback,),
-                                           (self.__common_errback,),
-                                           Scenario.CONTACT_MSGR_API,
-                                           contact.account,
-                                           contact.network,
-                                           'Accepted',
-                                           contact.memberships,
-                                           memberships)
-            um()
-
         up = scenario.ContactUpdatePropertiesScenario(self._ab,
-                                                      (update_callback,),
-                                                      (self.__common_errback,))
+                (callback,), (self.__common_errback,))
         up.contact_guid = contact.id
         up.contact_properties = { 'is_messenger_user' : True }
+        up.enable_allow_list_management = True
         up()
 
 #     def add_email_contact(self, email_address):

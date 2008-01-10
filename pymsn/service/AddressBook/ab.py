@@ -247,7 +247,8 @@ class AB(SOAPService):
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def ContactUpdate(self, callback, errback,
-            scenario, contact_id, contact_info):
+            scenario, contact_id, contact_info,
+            enable_allow_list_management=False):
         """Updates a contact informations.
         
             @param scenario: "ContactSave" | "Timer" | ...
@@ -275,7 +276,8 @@ class AB(SOAPService):
                     contact_info.get(ContactGeneral.ANNOTATIONS, None),
                     contact_info.get(ContactGeneral.COMMENT, None),
                     contact_info.get(ContactGeneral.ANNIVERSARY, None),
-                    contact_info.get('has_space', None)),
+                    contact_info.get('has_space', None),
+                    enable_allow_list_management),
                 callback, errback)
 
     def _HandleABContactUpdateResponse(self, callback, errback, response, user_data):

@@ -36,7 +36,8 @@ def soap_action():
 
 def soap_body(contact_id, display_name, is_messenger_user, contact_type,
               first_name, last_name, birth_date, email, phone, location, 
-              web_site, annotation, comment, anniversary, has_space):
+              web_site, annotation, comment, anniversary, has_space,
+              enable_allow_list_management=False):
     """Returns the SOAP xml body
 
         @param contact_id: a contact GUID string
@@ -171,9 +172,15 @@ def soap_body(contact_id, display_name, is_messenger_user, contact_type,
                     </propertiesChanged>
                 </Contact>
             </contacts>
+            <options>
+                <EnableAllowListManagement>
+                    %(allow_list_management)s
+                </EnableAllowListManagement>
+            </options>
         </ABContactUpdate>""" % { 'contact_id' : contact_id,
                                   'contact_info' : contact_info,
-                                  'properties_changed' : properties_changed }
+                                  'properties_changed' : properties_changed,
+                                  'allow_list_management' : str(enable_allow_list_management).lower() }
 
 def process_response(soap_response):
     return None

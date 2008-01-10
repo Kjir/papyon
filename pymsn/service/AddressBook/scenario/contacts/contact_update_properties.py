@@ -37,12 +37,14 @@ class ContactUpdatePropertiesScenario(BaseScenario):
 
         self.contact_guid = contact_guid
         self.contact_properties = contact_properties
+        self.enable_allow_list_management = False
 
     def execute(self):
         self.__ab.ContactUpdate((self.__contact_update_callback,),
                                 (self.__contact_update_errback,),
                                 self._scenario, self.contact_guid,
-                                self.contact_properties)
+                                self.contact_properties,
+                                self.enable_allow_list_management)
 
     def __contact_update_callback(self):
         callback = self._callback
