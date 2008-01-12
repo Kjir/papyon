@@ -305,8 +305,7 @@ class Client(EventsDispatcher):
                 self._state = ClientState.SYNCHRONIZED
             elif state == msnp.ProtocolState.OPEN:
                 self._state = ClientState.OPEN
-                im_contacts = self.address_book.contacts.\
-                        search_by_memberships(profile.Membership.FORWARD)
+                im_contacts = self.address_book.contacts
                 for contact in im_contacts:
                     self.__connect_contact_signals(contact)
 

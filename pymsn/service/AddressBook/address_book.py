@@ -284,19 +284,42 @@ class AddressBook(gobject.GObject):
             for contact in contacts:
                 if contact.Id != contact_guid:
                     continue
-                c = self.__build_contact(contact)
-                if c is None:
-                    continue
-                self.contacts.add(c)
-                self.emit('messenger-contact-added', c)
+                try:
+                    c = self.contacts.search_by_account(contact.PassportName).\
+                            search_by_network_id(NetworkID.MSN)[0]
+                    c.freeze_notify()
+                    c._id = contact.Id
+                    c._cid = contact.CID
+                    c._display_name = contact.DisplayName
+                    for group in self.groups:
+                        if group.id in contact.Groups:
+                            c._add_group_ownership(group)
+                    c._add_membership(profile.Membership.FORWARD)
+                    c._add_membership(profile.Membership.ALLOW)
+                    contact_infos = {ContactGeneral.ANNOTATIONS : contact.Annotations}
+                    c._server_infos_changed(contact_infos)
+                    c.thaw_notify()
+                    self.unblock_contact(c)
+                except IndexError:
+                    c = self.__build_contact(contact)
+                    if c.is_member(profile.Membership.FORWARD):
+                        c._add_membership(profile.Membership.ALLOW)
+                    if c is None:
+                        continue
+                    self.contacts.add(c)
+                    self.emit('messenger-contact-added', c)
+                    self.unblock_contact(c)
                 for group in groups:
                     self.add_contact_to_group(group, c)
 
         try:
             contact = self.contacts.search_by_account(account).\
                 search_by_network_id(NetworkID.MSN)[0]
-            if not contact.is_member(profile.Membership.FORWARD):
+            if not contact.is_member(profile.Membership.FORWARD) and \
+                    contact.id != "00000000-0000-0000-0000-000000000000":
                 self.__upgrade_mail_contact(contact, groups)
+            elif contact.id == "00000000-0000-0000-0000-000000000000":
+                raise IndexError
             else:
                 return
         except IndexError:
