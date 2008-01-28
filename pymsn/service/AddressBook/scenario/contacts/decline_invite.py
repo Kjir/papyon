@@ -16,6 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
+from pymsn.service.AddressBook.constants import AddressBookError
 from pymsn.service.AddressBook.scenario.base import BaseScenario
 from pymsn.service.AddressBook.scenario.base import Scenario
 from update_memberships import UpdateMembershipsScenario
