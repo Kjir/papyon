@@ -1,7 +1,13 @@
 pymsn-0.3.2 (Green Moustache)
 ===============================
 
-  * List of changed between 0.3.1 and 0.3.2
+  * List of changes between 0.3.2 and 0.3.3
+    o Removed an assert statement causing pymsn to fail with the newest CVR response
+    o Removed the python-adns dependency
+    o Fixed a DNS resolution issue
+    o Fixed a small error in the decorator module
+
+  * List of changes between 0.3.1 and 0.3.2
     o Fixed MSNObject handling in Profile
     o Added Profile events support
     o Fixed typo in the EmailContactAdd scenario
