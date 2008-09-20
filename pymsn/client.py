@@ -78,6 +78,7 @@ password was wrong, this will lead us to use the L{pymsn.event} interfaces:
 
 """
 
+
 import pymsn.profile as profile
 import pymsn.msnp as msnp
 
@@ -142,11 +143,12 @@ class Client(EventsDispatcher):
         self._external_conversations = {}
 
         self._sso = None
-
+        
         self._profile = None
         self._address_book = None
         self._oim_box = None
-
+        self._mailbox = None
+        
         self.__die = False
         self.__connect_transport_signals()
         self.__connect_protocol_signals()
@@ -178,6 +180,12 @@ class Client(EventsDispatcher):
         return self._oim_box
 
     @property
+    def mailbox(self):
+        """The mailbox of the current user
+            @type: L{<pymsn.msnp.mailbox.Mailbox>}"""
+        return self._mailbox
+
+    @property
     def spaces(self):
         """The MSN Spaces of the current user
             @type: L{Spaces<pymsn.service.Spaces>}"""
@@ -203,6 +211,8 @@ class Client(EventsDispatcher):
         self.__die = False
         self._profile = profile.Profile((account, password), self._protocol)
         self.__connect_profile_signals()
+        self._mailbox = msnp.Mailbox(self._protocol)
+        self.__connect_mailbox_signals()
         self._transport.establish_connection()
         self._state = ClientState.CONNECTING
 
@@ -251,7 +261,19 @@ class Client(EventsDispatcher):
         self.profile.connect("notify::personal-message", property_changed)
         self.profile.connect("notify::current-media", property_changed)
         self.profile.connect("notify::msn-object", property_changed)
-
+    
+    def __connect_mailbox_signals(self):
+        """Connect mailbox signals"""
+        def new_mail_received(mailbox, mail):
+            self._dispatch("on_mailbox_new_mail_received", mail)
+        
+        def unread_changed(mailbox, unread_count, initial):
+            method_name = "on_mailbox_unread_mail_count_changed"
+            self._dispatch(method_name, unread_count, initial)
+            
+        self.mailbox.connect("unread-mail-count-changed", unread_changed)
+        self.mailbox.connect("new-mail-received", new_mail_received)
+        
     def __connect_contact_signals(self, contact):
         """Connect contact signals"""
         def event(contact, *args):

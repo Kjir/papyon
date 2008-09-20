@@ -38,6 +38,8 @@ import pymsn.service.SingleSignOn as SSO
 import pymsn.service.AddressBook as AB
 import pymsn.service.OfflineIM as OIM
 
+import md5
+import time
 import logging
 import urllib
 import gobject
@@ -100,6 +102,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         gobject.GObject.__init__(self)
         self.__state = ProtocolState.CLOSED
         self._protocol_version = 0
+        self._url_callbacks = {} # tr_id=>callback
 
     # Properties ------------------------------------------------------------
     def __get_state(self):
@@ -244,6 +247,11 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._send_command('UUM',
                 (contact.account, contact.network_id, message_type),
                 payload=message)
+
+    def send_url_request(self, url_command_args, callback):
+        tr_id = self._send_command('URL', url_command_args)
+        self._url_callbacks[tr_id] = callback
+
 
     # Handlers ---------------------------------------------------------------
     # --------- Connection ---------------------------------------------------
@@ -468,10 +476,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 self._state = ProtocolState.SYNCHRONIZING
                 self._client.address_book.sync()
         elif content_type[0] in \
-                ('text/x-msmsgsinitialemailnotification', \
-                 'text/x-msmsgsemailnotification'):
-            self.emit("mail-received", message)
-        elif content_type[0] in \
                 ('text/x-msmsgsinitialmdatanotification', \
                  'text/x-msmsgsoimnotification'):
             if self._client.oim_box is not None:
@@ -483,8 +487,46 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 if mail_data == 'too-large':
                     mail_data = None
                 self._client.oim_box.sync(mail_data)
-        elif content_type[0] == 'text/x-msmsgsactivemailnotification':
+                if mail_data and \
+                   content_type[0] == 'text/x-msmsgsinitialmdatanotification':
+                    #Initial mail
+                    start = mail_data.find('<IU>') + 4
+                    end = mail_data.find('</IU>')
+                    if start < end:
+                        mailbox_unread = int(mail_data[start:end])
+                        self._client.mailbox._initial_set(mailbox_unread)
+                        
+        elif content_type[0] == 'text/x-msmsgsinitialemailnotification':
+            #Initial mail (obsolete by MSNP11)
             pass
+        elif content_type[0] == 'text/x-msmsgsemailnotification':
+            #New mail
+            m = HTTPMessage()
+            m.parse(message.body)
+            name = m.get_header('From')
+            address = m.get_header('From-Addr')
+            subject = m.get_header('Subject')
+            message_url = m.get_header('Message-URL')
+            post_url = m.get_header('Post-URL')
+            post_id = m.get_header('id')
+            dest = m.get_header('Dest-Folder')
+            if dest == 'ACTIVE':
+                self._client.mailbox._unread_mail_increased(1)
+                build = self._build_url_post_data
+                post_url, form_data = build(message_url, post_url, post_id)
+                self._client.mailbox._new_mail(name, address, subject,
+                                               post_url, form_data)
+        elif content_type[0] == 'text/x-msmsgsactivemailnotification':
+            #Movement of unread mail
+            m = HTTPMessage()
+            m.parse(message.body)
+            src = m.get_header('Src-Folder')
+            dest = m.get_header('Dest-Folder')
+            delta = int(m.get_header('Message-Delta'))
+            if src == 'ACTIVE':
+                self._client.mailbox._unread_mail_decreased(delta)
+            elif dest == 'ACTIVE':
+                self._client.mailbox._unread_mail_increased(delta)
     
     def _handle_UBM(self, command):
         network_id = int(command.arguments[1])
@@ -501,6 +543,54 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             contact = contacts[0]
             message = Message(contact, command.payload)
             self.emit("unmanaged-message-received", contact, message)
+
+    # --------- Urls ---------------------------------------------------------
+    
+    def _build_url_post_data(self, 
+                message_url="/cgi-bin/HoTMaiL", 
+                post_url='https://loginnet.passport.com/ppsecure/md5auth.srf?',
+                post_id='2'):
+        
+        profile = {}
+        lines = self._client.profile.profile.split("\r\n")
+        for line in lines:
+            line = line.strip()
+            if line:
+                name, value = line.split(":", 1)
+                profile[name] = value.strip()
+                
+        account = self._client.profile.account
+        password = str(self._client.profile.password)
+        sl = str(int(time.time()) - int(profile['LoginTime']))
+        auth = profile['MSPAuth']
+        sid = profile['sid']
+        auth = profile['MSPAuth']
+        creds = md5.new(auth + sl + password).hexdigest()
+        
+        post_data = dict([
+            ('mode', 'ttl'),            
+            ('login', account.split('@')[0]),
+            ('username', account),
+            ('sid', sid),
+            ('kv', ''),
+            ('id', post_id),
+            ('sl', sl),
+            ('rru', message_url),
+            ('auth', auth),
+            ('creds', creds),
+            ('svc', 'mail'),
+            ('js', 'yes')])
+        return (post_url, post_data)
+
+    def _handle_URL(self, command):
+        tr_id = command.transaction_id
+        if tr_id in self._url_callbacks:
+            message_url, post_url, post_id = command.arguments
+            post_url, form_dict = self._build_url_post_data(message_url, 
+                                                            post_url, post_id)
+            callback = self._url_callbacks[tr_id]
+            del self._url_callbacks[tr_id]
+            callback(post_url, form_dict)
 
     # --------- Invitation ---------------------------------------------------
     def _handle_RNG(self,command):

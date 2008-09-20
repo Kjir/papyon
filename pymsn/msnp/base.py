@@ -76,8 +76,9 @@ class BaseProtocol(object):
 
     def _send_command(self, command, arguments=(), payload=None, 
             increment=True, callback=None, *cb_args):
-        self._transport.send_command_ex(command, arguments, payload, increment,
-                callback, *cb_args)
+        command = self._transport.send_command_ex(command, arguments, payload, 
+                                                increment, callback, *cb_args)
+        return command.transaction_id
    
     # default handlers
     def _default_handler(self, command):
