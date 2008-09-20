@@ -553,7 +553,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         contacts = address_book.contacts\
                 .search_by_memberships(profile.Membership.FORWARD)\
                 .group_by_domain()
-        
+
         payloads = ['<ml l="1">']
         mask = ~(profile.Membership.REVERSE | profile.Membership.PENDING)
         for domain, contacts in contacts.iteritems():
@@ -570,8 +570,11 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 payloads[-1] += node 
             payloads[-1] += '</d>'
         payloads[-1] += '</ml>'
-        
+
+        import re
+        pattern = re.compile ('<d n="[^"]+"></d>')
         for payload in payloads:
+            payload = pattern.sub('', payload)
             self._send_command("ADL", payload=payload)
         self._state = ProtocolState.SYNCHRONIZED
 
