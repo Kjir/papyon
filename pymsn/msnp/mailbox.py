@@ -19,7 +19,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-from sys import maxint as MAX_INT
 import gobject
 
 __all__ = ['Mailbox', 'MailMessage']
@@ -38,7 +37,7 @@ class MailMessage(object):
         """The name of the person who sent the email"""
         return self._name
 
-    @property        
+    @property
     def address(self):
         """Email address of the person who sent the email"""
         return self._address
@@ -47,7 +46,7 @@ class MailMessage(object):
     def post_url(self):
         """post url"""
         return self._post_url
-        
+
     @property
     def form_data(self):
         """form url"""
@@ -64,14 +63,14 @@ class Mailbox(gobject.GObject):
                                   (object,)),
             "unread-mail-count-changed" : (gobject.SIGNAL_RUN_FIRST,
                                   gobject.TYPE_NONE,
-                                  (int, bool)),
+                                  (gobject.TYPE_UINT, bool)),
             }
 
     __gproperties__ = {
-            "unread-mail-count": (gobject.TYPE_INT,
+            "unread-mail-count": (gobject.TYPE_UINT,
                 "Inbox Unread",
                 "Number of unread mail in the users inbox",
-                0, MAX_INT, 0,
+                0, gobject.G_MAXUINT, 0,
                 gobject.PARAM_READABLE),
             }
 
@@ -88,7 +87,7 @@ class Mailbox(gobject.GObject):
 
     def request_compose_mail_url(self, contact, callback):
         self._ns_client.send_url_request(('COMPOSE', contact.account), callback)            
-            
+
     def request_inbox_url(self, callback):
         self._ns_client.send_url_request(('INBOX',), callback)
 
@@ -101,13 +100,13 @@ class Mailbox(gobject.GObject):
         self._unread_mail_count -= delta
         self.emit("unread-mail-count-changed", self._unread_mail_count, False)
         self.notify("unread-mail-count")
-        
+
     def _initial_set(self, unread_number):
         if unread_number > 0:
             self._unread_mail_count = unread_number
             self.emit("unread-mail-count-changed", unread_number, True)
             self.notify("unread-mail-count")
-            
+
     def _new_mail(self, name, address, subject, post_url, form_data):
         mail = MailMessage(name, address, subject, post_url, form_data)
         self.emit("new-mail-received", mail)
