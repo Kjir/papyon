@@ -151,7 +151,9 @@ class P2PSessionManager(gobject.GObject):
                         session = IncomingP2PSession(self, peer, session_id, message)
                     except SLPError:
                         #TODO: answer with a 603 Decline ?
-                        return 
+                        return None
+                else:
+                    return None
                 #elif isinstance(message.body, SLPTransferRequestBody):
                 #    pass  
             else:
