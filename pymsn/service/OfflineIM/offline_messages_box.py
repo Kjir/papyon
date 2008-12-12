@@ -250,12 +250,12 @@ class OfflineMessagesBox(gobject.GObject):
         metadata = Metadata(xml_data)
         for m in metadata.findall('./M'):
             id = m.findtext('./I')
-            network = (m.findtext('T','int'), m.findtext('S','int'))
-            if network == (11,6):
+            network = m.findtext('T','int')
+            if network == 11:
                 network_id = NetworkID.MSN
-            elif network == (13,7):
+            elif network == 13:
                 network_id = NetworkID.EXTERNAL
-            
+
             account = m.findtext('./E')
 
             try:
