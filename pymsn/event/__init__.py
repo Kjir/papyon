@@ -72,3 +72,4 @@ from contact import *
 from address_book import *
 from offline_messages import *
 from invite import *
+from mailbox import *

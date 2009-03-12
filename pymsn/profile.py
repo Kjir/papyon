@@ -487,6 +487,9 @@ class Profile(gobject.GObject):
             return self._personal_message, self._current_media
         return locals()
 
+    def request_profile_url(self, callback):
+        self._ns_client.send_url_request(('PROFILE', '0x0409'), callback)
+
     def _server_property_changed(self, name, value):
         attr_name = "_" + name.lower().replace("-", "_")
         if attr_name == "_msn_object" and value is not None:
@@ -709,6 +712,13 @@ class Contact(gobject.GObject):
             return result[1]
         else:
             return ""
+            
+    @property
+    def profile_url(self):
+        """Contact profile url
+            @type: string"""
+        account = self._account
+        return "http://members.msn.com/default.msnw?mem=%s&pgmarket=" % account
 
     ### membership management
     def is_member(self, memberships):

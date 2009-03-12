@@ -165,7 +165,11 @@ class P2PSessionManager(gobject.GObject):
                     except SLPError:
                         #TODO: answer with a 603 Decline ?
                         logger.error("SLPError")
-                        return
+                        return None
+                else:
+                    return None
+                #elif isinstance(message.body, SLPTransferRequestBody):
+                #    pass  
             else:
                 logger.warning('Received initial blob with SessionID=0 and non INVITE SLP data') #FIXME - pick up properly on the transreq
                 

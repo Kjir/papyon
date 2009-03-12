@@ -343,6 +343,8 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
         message_encoding = message.content_type[1]
         try:
             message_formatting = message.get_header('X-MMS-IM-Format')
+            if not message_formatting:
+                message_formatting = '='
         except KeyError:
             message_formatting = '='
 
