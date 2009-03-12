@@ -84,28 +84,38 @@ class Client(pymsn.Client):
         return False
 
     def start_conversation(self):
-        contacts = self.address_book.contacts.\
-                search_by_presence(pymsn.Presence.ONLINE)
-        for c in self.address_book.contacts:
-            if c.account == "@hotmail.com":
-                print "Fetching space of : %s with cid %s\n" % (c.display_name, c.cid)
-                self.spaces_service.get_contact_card(c)
+        global peer
 
-        if len(contacts) == 0:
-            print "No online contacts"
-            return True
-        else:
-            for contact in contacts:
-                if contact.account == "johann.prieur@gmail.com":
-                    print "Inviting %s for a conversation" % contact.display_name
-                    self.conv = pymsn.Conversation(self, [contact])
-                    self._convo_events = AnnoyingConversation(self.conv)
-            return False
+        for state in [pymsn.Presence.ONLINE, \
+                          pymsn.Presence.BUSY, \
+                          pymsn.Presence.IDLE, \
+                          pymsn.Presence.AWAY, \
+                          pymsn.Presence.BE_RIGHT_BACK, \
+                          pymsn.Presence.ON_THE_PHONE, \
+                          pymsn.Presence.OUT_TO_LUNCH]:
+            print "Trying %s" % state
+            contacts = self.address_book.contacts.\
+                search_by_presence(state)
+
+            if len(contacts) == 0:
+                print "No %s contacts" % state
+            else:
+                for contact in contacts:
+                    print "%s is %s" % (contact.display_name, state)
+                    if contact.account == peer:
+                        print "Inviting %s for a webcam" % contact.display_name
+                        self._webcam_handler._create_new_send_session(contact)
+                        
+                        return False
+
+        return True
 
 def main():
     import sys
     import getpass
     import signal
+
+    global peer
 
     if "--http" in sys.argv:
         http_mode = True
@@ -122,6 +132,11 @@ def main():
         passwd = getpass.getpass('Password: ')
     else:
         passwd = sys.argv[2]
+
+    if len(sys.argv) < 4:
+        peer = raw_input('Send webcam to : ')
+    else:
+        peer = sys.argv[3]
 
     mainloop = gobject.MainLoop(is_running=True)
 
