@@ -4,6 +4,7 @@
 #
 # Copyright (C) 2007 Ali Sabil <ali.sabil@gmail.com>
 # Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
+# Copyright (C) 2008 Richard Spiers <richard.spiers@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,7 +25,7 @@ This module contains the classes needed to engage in a peer to peer transfer
 with a contact.
     @group MSNObject: MSNObjectStore, MSNObject, MSNObjectType
     @sort: MSNObjectStore, MSNObject, MSNObjectType"""
-
+from msnp2p.session import IncomingP2PSession, WebcamSession
 from msnp2p import OutgoingP2PSession, EufGuid, ApplicationID
 from msnp2p.exceptions import ParseError
 from profile import NetworkID
@@ -38,7 +39,12 @@ import base64
 import sha
 import logging
 
-__all__ = ['MSNObjectType', 'MSNObject', 'MSNObjectStore']
+#Farsight/GST imports
+import pygst
+pygst.require('0.10')
+import farsight, gst, gobject, sys
+
+__all__ = ['MSNObjectType', 'MSNObject', 'MSNObjectStore', 'WebcamHandler']
 
 logger = logging.getLogger('p2p')
 
@@ -204,8 +210,9 @@ class MSNObjectStore(object):
         self._outgoing_sessions = {} # session => (handle_id, callback, errback)
         self._incoming_sessions = {}
         self._published_objects = set()
-        self._client._p2p_session_manager.connect("incoming-session",
-                self._incoming_session_received)
+        # Made an edit here - do we really want to call MSNObjectStore on each new session ?
+        #self._client._p2p_session_manager.connect("incoming-session",
+        #        self._incoming_session_received)
 
     def request(self, msn_object, callback, errback=None):
         if msn_object._data is not None:
@@ -262,3 +269,32 @@ class MSNObjectStore(object):
         session.disconnect(handle_id)
         del self._incoming_sessions[session]
 
+class WebcamHandler(object):
+
+    def __init__(self, client):
+        self._client = client
+        self._sessions = []
+
+    def _can_handle_euf_guid(self,message):
+        euf_guid = message.body.euf_guid
+        if (euf_guid == EufGuid.MEDIA_SESSION):
+            return True
+        else:
+            return False
+        
+    def _create_new_recv_session(self, peer, session_id, message):
+        session = WebcamSession(False, self._client._p2p_session_manager, \
+                                    peer, message.body.euf_guid, \
+                                    ApplicationID.WEBCAM, session_id)
+        self._sessions.append(session)
+        session.accept()
+        return session
+    
+    def _create_new_send_session(self, peer):
+        print "Creating New Send Session"
+        session = WebcamSession(True, self._client._p2p_session_manager, \
+                                    peer, EufGuid.MEDIA_SESSION, \
+                                    ApplicationID.WEBCAM)
+        self._sessions.append(session)
+        session.invite()
+        return session

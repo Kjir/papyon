@@ -3,6 +3,7 @@
 # pymsn - a python client library for Msn
 #
 # Copyright (C) 2007 Ole André Vadla Ravnås <oleavr@gmail.com>
+# Copyright (C) 2008 Richard Spiers <richard.spiers@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,6 +30,7 @@ class EufGuid(object):
 class ApplicationID(object):
     CUSTOM_EMOTICON_TRANSFER = 11
     DISPLAY_PICTURE_TRANSFER = 12
+    WEBCAM           = 4 # Do we need a better name ?
 
 class SLPContentType(object):
     """MSNSLP content types"""

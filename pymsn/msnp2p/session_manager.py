@@ -3,6 +3,7 @@
 # pymsn - a python client library for Msn
 #
 # Copyright (C) 2007 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2008 Richard Spiers <richard.spiers@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -47,12 +48,16 @@ class P2PSessionManager(gobject.GObject):
 
         self._client = client
         self._sessions = weakref.WeakValueDictionary() # session_id => session
+        self._handlers = []
         self._transport_manager = P2PTransportManager(self._client)
         self._transport_manager.connect("blob-received",
                 lambda tr, blob: self._on_blob_received(blob))
         self._transport_manager.connect("blob-sent",
                 lambda tr, blob: self._on_blob_sent(blob))
-
+        
+    def register_handler(self, handler_class):
+        self._handlers.append(handler_class)
+        
     def _register_session(self, session):
         self._sessions[session.id] = session
 
@@ -105,6 +110,7 @@ class P2PSessionManager(gobject.GObject):
             # This means that we received a data packet for an unknown session
             # We must RESET the session just like the official client does
             # TODO send a TLP
+            logger.error("SLPSessionError")
             return
 
         new_session = session is None
@@ -128,6 +134,9 @@ class P2PSessionManager(gobject.GObject):
             # an existing session
             if session_id == 0:
                 # TODO send a 500 internal error
+                logger.error("Session_id == 0")
+                
+                
                 return
 
             # If there was no session then create one only if it's an INVITE
@@ -148,26 +157,23 @@ class P2PSessionManager(gobject.GObject):
                 # Create the session depending on the type of the message
                 if isinstance(message.body, SLPSessionRequestBody):
                     try:
-                        session = IncomingP2PSession(self, peer, session_id, message)
+                        for handler in self._handlers:
+                            if handler._can_handle_euf_guid(message):
+                                session = handler._create_new_recv_session(peer,session_id,message)
+                                self._register_session(session)
+                                
                     except SLPError:
                         #TODO: answer with a 603 Decline ?
-                        return 
-                #elif isinstance(message.body, SLPTransferRequestBody):
-                #    pass  
+                        logger.error("SLPError")
+                        return
             else:
-                logger.warning('Received initial blob with SessionID=0 and non INVITE SLP data')
+                logger.warning('Received initial blob with SessionID=0 and non INVITE SLP data') #FIXME - pick up properly on the transreq
+                
                 #TODO: answer with a 500 Internal Error
                 return None
 
         # The session should be notified of this blob
         session._on_blob_received(blob)
-
-        # emit the new session signal only after the session got notified of this blob
-        # if one of the functions connected to the signal ends the session it needs to
-        # first know its initial INVITE before knowing about it's BYE
-        if new_session:
-            logger.info("Creating new incomming session")
-            self.emit("incoming-session", session)
 
     def _on_blob_sent(self, blob):
         session = None

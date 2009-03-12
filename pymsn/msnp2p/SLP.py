@@ -3,6 +3,7 @@
 # pymsn - a python client library for Msn
 #
 # Copyright (C) 2007 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2008 Richard Spiers<richard.spiers@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,7 +27,7 @@ import base64
 
 __all__ = ['SLPMessage', 'SLPRequestMessage', 'SLPResponseMessage',
            'SLPMessageBody', 'SLPNullBody', 'SLPSessionRequestBody',
-           'SLPSessionCloseBody', 'SLPSessionFailureResponseBody']
+           'SLPSessionCloseBody', 'SLPSessionFailureResponseBody', 'SLPTransferRequestBody']
 
 
 class SLPMessage(HTTPMessage):
@@ -236,7 +237,7 @@ SLPMessageBody.register_content(SLPContentType.NULL, SLPNullBody)
 class SLPSessionRequestBody(SLPMessageBody):
     def __init__(self, euf_guid=None, app_id=None, context=None,
             session_id=None, s_channel_state=0, capabilities_flags=1):
-        SLPMessageBody.__init__(self, SLPContentType.SESSION_REQUEST,
+        SLPMessageBody.__init__(self,SLPContentType.SESSION_REQUEST,
                                     session_id, s_channel_state, capabilities_flags)
         
         if euf_guid is not None:
@@ -273,6 +274,47 @@ class SLPSessionRequestBody(SLPMessageBody):
 
 SLPMessageBody.register_content(SLPContentType.SESSION_REQUEST, SLPSessionRequestBody)
 
+class SLPTransferRequestBody(SLPMessageBody):
+    def __init__(self, euf_guid=None, app_id=None, context=None,
+            session_id=None, s_channel_state=None, capabilities_flags=None):
+        SLPMessageBody.__init__(self,SLPContentType.TRANSFER_REQUEST,
+                                    session_id, s_channel_state, capabilities_flags)
+        
+        #Examples of headers that might be useful
+        
+        #self.add_header("Bridges","TRUDPv1 TCPv1")
+        #self.add_header("NetID",0)
+        #self.add_header("Conn-Type","Firewall")
+        #self.add_header("UPnPNat","false")
+        #self.add_header("ICF","false")
+            
+            
+    @property
+    def euf_guid(self):
+        try:
+            return self.get_header("EUF-GUID")
+        except (KeyError, ValueError):
+            return ""
+
+    @property
+    def context(self):
+        try:
+            context = self.get_header("Context")
+            # Make the b64 string correct by append '=' to get a length as a
+            # multiple of 4. Kopete client seems to use incorrect b64 strings.
+            context += '=' * (len(context) % 4)
+            return base64.b64decode(context)
+        except KeyError:
+            return None
+
+    @property
+    def application_id(self):
+        try:
+            return int(self.get_header("AppID"))
+        except (KeyError, ValueError):
+            return 0
+
+SLPMessageBody.register_content(SLPContentType.TRANSFER_REQUEST, SLPTransferRequestBody)
 
 class SLPSessionCloseBody(SLPMessageBody):
     def __init__(self, context=None, session_id=None, s_channel_state=0,

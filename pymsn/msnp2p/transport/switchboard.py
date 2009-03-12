@@ -37,6 +37,7 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
         SwitchboardClient.__init__(self, client, contacts)
         BaseP2PTransport.__init__(self, transport_manager, "switchboard")
 
+
     def close(self):
         BaseP2PTransport.close(self)
         self._leave()

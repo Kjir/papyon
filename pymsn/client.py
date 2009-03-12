@@ -5,6 +5,7 @@
 # Copyright (C) 2005-2007 Ali Sabil <ali.sabil@gmail.com>
 # Copyright (C) 2006-2007 Ole André Vadla Ravnås <oleavr@gmail.com>
 # Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
+# Copyright (C) 2008 Richard Spiers <richard.spiers@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -90,7 +91,7 @@ from pymsn.util.decorator import rw_property
 from pymsn.transport import *
 from pymsn.switchboard_manager import SwitchboardManager
 from pymsn.msnp2p import P2PSessionManager
-from pymsn.p2p import MSNObjectStore
+from pymsn.p2p import MSNObjectStore, WebcamHandler
 from pymsn.conversation import SwitchboardConversation, \
     ExternalNetworkConversation
 from pymsn.event import ClientState, ClientErrorType, \
@@ -137,7 +138,12 @@ class Client(EventsDispatcher):
         self._switchboard_manager.register_handler(SwitchboardConversation)
 
         self._p2p_session_manager = P2PSessionManager(self)
+        self._webcam_handler = WebcamHandler(self)
+        self._p2p_session_manager.register_handler(self._webcam_handler)
+        
         self._msn_object_store = MSNObjectStore(self)
+        
+        
 
         self._external_conversations = {}
 
@@ -159,6 +165,10 @@ class Client(EventsDispatcher):
             @type: L{MSNObjectStore<pymsn.p2p.MSNObjectStore>}"""
         return self._msn_object_store
 
+    @property
+    def webcam_handler(self):
+        return self._webcam_handler
+    
     @property
     def profile(self):
         """The profile of the current user
