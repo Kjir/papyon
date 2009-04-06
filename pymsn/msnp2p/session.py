@@ -31,12 +31,15 @@ import pymsn.util.guid as guid
 import gobject
 import base64
 import random
-#Farsight/GStreamer imports
-import pygst
-pygst.require('0.10')
-import farsight, gst, gobject, sys
+try:
+    #Farsight/GStreamer imports
+    import pygst
+    pygst.require('0.10')
+    import farsight, gst, gobject, sys
 
-__all__ = ['IncomingP2PSession', 'OutgoingP2PSession','WebcamSessionRecv,WebcamSessionSend']
+    __all__ = ['IncomingP2PSession', 'OutgoingP2PSession','WebcamSessionRecv,WebcamSessionSend']
+except ImportError:
+    __all__ = ['IncomingP2PSession', 'OutgoingP2PSession']
 
 MAX_INT32 = 0x7fffffff
 MAX_INT16 = 0x7fff
