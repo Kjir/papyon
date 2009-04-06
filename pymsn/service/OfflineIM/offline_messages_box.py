@@ -255,6 +255,9 @@ class OfflineMessagesBox(gobject.GObject):
                 network_id = NetworkID.MSN
             elif network == 13:
                 network_id = NetworkID.EXTERNAL
+            else:
+                # FIXME: Setting a default value for network_id. Is NetworkID.MSN the correct value?
+                network_id = NetworkID.MSN
 
             account = m.findtext('./E')
 
