@@ -268,11 +268,14 @@ class OfflineMessagesBox(gobject.GObject):
             except IndexError:
                 sender = None
 
-            if network_id == NetworkID.MSN:
-                name = m.findtext('./N').replace(' ','').\
-                    split('?')[3].decode('base64').encode('utf-8')
-            elif network_id == NetworkID.EXTERNAL:
-                name = m.findtext('./N').encode('utf-8')
+            # Get the name of the sender
+            name = m.findtext('./N');
+            # Decode it according to RFC 2047
+            from email.header import decode_header
+            parts = decode_header(name)
+            name = ''
+            for part in parts:
+                name += part[0].decode(part[1])
 
             date = m.find('./RT')
             if date is not None:
