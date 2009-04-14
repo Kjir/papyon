@@ -562,7 +562,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         account = self._client.profile.account
         password = str(self._client.profile.password)
         sl = str(int(time.time()) - int(profile['LoginTime']))
-        auth = profile['MSPAuth']
         sid = profile['sid']
         auth = profile['MSPAuth']
         creds = md5.new(auth + sl + password).hexdigest()
