@@ -1,7 +1,7 @@
-pymsn - Python msn client library
+papyon - Python msn client library
 =================================
 
-pymsn is an MSN client library, that tries to abstract the MSN protocol
+papyon is an MSN client library, that tries to abstract the MSN protocol
 gory details.
 
 Dependencies
