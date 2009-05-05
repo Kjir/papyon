@@ -2,23 +2,23 @@ from distutils.core import setup
 from doc import make_doc_command, BuildAllDocCommand
 import os
 
-import pymsn
+import papyon
 
 
 # Metadata
-NAME = "pymsn"
-VERSION = pymsn.__version__
+NAME = "papyon"
+VERSION = papyon.__version__
 DESCRIPTION = "Python msn client library"
 AUTHOR = "Ali Sabil"
 AUTHOR_EMAIL = "ali.sabil@gmail.com"
-URL = pymsn.__url__
-LICENSE = pymsn.__license__
+URL = papyon.__url__
+LICENSE = papyon.__license__
 
 # Documentation
 doc_commands = {
     'doc_user_api': make_doc_command(
         name='user_api',
-        description='the pymsn user API documentation',
+        description='the papyon user API documentation',
         config='doc/user-api.conf'),
     'doc': BuildAllDocCommand
 }
@@ -50,8 +50,8 @@ if pieces[-1] == '':
 else:
     len_root_dir = len(pieces)
 
-pymsn_dir = os.path.join(root_dir, 'pymsn')
-for dirpath, dirnames, filenames in os.walk(pymsn_dir):
+papyon_dir = os.path.join(root_dir, 'papyon')
+for dirpath, dirnames, filenames in os.walk(papyon_dir):
     # Ignore dirnames that start with '.'
     for i, dirname in enumerate(dirnames):
         if dirname.startswith('.'):

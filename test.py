@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import pymsn
-import pymsn.event
+import papyon
+import papyon.event
 
 
 import logging
@@ -18,41 +18,41 @@ def get_proxies():
     if 'https' not in proxies and \
             'http' in proxies:
         url = proxies['http'].replace("http://", "https://")
-        result['https'] = pymsn.Proxy(url)
+        result['https'] = papyon.Proxy(url)
     for type, url in proxies.items():
         if type == 'no': continue
         if type == 'https' and url.startswith('http://'):
             url = url.replace('http://', 'https://', 1)
-        result[type] = pymsn.Proxy(url)
+        result[type] = papyon.Proxy(url)
     return result
 
 
-class ClientEvents(pymsn.event.ClientEventInterface):
+class ClientEvents(papyon.event.ClientEventInterface):
     def on_client_state_changed(self, state):
-        if state == pymsn.event.ClientState.CLOSED:
+        if state == papyon.event.ClientState.CLOSED:
             self._client.quit()
-        elif state == pymsn.event.ClientState.OPEN:
+        elif state == papyon.event.ClientState.OPEN:
             self._client.profile.display_name = "Kimbix"
-            self._client.profile.presence = pymsn.Presence.ONLINE
+            self._client.profile.presence = papyon.Presence.ONLINE
             self._client.profile.current_media = ("I listen to", "Nothing")
             for contact in self._client.address_book.contacts:
                 print contact
-            #self._client.profile.personal_message = "Testing pymsn, and freeing the pandas!"
+            #self._client.profile.personal_message = "Testing papyon, and freeing the pandas!"
             gobject.timeout_add(5000, self._client.start_conversation)
 
     def on_client_error(self, error_type, error):
         print "ERROR :", error_type, " ->", error
 
-class AnnoyingConversation(pymsn.event.ConversationEventInterface):
+class AnnoyingConversation(papyon.event.ConversationEventInterface):
     def on_conversation_user_joined(self, contact):
         gobject.timeout_add(5000, self.annoy_user)
 
     def annoy_user(self):
-        msg = "Let's free the pandas ! (testing pymsn)"
-        formatting = pymsn.TextFormat("Comic Sans MS", 
-                         pymsn.TextFormat.UNDERLINE | pymsn.TextFormat.BOLD,
+        msg = "Let's free the pandas ! (testing papyon)"
+        formatting = papyon.TextFormat("Comic Sans MS",
+                         papyon.TextFormat.UNDERLINE | papyon.TextFormat.BOLD,
                          'FF0000')
-        self._client.send_text_message(pymsn.ConversationMessage(msg, formatting))
+        self._client.send_text_message(papyon.ConversationMessage(msg, formatting))
 #         self._client.send_nudge()
 #         self._client.send_typing_notification()
         return True
@@ -66,16 +66,16 @@ class AnnoyingConversation(pymsn.event.ConversationEventInterface):
     def on_conversation_error(self, error_type, error):
         print "ERROR :", error_type, " ->", error
 
-class Client(pymsn.Client):
+class Client(papyon.Client):
     def __init__(self, account, quit, http_mode=False):
         server = ('messenger.hotmail.com', 1863)
         self.quit = quit
         self.account = account
         if http_mode:
-            from pymsn.transport import HTTPPollConnection
-            pymsn.Client.__init__(self, server, get_proxies(), HTTPPollConnection)
+            from papyon.transport import HTTPPollConnection
+            papyon.Client.__init__(self, server, get_proxies(), HTTPPollConnection)
         else:
-            pymsn.Client.__init__(self, server, proxies = get_proxies())
+            papyon.Client.__init__(self, server, proxies = get_proxies())
         self._event_handler = ClientEvents(self)
         gobject.idle_add(self._connect)
 
@@ -86,13 +86,13 @@ class Client(pymsn.Client):
     def start_conversation(self):
         global peer
 
-        for state in [pymsn.Presence.ONLINE, \
-                          pymsn.Presence.BUSY, \
-                          pymsn.Presence.IDLE, \
-                          pymsn.Presence.AWAY, \
-                          pymsn.Presence.BE_RIGHT_BACK, \
-                          pymsn.Presence.ON_THE_PHONE, \
-                          pymsn.Presence.OUT_TO_LUNCH]:
+        for state in [papyon.Presence.ONLINE, \
+                          papyon.Presence.BUSY, \
+                          papyon.Presence.IDLE, \
+                          papyon.Presence.AWAY, \
+                          papyon.Presence.BE_RIGHT_BACK, \
+                          papyon.Presence.ON_THE_PHONE, \
+                          papyon.Presence.OUT_TO_LUNCH]:
             print "Trying %s" % state
             contacts = self.address_book.contacts.\
                 search_by_presence(state)
