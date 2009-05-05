@@ -54,10 +54,10 @@ class P2PSessionManager(gobject.GObject):
                 lambda tr, blob: self._on_blob_received(blob))
         self._transport_manager.connect("blob-sent",
                 lambda tr, blob: self._on_blob_sent(blob))
-        
+
     def register_handler(self, handler_class):
         self._handlers.append(handler_class)
-        
+
     def _register_session(self, session):
         self._sessions[session.id] = session
 
@@ -112,8 +112,6 @@ class P2PSessionManager(gobject.GObject):
             # TODO send a TLP
             logger.error("SLPSessionError")
             return
-
-        new_session = session is None
 
         # The session could not be found, create a new one if necessary
         if session is None:
