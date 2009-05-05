@@ -39,12 +39,15 @@ import base64
 import sha
 import logging
 
-#Farsight/GST imports
-import pygst
-pygst.require('0.10')
-import farsight, gst, gobject, sys
+try:
+    #Farsight/GST imports
+    import pygst
+    pygst.require('0.10')
+    import farsight, gst, gobject, sys
 
-__all__ = ['MSNObjectType', 'MSNObject', 'MSNObjectStore', 'WebcamHandler']
+    __all__ = ['MSNObjectType', 'MSNObject', 'MSNObjectStore', 'WebcamHandler']
+except ImportError:
+    __all__ = ['MSNObjectType', 'MSNObject', 'MSNObjectStore']
 
 logger = logging.getLogger('p2p')
 
