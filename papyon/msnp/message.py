@@ -58,8 +58,8 @@ class Message(HTTPMessage):
     def __init__(self, sender=None, message=""):
         """Initializer
             
-            @param body: The body of the message, it is put after the headers
-            @type body: string"""
+            @param message: The body of the message, it is put after the headers
+            @type message: string"""
         HTTPMessage.__init__(self)
         self.sender = sender
         if message:

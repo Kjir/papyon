@@ -43,8 +43,8 @@ class UpdateMembershipsScenario(BaseScenario):
 
            @type scenario: L{Scenario<papyon.service.AddressBook.scenario.base.Scenario>}
            @type network: L{NetworkID<papyon.profile.NetworkID>}
-           @type old_memberships: bitmask of L{Membership<papyon.profile.Membership>}
-           @type new_memberships: bitmask of L{Membership<papyon.profile.Membership>}
+           @type old_membership: bitmask of L{Membership<papyon.profile.Membership>}
+           @type new_membership: bitmask of L{Membership<papyon.profile.Membership>}
         """
         BaseScenario.__init__(self, scenario, callback, errback)
         self.__sharing = sharing

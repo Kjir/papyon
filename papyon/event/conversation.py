@@ -60,7 +60,7 @@ class MessageError(object):
 
 
 class ConversationEventInterface(BaseEventInterface):
-    """interfaces allowing the user to get notified about events
+    """Interfaces allowing the user to get notified about events
     from a L{Conversation<papyon.conversation.ConversationInterface>} object."""
 
     def __init__(self, conversation):
@@ -74,7 +74,7 @@ class ConversationEventInterface(BaseEventInterface):
         pass
 
     def on_conversation_error(self, type, error):
-        """Called when an error occurs in the L{Client<papyon.Conversation>}.
+        """Called when an error occurs in the L{Client<papyon.conversation>}.
 
             @param type: the error type
             @type type: L{ClientErrorType}
@@ -86,25 +86,25 @@ class ConversationEventInterface(BaseEventInterface):
         pass
 
     def on_conversation_user_joined(self, contact):
-        """Called when a user joins the conversation.
+        """Called when an user joins the conversation.
             @param contact: the contact whose presence changed
             @type contact: L{Contact<papyon.profile.Contact>}"""
         pass
 
     def on_conversation_user_left(self, contact):
-        """Called when a user leaved the conversation.
+        """Called when an user leaved the conversation.
             @param contact: the contact whose presence changed
             @type contact: L{Contact<papyon.profile.Contact>}"""
         pass
 
     def on_conversation_user_typing(self, contact):
-        """Called when a user is typing.
+        """Called when an user is typing.
             @param contact: the contact whose presence changed
             @type contact: L{Contact<papyon.profile.Contact>}"""
         pass
 
     def on_conversation_message_received(self, sender, message):
-        """Called when a user sends a message.
+        """Called when an user sends a message.
             @param sender: the contact who sent the message
             @type sender: L{Contact<papyon.profile.Contact>}
 
@@ -113,7 +113,7 @@ class ConversationEventInterface(BaseEventInterface):
         pass
     
     def on_conversation_nudge_received(self, sender):
-        """Called when a user sends a nudge.
+        """Called when an user sends a nudge.
             @param sender: the contact who sent the nudge
             @type sender: L{Contact<papyon.profile.Contact>}"""
         pass

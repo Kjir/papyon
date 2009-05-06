@@ -74,9 +74,9 @@ class SOAPRequest(object):
         @type namespace: URI
         
         @param encoding_style: the encoding style for this method
-        @type encoding: URI
+        @type encoding_style: URI
         
-        @param **attr: attributes to be attached to the method"""
+        @param attr: attributes to be attached to the method"""
         self.header = ElementTree.Element(_SOAPSection.HEADER)
         if namespace is not None:
             method = "{" + namespace + "}" + method
