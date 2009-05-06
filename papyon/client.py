@@ -121,7 +121,7 @@ class Client(EventsDispatcher):
 
             @param transport_class: the transport class to use for the network
                     connection
-            @type transport_class: L{papyon.transport.AbstractTransport}"""
+            @type transport_class: L{papyon.transport.BaseTransport}"""
         EventsDispatcher.__init__(self)
 
         self.__state = ClientState.CLOSED
@@ -164,7 +164,7 @@ class Client(EventsDispatcher):
     @property
     def msn_object_store(self):
         """The MSNObjectStore instance associated with this client.
-            @type: L{MSNObjectStore<papyon.p2p.MSNObjectStore>}"""
+            @rtype: L{MSNObjectStore<papyon.p2p.MSNObjectStore>}"""
         return self._msn_object_store
 
     @property
@@ -174,37 +174,37 @@ class Client(EventsDispatcher):
     @property
     def profile(self):
         """The profile of the current user
-            @type: L{User<papyon.profile.Profile>}"""
+            @rtype: L{User<papyon.profile.Profile>}"""
         return self._profile
 
     @property
     def address_book(self):
         """The address book of the current user
-            @type: L{AddressBook<papyon.service.AddressBook>}"""
+            @rtype: L{AddressBook<papyon.service.AddressBook>}"""
         return self._address_book
 
     @property
     def oim_box(self):
         """The offline IM for the current user
-            @type: L{OfflineIM<papyon.service.OfflineIM>}"""
+            @rtype: L{OfflineIM<papyon.service.OfflineIM>}"""
         return self._oim_box
 
     @property
     def mailbox(self):
         """The mailbox of the current user
-            @type: L{<papyon.msnp.mailbox.Mailbox>}"""
+            @rtype: L{<papyon.msnp.mailbox.Mailbox>}"""
         return self._mailbox
 
     @property
     def spaces(self):
         """The MSN Spaces of the current user
-            @type: L{Spaces<papyon.service.Spaces>}"""
+            @rtype: L{Spaces<papyon.service.Spaces>}"""
         return self._spaces
 
     @property
     def state(self):
         """The state of this Client
-            @type: L{papyon.event.ClientState}"""
+            @rtype: L{papyon.event.ClientState}"""
         return self.__state
 
     def login(self, account, password):

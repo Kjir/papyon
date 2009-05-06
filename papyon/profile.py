@@ -364,25 +364,25 @@ class Profile(gobject.GObject):
     @property
     def account(self):
         """The user account
-            @type: utf-8 encoded string"""
+            @rtype: utf-8 encoded string"""
         return self._account
 
     @property
     def password(self):
         """The user password
-            @type: utf-8 encoded string"""
+            @rtype: utf-8 encoded string"""
         return self._password
 
     @property
     def profile(self):
         """The user profile retrieved from the MSN servers
-            @type: utf-8 encoded string"""
+            @rtype: utf-8 encoded string"""
         return self._profile
 
     @property
     def id(self):
         """The user identifier in a GUID form
-            @type: GUID string"""
+            @rtype: GUID string"""
         return "00000000-0000-0000-0000-000000000000"
 
     @rw_property
@@ -616,85 +616,85 @@ class Contact(gobject.GObject):
     @property
     def id(self):
         """Contact identifier in a GUID form
-            @type: GUID string"""
+            @rtype: GUID string"""
         return self._id
 
     @property
     def attributes(self):
         """Contact attributes
-            @type: {key: string => value: string}"""
+            @rtype: {key: string => value: string}"""
         return self._attributes.copy()
 
     @property
     def cid(self):
         """Contact ID
-            @type: GUID string"""
+            @rtype: GUID string"""
         return self._cid
 
     @property
     def network_id(self):
         """Contact network ID
-            @type: L{NetworkID<papyon.profile.NetworkID>}"""
+            @rtype: L{NetworkID<papyon.profile.NetworkID>}"""
         return self._network_id
 
     @property
     def account(self):
         """Contact account
-            @type: utf-8 encoded string"""
+            @rtype: utf-8 encoded string"""
         return self._account
 
     @property
     def presence(self):
         """Contact presence
-            @type: L{Presence<papyon.profile.Presence>}"""
+            @rtype: L{Presence<papyon.profile.Presence>}"""
         return self._presence
 
     @property
     def display_name(self):
         """Contact display name
-            @type: utf-8 encoded string"""
+            @rtype: utf-8 encoded string"""
         return self._display_name
 
     @property
     def personal_message(self):
         """Contact personal message
-            @type: utf-8 encoded string"""
+            @rtype: utf-8 encoded string"""
         return self._personal_message
 
     @property
     def current_media(self):
         """Contact current media
-            @type: (artist: string, track: string)"""
+            @rtype: (artist: string, track: string)"""
         return self._current_media
 
     @property
     def groups(self):
         """Contact list of groups
-            @type: set(L{Group<papyon.profile.Group>}...)"""
+            @rtype: set(L{Group<papyon.profile.Group>}...)"""
         return self._groups
 
     @property
     def infos(self):
         """Contact informations
-            @type: {key: string => value: string}"""
+            @rtype: {key: string => value: string}"""
         return self._infos
 
     @property
     def memberships(self):
         """Contact membership value
-            @type: bitmask of L{Membership<papyon.profile.Membership>}s"""
+            @rtype: bitmask of L{Membership<papyon.profile.Membership>}s"""
         return self._memberships
 
     @property
     def contact_type(self):
         """Contact automatic update status flag
-            @type: L{ContactType<papyon.profile.ContactType>}"""
+            @rtype: L{ContactType<papyon.profile.ContactType>}"""
         return self._contact_type
 
     @property
     def client_capabilities(self):
         """Contact client capabilities
-            @type: L{ClientCapabilities}"""
+            @rtype: L{ClientCapabilities}"""
         return self._client_capabilities
 
     @property
@@ -706,7 +706,7 @@ class Contact(gobject.GObject):
     @property
     def domain(self):
         """Contact domain, which is basically the part after @ in the account
-            @type: utf-8 encoded string"""
+            @rtype: utf-8 encoded string"""
         result = self._account.split('@', 1)
         if len(result) > 1:
             return result[1]
@@ -716,7 +716,7 @@ class Contact(gobject.GObject):
     @property
     def profile_url(self):
         """Contact profile url
-            @type: string"""
+            @rtype: string"""
         account = self._account
         return "http://members.msn.com/default.msnw?mem=%s&pgmarket=" % account
 
@@ -793,13 +793,13 @@ class Group(gobject.GObject):
     @property
     def id(self):
         """Group identifier in a GUID form
-            @type: GUID string"""
+            @rtype: GUID string"""
         return self._id
 
     @property
     def name(self):
         """Group name
-            @type: utf-8 encoded string"""
+            @rtype: utf-8 encoded string"""
         return self._name
 
     def _server_property_changed(self, name, value):

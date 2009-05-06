@@ -66,7 +66,7 @@ class ProxyInfos(object):
             @param default_type: the default proxy type
             @type default_type: string in ('http', 'https', 'socks4', 'socks5')
 
-            @return L{ProxyInfos} instance filled with the infos given in the
+            @return: L{ProxyInfos} instance filled with the infos given in the
                 url"""
         # scheme://netloc/path;parameters?query#fragment
         # (scheme, netloc, path;parameters, query, fragment)

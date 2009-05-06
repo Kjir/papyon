@@ -43,8 +43,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         @group Handlers: _handle_*, _default_handler, _error_handler
 
         @ivar _state: the current protocol state
-        @type _state: integer
-        @see L{ProtocolState}"""
+        @type _state: L{ProtocolState}"""
     __gsignals__ = {
             "message-received": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,

@@ -145,8 +145,8 @@ class Command(object):
             @param transaction_id: the transaction ID
             @type transaction_id: integer
             
-            @param *arguments: the command arguments
-            @type *arguments: string, ... 
+            @param arguments: the command arguments
+            @type arguments: string, ... 
             
             @param payload: is the data to send with the command
             @type payload: string

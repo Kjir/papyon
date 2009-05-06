@@ -97,14 +97,14 @@ class Sharing(SOAPService):
     def FindMembership(self, callback, errback, scenario, services, deltas_only):
         """Requests the membership list.
 
+            @param callback: tuple(callable, *args)
+            @param errback: tuple(callable, *args)
             @param scenario: 'Initial' | ...
             @param services: a list containing the services to check in
                              ['Messenger', 'Invitation', 'SocialNetwork',
                               'Space', 'Profile' ]
             @param deltas_only: True if the method should only check changes 
                                 since last_change, False else
-            @param callback: tuple(callable, *args)
-            @param errback: tuple(callable, *args)
         """
         self.__soap_request(self._service.FindMembership, scenario,
                 (services, deltas_only, self._last_changes), callback, errback)

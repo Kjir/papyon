@@ -144,8 +144,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def set_display_name(self, display_name):
         """Sets the new display name
 
-            @param friendly_name: the new friendly name
-            @type friendly_name: string"""
+            @param display_name: the new friendly name
+            @type display_name: string"""
         self._send_command('PRP',
                 ('MFN', urllib.quote(display_name)))
 

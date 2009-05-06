@@ -163,14 +163,12 @@ class AB(SOAPService):
     @RequireSecurityTokens(LiveService.CONTACTS)
     def FindAll(self, callback, errback, scenario, deltas_only):
         """Requests the contact list.
+
+            @param callback: tuple(callable, *args)
+            @param errback: tuple(callable, *args)
             @param scenario: "Initial" | "ContactSave" ...
             @param deltas_only: True if the method should only check changes
-                since last_change, otherwise False
-            @param last_change: an ISO 8601 timestamp
-                (previously sent by the server), or
-                0001-01-01T00:00:00.0000000-08:00 to get the whole list
-            @param callback: tuple(callable, *args)
-            @param errback: tuple(callable, *args)"""            
+                since last_change, otherwise False"""
         self.__soap_request(self._service.ABFindAll, scenario,
                 (XMLTYPE.bool.encode(deltas_only), self._last_changes),
                 callback, errback)
@@ -196,12 +194,12 @@ class AB(SOAPService):
             contact_info, invite_info, auto_manage_allow_list=True):
         """Adds a contact to the contact list.
 
+            @param callback: tuple(callable, *args)
+            @param errback: tuple(callable, *args)
             @param scenario: "ContactSave" | "ContactMsgrAPI"
             @param contact_info: info dict concerning the new contact
             @param invite_info: info dict concerning the sent invite
             @param auto_manage_allow_list: whether to auto add to Allow role or not
-            @param callback: tuple(callable, *args)
-            @param errback: tuple(callable, *args)
         """
         is_messenger_user = contact_info.get('is_messenger_user', None)
         if is_messenger_user is not None:

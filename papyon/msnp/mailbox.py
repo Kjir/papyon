@@ -82,7 +82,7 @@ class Mailbox(gobject.GObject):
     @property
     def unread_mail_count(self):
         """Number of unread mail in the users inbox
-            @type: integer"""
+            @rtype: integer"""
         return self._unread_mail_count
 
     def request_compose_mail_url(self, contact, callback):
