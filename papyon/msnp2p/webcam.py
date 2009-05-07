@@ -144,6 +144,8 @@ class WebcamSession(P2PSession, EventsDispatcher): #Based off P2PSession, rework
             self.send_binary_syn() #Send 603 first ?
         if '\x00s\x00y\x00n\x00\x00\x00' in data:
             self.send_binary_ack()
+        elif '\x006\x000\x003\x00 \x00D\x00e\x00c\x00l\x00i\x00n\x00e' in data:
+            self._dispatch("on_webcam_rejected")
         elif '\x00a\x00c\x00k\x00\x00\x00' in data:
             if self._producer:
                 self._dispatch("on_webcam_accepted")
