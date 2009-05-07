@@ -442,7 +442,7 @@ class Client(EventsDispatcher):
 
     def __connect_webcam_handler_signals(self):
         """Connect Webcam Handler signals"""
-        def session_created(webcam_handler, session):
-            self._dispatch("on_invite_webcam", session)
+        def session_created(webcam_handler, session, producer):
+            self._dispatch("on_invite_webcam", session, producer)
 
         self._webcam_handler.connect("session-created", session_created)

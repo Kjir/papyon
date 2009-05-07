@@ -271,7 +271,7 @@ class WebcamHandler(gobject.GObject):
     __gsignals__ = {
             "session-created" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object,))
+                (object, bool))
     }
 
     def __init__(self, client):
@@ -291,7 +291,7 @@ class WebcamHandler(gobject.GObject):
                                     peer, message.body.euf_guid, \
                                     ApplicationID.WEBCAM, session_id)
         self._sessions.append(session)
-        self.emit("session-created", session)
+        self.emit("session-created", session, False)
         return session
     
     def _create_new_send_session(self, peer):
