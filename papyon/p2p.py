@@ -25,7 +25,8 @@ This module contains the classes needed to engage in a peer to peer transfer
 with a contact.
     @group MSNObject: MSNObjectStore, MSNObject, MSNObjectType
     @sort: MSNObjectStore, MSNObject, MSNObjectType"""
-from msnp2p.session import IncomingP2PSession, WebcamSession
+from msnp2p.session import IncomingP2PSession
+from msnp2p.webcam import WebcamSession
 from msnp2p import OutgoingP2PSession, EufGuid, ApplicationID
 from msnp2p.exceptions import ParseError
 from profile import NetworkID
@@ -33,16 +34,12 @@ from profile import NetworkID
 import papyon.util.element_tree as ElementTree
 import papyon.util.string_io as StringIO
 
+import gobject
 import xml.sax.saxutils as xml
 import urllib
 import base64
 import sha
 import logging
-
-#Farsight/GST imports
-import pygst
-pygst.require('0.10')
-import farsight, gst, gobject, sys
 
 __all__ = ['MSNObjectType', 'MSNObject', 'MSNObjectStore', 'WebcamHandler']
 
@@ -269,9 +266,16 @@ class MSNObjectStore(object):
         session.disconnect(handle_id)
         del self._incoming_sessions[session]
 
-class WebcamHandler(object):
+class WebcamHandler(gobject.GObject):
+
+    __gsignals__ = {
+            "session-created" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,))
+    }
 
     def __init__(self, client):
+        gobject.GObject.__init__(self)
         self._client = client
         self._sessions = []
 
@@ -287,7 +291,7 @@ class WebcamHandler(object):
                                     peer, message.body.euf_guid, \
                                     ApplicationID.WEBCAM, session_id)
         self._sessions.append(session)
-        session.accept()
+        self.emit("session-created", session)
         return session
     
     def _create_new_send_session(self, peer):

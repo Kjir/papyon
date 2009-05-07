@@ -159,6 +159,7 @@ class Client(EventsDispatcher):
         self.__connect_transport_signals()
         self.__connect_protocol_signals()
         self.__connect_switchboard_manager_signals()
+        self.__connect_webcam_handler_signals()
 
     ### public:
     @property
@@ -438,3 +439,10 @@ class Client(EventsDispatcher):
         connect_signal("messages-fetched")
         connect_signal("message-sent")
         connect_signal("messages-deleted")
+
+    def __connect_webcam_handler_signals(self):
+        """Connect Webcam Handler signals"""
+        def session_created(webcam_handler, session):
+            self._dispatch("on_invite_webcam", session)
+
+        self._webcam_handler.connect("session-created", session_created)

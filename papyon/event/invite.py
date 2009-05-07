@@ -39,3 +39,9 @@ class InviteEventInterface(BaseEventInterface):
             @type conversation: L{Conversation<papyon.conversation.ConversationInterface>}"""
         pass
 
+    def on_invite_webcam(self, session, producer):
+        """Called when we get invited into a webcam conversation
+            @param session: the session
+            @type session: L{WebcamSession<papyon.msnp2p.webcam.WebcamSession>}"""
+        pass
+

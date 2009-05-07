@@ -32,6 +32,9 @@ class ApplicationID(object):
     DISPLAY_PICTURE_TRANSFER = 12
     WEBCAM           = 4 # Do we need a better name ?
 
+class Codec(object):
+    ML20 = "ML20"
+
 class SLPContentType(object):
     """MSNSLP content types"""
     SESSION_REQUEST = "application/x-msnmsgr-sessionreqbody"
