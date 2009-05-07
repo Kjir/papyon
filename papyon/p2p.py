@@ -281,17 +281,24 @@ class WebcamHandler(gobject.GObject):
 
     def _can_handle_euf_guid(self,message):
         euf_guid = message.body.euf_guid
-        if (euf_guid == EufGuid.MEDIA_SESSION):
+        if (euf_guid == EufGuid.MEDIA_SESSION or
+            euf_guid == EufGuid.MEDIA_RECEIVE_ONLY):
             return True
         else:
             return False
         
     def _create_new_recv_session(self, peer, session_id, message):
-        session = WebcamSession(False, self._client._p2p_session_manager, \
+        euf_guid = message.body.euf_guid
+        if (euf_guid == EufGuid.MEDIA_SESSION):
+            producer = False
+        else if (euf_guid == EufGuid.MEDIA_RECEIVE_ONLY):
+            producer = True
+
+        session = WebcamSession(producer, self._client._p2p_session_manager, \
                                     peer, message.body.euf_guid, \
                                     ApplicationID.WEBCAM, session_id)
         self._sessions.append(session)
-        self.emit("session-created", session, False)
+        self.emit("session-created", session, producer)
         return session
     
     def _create_new_send_session(self, peer):
