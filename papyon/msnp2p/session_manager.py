@@ -159,7 +159,9 @@ class P2PSessionManager(gobject.GObject):
                             if handler._can_handle_euf_guid(message):
                                 session = handler._create_new_recv_session(peer,session_id,message)
                                 self._register_session(session)
-
+                        if session is None:
+                            logger.error("No handler could handle euf-guid %s" % (message.euf_guid))
+                            return
                     except SLPError:
                         #TODO: answer with a 603 Decline ?
                         logger.error("SLPError")

@@ -42,7 +42,6 @@ __all__=['ServerType', 'DirectConnection']
 logger = logging.getLogger('Transport')
 
 class ServerType(object):
-    """"""
     SWITCHBOARD = 'SB'
     NOTIFICATION = 'NS'
 
