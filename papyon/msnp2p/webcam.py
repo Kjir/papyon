@@ -58,6 +58,7 @@ class WebcamSession(P2PSession, EventsDispatcher): #Based off P2PSession, rework
             self._branch = message.branch
 
         self._sent_syn = False
+        self._xml_needed = False
         self._session_manager._register_session(self)
 
     @rw_property
@@ -66,6 +67,8 @@ class WebcamSession(P2PSession, EventsDispatcher): #Based off P2PSession, rework
             return self._local_candidates
         def fset(self, candidates):
             self._local_candidates = candidates
+            if self._xml_needed:
+                self._send_xml()
         return locals()
 
     @property
@@ -134,22 +137,31 @@ class WebcamSession(P2PSession, EventsDispatcher): #Based off P2PSession, rework
         self.send_binary_syn()
 
     def _on_blob_received(self, blob):
+        data = blob.data.read()
+
         if blob.session_id == 0:
+            message = SLPMessage.build(data)
+            if isinstance(message, SLPResponseMessage):
+                if message.status is 200:
+                    self._dispatch("on_webcam_accepted")
+                elif message.status is 603:
+                    self._dispatch("on_webcam_rejected")
+
             # FIXME: handle the signaling correctly
             # Determine if it actually is a transreq or not
             # send 603
             return
-        data = blob.data.read()
+
         if not self._sent_syn:
             self.send_binary_syn() #Send 603 first ?
         if '\x00s\x00y\x00n\x00\x00\x00' in data:
             self.send_binary_ack()
-        elif '\x006\x000\x003\x00 \x00D\x00e\x00c\x00l\x00i\x00n\x00e' in data:
-            self._dispatch("on_webcam_rejected")
         elif '\x00a\x00c\x00k\x00\x00\x00' in data:
             if self._producer:
-                self._dispatch("on_webcam_accepted")
-            pass
+                if self._local_candidates is not None:
+                    self._send_xml()
+                else:
+                    self._xml_needed = True
         elif ('\x00<\x00p\x00r\x00o\x00d\x00u\x00c\x00e\x00r\x00>\x00' in data) \
                 or ('\x00<\x00v\x00i\x00e\x00w\x00e\x00r\x00>\x00' in data):
             self._handle_xml(blob)
@@ -224,3 +236,7 @@ class WebcamSession(P2PSession, EventsDispatcher): #Based off P2PSession, rework
         self._dispatch("on_webcam_viewer_data_received", self._session_id, rid, self._remote_candidates)
         if self._producer:
             self.send_binary_viewer_data()
+        elif self._local_candidates is not None:
+            self._send_xml()
+        else:
+            self._xml_needed = True
