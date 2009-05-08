@@ -291,7 +291,7 @@ class WebcamHandler(gobject.GObject):
         euf_guid = message.body.euf_guid
         if (euf_guid == EufGuid.MEDIA_SESSION):
             producer = False
-        else if (euf_guid == EufGuid.MEDIA_RECEIVE_ONLY):
+        elif (euf_guid == EufGuid.MEDIA_RECEIVE_ONLY):
             producer = True
 
         session = WebcamSession(producer, self._client._p2p_session_manager, \
