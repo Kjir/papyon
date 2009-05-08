@@ -17,31 +17,30 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-"""Invite event interfaces
+"""Webcam event interfaces
 
-The interfaces defined in this module allow receiving notification events when
-we get invited into an activity with other users."""
+The interfaces defined in this module allow receiving notification events 
+about webcam conversations."""
 
 from papyon.event import BaseEventInterface
 
-__all__ = ["InviteEventInterface"]
+__all__ = ["WebcamEventInterface"]
 
-class InviteEventInterface(BaseEventInterface):
-    def __init__(self, client):
+class WebcamEventInterface(BaseEventInterface):
+    def __init__(self, session):
         """Initializer
-            @param client: the client we want to be notified for its events
-            @type client: L{Client<papyon.Client>}"""
+            @param session: the session we want to be notified for its events
+            @type session: L{WebcamSession<papyon.msnp2p.webcam.WebcamSession>}"""
         BaseEventInterface.__init__(self, client)
 
-    def on_invite_conversation(self, conversation):
-        """Called when we get invited into a conversation
-            @param conversation: the conversation
-            @type conversation: L{Conversation<papyon.conversation.ConversationInterface>}"""
+    def on_webcam_viewer_data_received(self):
+        """Called when we received viewer data"""
         pass
 
-    def on_invite_webcam(self, session, producer):
-        """Called when we get invited into a webcam conversation
-            @param session: the session
-            @type session: L{WebcamSession<papyon.msnp2p.webcam.WebcamSession>}"""
+    def on_webcam_accepted(self):
+        """Called when our invitation got accepted"""
         pass
 
+    def on_webcam_rejected(self, session):
+        """Called when our invitation got rejected"""
+        pass

@@ -159,6 +159,7 @@ class Client(EventsDispatcher):
         self.__connect_transport_signals()
         self.__connect_protocol_signals()
         self.__connect_switchboard_manager_signals()
+        self.__connect_webcam_handler_signals()
 
     ### public:
     @property
@@ -219,20 +220,24 @@ class Client(EventsDispatcher):
         if (self._state != ClientState.CLOSED):
             logger.warning('login already in progress')
         self.__die = False
+        self._state = ClientState.CONNECTING
         self._profile = profile.Profile((account, password), self._protocol)
         self.__connect_profile_signals()
         self._mailbox = msnp.Mailbox(self._protocol)
         self.__connect_mailbox_signals()
         self._transport.establish_connection()
-        self._state = ClientState.CONNECTING
 
     def logout(self):
         """Logout from the server."""
-        if self.__state != ClientState.OPEN: # FIXME: we need something better
+        if self._state == ClientState.CLOSED:
+            logger.warning('alreay logged out')
             return
         self.__die = True
-        self._protocol.signoff()
         self._switchboard_manager.close()
+        if self.__state < ClientState.AUTHENTICATING:
+            self._transport.lose_connection()
+        else:
+            self._protocol.signoff()
         self.__state = ClientState.CLOSED
 
     ### protected:
@@ -434,3 +439,10 @@ class Client(EventsDispatcher):
         connect_signal("messages-fetched")
         connect_signal("message-sent")
         connect_signal("messages-deleted")
+
+    def __connect_webcam_handler_signals(self):
+        """Connect Webcam Handler signals"""
+        def session_created(webcam_handler, session, producer):
+            self._dispatch("on_invite_webcam", session, producer)
+
+        self._webcam_handler.connect("session-created", session_created)
