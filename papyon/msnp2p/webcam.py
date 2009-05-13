@@ -72,6 +72,7 @@ class WebcamSession(P2PSession, EventsDispatcher): #Based off P2PSession, rework
             self._local_candidates = candidates
             if self._xml_needed:
                 self._send_xml()
+                self._xml_needed = False
         return locals()
 
     @property
