@@ -204,14 +204,14 @@ class WebcamSession(P2PSession, EventsDispatcher): #Based off P2PSession, rework
             s = "<viewer>"
 
         s += "<version>2.0</version><rid>%s</rid><session>%u</session><ctypes>0</ctypes><cpu>2010</cpu>" % \
-            (self._local_candidates[0].foundation,
+            (self._local_candidates[0][2],
              self._session_id)
         
         s += "<tcp>"
         s += "<tcpport>%(port)u</tcpport>\t\t\t\t\t\t\t\t  <tcplocalport>%(port)u</tcplocalport>\t\t\t\t\t\t\t\t  <tcpexternalport>%(port)u</tcpexternalport>" \
-            % { "port" : self._local_candidates[0].port }
+            % { "port" : self._local_candidates[0][1] }
         for i, candidate in enumerate(self._local_candidates):
-            s += "<tcpipaddress%u>%s</tcpipaddress%u>" % (i + 1, candidate.ip, i + 1)
+            s += "<tcpipaddress%u>%s</tcpipaddress%u>" % (i + 1, candidate[0], i + 1)
         s += "</tcp>"
         s += "<codec></codec><channelmode>2</channelmode>"
         
@@ -244,7 +244,7 @@ class WebcamSession(P2PSession, EventsDispatcher): #Based off P2PSession, rework
         self._remote_candidates = []
         for ip in ips:
             for port in ports:
-                candidate = (ip, port, l)
+                candidate = (ip, port, rid)
                 self._remote_candidates.append(candidate)
 
         # Signalling is done, now pass it off to the handler to control it further
