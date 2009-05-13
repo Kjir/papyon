@@ -48,7 +48,7 @@ class WebcamSession(P2PSession, EventsDispatcher): #Based off P2PSession, rework
 
         self._producer = producer
         if session_id is None:
-            self._id =  _generate_id()
+            self._id =  self._generate_id()
         else:
             self._id = session_id
 
@@ -205,7 +205,7 @@ class WebcamSession(P2PSession, EventsDispatcher): #Based off P2PSession, rework
             s += "</viewer>"
         s += "\r\n\r\n"
         message_bytes = s.encode("utf-16-le") + "\x00\x00"
-        id = (_generate_id() << 8) | 0x80
+        id = (self._generate_id() << 8) | 0x80
         header = struct.pack("<LHL", id, 8, len(message_bytes))
         self._send_p2p_data(header+message_bytes)
 

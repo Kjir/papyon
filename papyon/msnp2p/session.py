@@ -36,15 +36,6 @@ __all__ = ['IncomingP2PSession', 'OutgoingP2PSession']
 MAX_INT32 = 0x7fffffff
 MAX_INT16 = 0x7fff
 
-def _generate_id(max=MAX_INT32):
-    """
-    Returns a random ID.
-
-        @return: a random integer between 1000 and sys.maxint
-        @rtype: integer
-    """
-    return random.randint(1000, max)
-
 
 class P2PSession(gobject.GObject):
     __gsignals__ = {
@@ -57,7 +48,7 @@ class P2PSession(gobject.GObject):
         self._session_manager = session_manager
         self._peer = peer
 
-        self._id =  _generate_id()
+        self._id =  self._generate_id()
         self._call_id = "{%s}" % guid.generate_guid()
 
         self._euf_guid = euf_guid
@@ -66,6 +57,15 @@ class P2PSession(gobject.GObject):
         self._cseq = 0
         self._branch = "{%s}" % guid.generate_guid()
         self._session_manager._register_session(self)
+
+    def _generate_id(max=MAX_INT32):
+        """
+        Returns a random ID.
+
+        @return: a random integer between 1000 and sys.maxint
+        @rtype: integer
+        """
+        return random.randint(1000, max)
 
     @property
     def id(self):
