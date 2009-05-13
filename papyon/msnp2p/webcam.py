@@ -70,7 +70,18 @@ class WebcamSession(P2PSession, EventsDispatcher): #Based off P2PSession, rework
             return self._local_candidates
         def fset(self, candidates):
             self._local_candidates = candidates
-            if self._xml_needed:
+            if self._xml_needed and self._session_id != 0:
+                self._send_xml()
+                self._xml_needed = False
+        return locals()
+
+    @rw_property
+    def session_id():
+        def fget(self):
+            return self._session_id
+        def fset(self, session_id)
+            self._session_id = session_id
+            if self._xml_needed and self._local_candidates != 0:
                 self._send_xml()
                 self._xml_needed = False
         return locals()
@@ -191,6 +202,7 @@ class WebcamSession(P2PSession, EventsDispatcher): #Based off P2PSession, rework
             s = "<producer>"
         else:
             s = "<viewer>"
+
         s += "<version>2.0</version><rid>%s</rid><session>%u</session><ctypes>0</ctypes><cpu>2010</cpu>" % \
             (self._local_candidates[0].foundation,
              self._session_id)
