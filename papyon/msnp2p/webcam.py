@@ -58,6 +58,9 @@ class WebcamSession(P2PSession, EventsDispatcher): #Based off P2PSession, rework
             self._branch = message.branch
 
         self._sent_syn = False
+        self._local_candidates = None
+        self._remote_candidates = None
+        self._session_id = 0
         self._xml_needed = False
         self._session_manager._register_session(self)
 
