@@ -21,25 +21,78 @@
 import unittest
 import sys
 
-class CodecRtpmap(unittest.TestCase):
-    codecs = [ ((8, "PCMA", 8000), "8 PCMA/8000"),
-               ((0, "PCMU", 8000), "0 PCMU/8000")]
+definitions = [ ((8, "PCMA", 8000, None), "8 PCMA/8000", ""),
+                ((0, "PCMU", 8000, None), "0 PCMU/8000", ""),
+                ((101, "telephone-event", 8000, "0-16"), 
+                  "101 telephone-event/8000", "101 0-16")]
+
+attributes = { "rtcp" : [42],
+               "rtpmap" : ["8 PCMA/8000",
+                           "0 PCMU/8000",
+                           "101 telephone-event/8000"],
+               "fmtp" : ["101 0-16"] }
+
+class CodecTestCase(unittest.TestCase):
 
     def testBuilding(self):
-        for args, string in self.codecs:
+        for args, rtpmap, fmtp in definitions:
             codec = Codec(*args)
-            self.assertEqual(codec.build_rtpmap(), string)
+            self.assertEqual(codec.build_rtpmap(), rtpmap)
 
     def testParsing(self):
-        for args, string in self.codecs:
+        for args, rtpmap, fmtp in definitions:
             codec = Codec()
-            codec.parse_rtpmap(string)
+            codec.parse_rtpmap(rtpmap)
             self.assertEqual(codec.payload, args[0])
             self.assertEqual(codec.encoding, args[1])
             self.assertEqual(codec.bitrate, args[2])
 
+class MediaTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.media = Media("")
+        self.codecs = []
+        for args, rtpmap, fmtp in definitions:
+            self.codecs.append(Codec(*args))
+
+    def testRtcpAssigned(self):
+        self.media.rtcp = 42
+        self.assertEqual(self.media.rtcp, 42)
+
+    def testRtcpAssignedTwice(self):
+        self.media.rtcp = 10
+        self.media.rtcp = 11
+        self.assertEqual(self.media.rtcp, 11)
+
+    def testAttributeGetter(self):
+        self.media.set_attribute("attr", "value")
+        self.assertEqual(self.media.get_attribute("attr"), "value")
+
+    def testAttributesGetter(self):
+        self.media.add_attribute("list", 1)
+        self.media.add_attribute("list", 2)
+        self.assertEqual(self.media.get_attributes("list"), [1, 2])
+
+    def testUnexistingAttribute(self):
+        self.assertEqual(self.media.get_attribute("foo"), None)
+
+    def testSetCodecs(self):
+        self.media.codecs = self.codecs
+        self.assertEqual(self.media.get_attributes("rtpmap"),
+            attributes["rtpmap"])
+        self.assertEqual(self.media.get_attributes("fmtp"),
+            attributes["fmtp"])
+
+    def testParseAttributes(self):
+        for key, values in attributes.iteritems():
+            for value in values:
+                self.media.parse_attribute(key, value)
+        self.assertEqual(self.media.rtcp, 42)
+        for i in range(0, len(self.codecs)):
+            self.assertEqual(self.media.codecs[i], self.codecs[i])
 
 if __name__ == "__main__":
     sys.path.insert(0, "")
     from papyon.sip.sdp import *
+    
     unittest.main()
