@@ -17,3 +17,29 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+import unittest
+import sys
+
+class CodecRtpmap(unittest.TestCase):
+    codecs = [ ((8, "PCMA", 8000), "8 PCMA/8000"),
+               ((0, "PCMU", 8000), "0 PCMU/8000")]
+
+    def testBuilding(self):
+        for args, string in self.codecs:
+            codec = Codec(*args)
+            self.assertEqual(codec.build_rtpmap(), string)
+
+    def testParsing(self):
+        for args, string in self.codecs:
+            codec = Codec()
+            codec.parse_rtpmap(string)
+            self.assertEqual(codec.payload, args[0])
+            self.assertEqual(codec.encoding, args[1])
+            self.assertEqual(codec.bitrate, args[2])
+
+
+if __name__ == "__main__":
+    sys.path.insert(0, "")
+    from papyon.sip.sdp import *
+    unittest.main()

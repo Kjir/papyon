@@ -19,7 +19,31 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 class Codec(object):
-    pass
+
+    def __init__(self, payload=None, encoding=None, bitrate=None, fmtp=None):
+        self.payload = payload
+        self.encoding = encoding
+        self.bitrate = bitrate
+        self.fmtp = fmtp
+
+    def build_rtpmap(self):
+        return "%i %s/%i" % (self.payload, self.encoding, self.bitrate)
+
+    def build_fmtp(self):
+        return "%i %s" % (self.payload, self.fmtp)
+
+    def parse_rtpmap(self, rtpmap):
+        if not rtpmap: return
+        payload, codec = rtpmap.split()
+        self.payload = int(payload)
+        self.encoding = codec.split('/')[0]
+        self.bitrate = int(codec.split('/')[1])
+
+    def parse_fmtp(self, fmtp):
+        if not fmtp: return
+        payload, fmtp = fmtp.split()
+        if int(payload) != self.payload: return
+        self.fmtp = fmtp
 
 class Media(object):
     pass
