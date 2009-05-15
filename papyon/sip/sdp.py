@@ -18,6 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from papyon.sip.constants import *
 from papyon.util.decorator import rw_property
 
 class Codec(object):
@@ -60,11 +61,11 @@ class Codec(object):
 
 class Media(object):
 
-    _attributes = {}
-    _codecs = []
-    _codec = None
-
     def __init__(self, name, ip=None, port=None, rtcp=None):
+        self._attributes = {}
+        self._codecs = []
+        self._codec = None
+
         self.name = name
         self.ip = ip
         self.port = port
@@ -92,15 +93,23 @@ class Media(object):
                     self.add_attribute("fmtp", codec.build_fmtp())
         return locals()
 
+    @property
+    def attributes(self):
+        return self._attributes
+
+    @property
+    def payload_types(self):
+        return map(lambda x: str(x.payload), self._codecs)
+
     def parse_attribute(self, key, value):
-        if key is "rtcp":
+        if key == "rtcp":
             self.rtcp = int(value)
         else:
-            if key is "rtpmap":
+            if key == "rtpmap":
                 self._codec = Codec()
                 self._codec.parse_rtpmap(value)
                 self._codecs.append(self._codec)
-            elif key is "fmtp":
+            elif key == "fmtp":
                 self._codec.parse_fmtp(value)
             self.add_attribute(key, value)
 
@@ -123,5 +132,55 @@ class Media(object):
         if key in self._attributes:
             del self._attributes[key]
 
+    def __repr__(self):
+        return "<SDP Media: %s>" % self.name
+
 class Message(object):
-    pass
+
+    def __init__(self):
+        self._medias = {}
+
+    @property
+    def medias(self):
+        return self._medias
+
+    def build(self):
+        out = []
+        out.append("o=- 0 0 IN IP4 %s" % self.medias["audio"].ip)
+        out.append("s=session")
+        out.append("b=CT:99980")
+        out.append("t=0 0")
+
+        for name, media in self._medias.iteritems():
+            types = " ".join(media.payload_types)
+            out.append("m=%s %s RTP/AVP %s" % (name, media.port, types))
+            out.append("c=IN IP4 %s" % media.ip)
+            if name == "video":
+                out.append("a=x-caps:%s" % VID_XCAPS)
+            for k, v in media.attributes.iteritems():
+                for value in v:
+                    out.append("a=%s:%s" % (k, value))
+            out.append("a=encryption:rejected")
+
+        return "\r\n".join(out)
+
+    def parse(self, message):
+        media = None
+
+        for line in message.splitlines():
+            line = line.strip()
+            if not line or line[1] != '=':
+                continue
+            key = line[0]
+            val = line[2:]
+
+            if key == 'm':
+                media = Media(val.split()[0])
+                media.port = int(val.split()[1])
+                media.rtcp = media.port + 1 # default RTCP port
+                self._medias[media.name] = media
+            elif key == 'c':
+                media.ip = val.split()[2]
+            elif key == 'a':
+                subkey, val = val.split(':', 1)
+                media.parse_attribute(subkey, val)

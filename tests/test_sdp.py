@@ -21,10 +21,12 @@
 import unittest
 import sys
 
-definitions = [ ((8, "PCMA", 8000, None), "8 PCMA/8000", ""),
-                ((0, "PCMU", 8000, None), "0 PCMU/8000", ""),
-                ((101, "telephone-event", 8000, "0-16"), 
-                  "101 telephone-event/8000", "101 0-16")]
+audio_definitions = [((8, "PCMA", 8000, None), "8 PCMA/8000", ""),
+                     ((0, "PCMU", 8000, None), "0 PCMU/8000", ""),
+                     ((101, "telephone-event", 8000, "0-16"), 
+                      "101 telephone-event/8000", "101 0-16")]
+
+video_definitions = [((34, "H263", 90000, None), "34 H263/90000", "")]
 
 attributes = { "rtcp" : [42],
                "rtpmap" : ["8 PCMA/8000",
@@ -32,15 +34,36 @@ attributes = { "rtcp" : [42],
                            "101 telephone-event/8000"],
                "fmtp" : ["101 0-16"] }
 
+msg_audio = """v=0
+o=- 0 0 IN IP4 64.4.34.205
+s=session
+b=CT:99980
+t=0 0
+m=audio 42821 RTP/AVP 8 0 101
+c=IN IP4 64.4.34.205
+a=rtcp:41965
+a=rtpmap:8 PCMA/8000
+a=rtpmap:0 PCMU/8000
+a=rtpmap:101 telephone-event/8000
+a=fmtp:101 0-16
+a=encryption:rejected"""
+
+msg_video = """m=video 52826 RTP/AVP 34
+c=IN IP4 192.168.1.116
+a=x-caps:34 65537:352:288:15.0:256000:1;131074:176:144:15.0:180000:1
+a=rtcp:37649
+a=rtpmap:34 H263/90000
+a=encryption:rejected"""
+
 class CodecTestCase(unittest.TestCase):
 
     def testBuilding(self):
-        for args, rtpmap, fmtp in definitions:
+        for args, rtpmap, fmtp in audio_definitions:
             codec = Codec(*args)
             self.assertEqual(codec.build_rtpmap(), rtpmap)
 
     def testParsing(self):
-        for args, rtpmap, fmtp in definitions:
+        for args, rtpmap, fmtp in audio_definitions:
             codec = Codec()
             codec.parse_rtpmap(rtpmap)
             self.assertEqual(codec.payload, args[0])
@@ -52,7 +75,7 @@ class MediaTestCase(unittest.TestCase):
     def setUp(self):
         self.media = Media("")
         self.codecs = []
-        for args, rtpmap, fmtp in definitions:
+        for args, rtpmap, fmtp in audio_definitions:
             self.codecs.append(Codec(*args))
 
     def testRtcpAssigned(self):
@@ -88,8 +111,55 @@ class MediaTestCase(unittest.TestCase):
             for value in values:
                 self.media.parse_attribute(key, value)
         self.assertEqual(self.media.rtcp, 42)
-        for i in range(0, len(self.codecs)):
-            self.assertEqual(self.media.codecs[i], self.codecs[i])
+        self.assertEqual(self.media.codecs, self.codecs)
+
+    def testListPayloadTypes(self):
+        self.media.codecs = self.codecs
+        self.assertEqual(self.media.payload_types, ['8', '0', '101'])
+
+class MessageTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.message = Message()
+        audio_codecs = []
+        video_codecs = []
+        for args, rtpmap, fmtp in audio_definitions:
+            audio_codecs.append(Codec(*args))
+        for args, rtpmap, fmtp in video_definitions:
+            video_codecs.append(Codec(*args))
+        self.audio = Media("audio", "64.4.34.205", 42821, 41965)
+        self.audio.codecs = audio_codecs
+        self.video = Media("video", "192.168.1.116", 52826, 37649)
+        self.video.codecs = video_codecs
+
+    def testParseMessageA(self):
+        self.message.parse(msg_audio)
+        medias = self.message.medias
+        self.assertEqual(len(medias), 1)
+        self.assertEqual(medias["audio"].ip, "64.4.34.205")
+        self.assertEqual(medias["audio"].port, 42821)
+        self.assertEqual(medias["audio"].rtcp, 41965)
+
+    def testParseMessageAV(self):
+        self.message.parse(msg_audio + "\r\n" + msg_video)
+        medias = self.message.medias
+        self.assertEqual(len(medias), 2)
+        self.assertEqual(medias["audio"].ip, "64.4.34.205")
+        self.assertEqual(medias["audio"].port, 42821)
+        self.assertEqual(medias["audio"].rtcp, 41965)
+        self.assertEqual(medias["video"].ip, "192.168.1.116")
+        self.assertEqual(medias["video"].port, 52826)
+        self.assertEqual(medias["video"].rtcp, 37649)
+
+    def testBuildMessageA(self):
+        self.message.medias["audio"] = self.audio
+        print self.message.build()
+
+    def testBuildMessageAV(self):
+        self.message.medias["audio"] = self.audio
+        self.message.medias["video"] = self.video
+        print self.message.build()
+
 
 if __name__ == "__main__":
     sys.path.insert(0, "")

@@ -87,3 +87,5 @@ MESSAGE_TYPES = {
     604: "Does Not Exist Anywhere",
     606: "Not Acceptable"
 }
+
+VID_XCAPS = "34 65537:352:288:15.0:256000:1;131074:176:144:15.0:180000:1"
