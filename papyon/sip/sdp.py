@@ -51,8 +51,8 @@ class Codec(object):
     def __eq__(self, other):
         return (self.payload == other.payload and
                 self.encoding == other.encoding and
-                self.bitrate == other.bitrate and
-                self.fmtp == other.fmtp)
+                self.bitrate == other.bitrate)
+                #self.fmtp == other.fmtp)
 
     def __repr__(self):
         fmtp = ((self.fmtp and (" " + self.fmtp)) or "")
@@ -101,16 +101,24 @@ class Media(object):
     def payload_types(self):
         return map(lambda x: str(x.payload), self._codecs)
 
+    def get_codec(self, payload):
+        for codec in self._codecs:
+            if codec.payload == payload:
+                return codec
+        return None
+
     def parse_attribute(self, key, value):
         if key == "rtcp":
             self.rtcp = int(value)
         else:
             if key == "rtpmap":
-                self._codec = Codec()
-                self._codec.parse_rtpmap(value)
-                self._codecs.append(self._codec)
+                codec = Codec()
+                codec.parse_rtpmap(value)
+                self.codecs.append(codec)
             elif key == "fmtp":
-                self._codec.parse_fmtp(value)
+                codec = self.get_codec(int(value.split()[0]))
+                if codec:
+                    codec.parse_fmtp(value)
             self.add_attribute(key, value)
 
     def add_attribute(self, key, value):
@@ -134,6 +142,7 @@ class Media(object):
 
     def __repr__(self):
         return "<SDP Media: %s>" % self.name
+
 
 class Message(object):
 
