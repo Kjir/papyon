@@ -153,7 +153,7 @@ class Message(object):
     def medias(self):
         return self._medias
 
-    def build(self):
+    def __str__(self):
         out = []
         out.append("o=- 0 0 IN IP4 %s" % self.medias["audio"].ip)
         out.append("s=session")

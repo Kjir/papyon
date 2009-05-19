@@ -121,7 +121,8 @@ def createCandidate19(args):
                      base_port=args[8])
 
 def createCandidate6(args):
-    return Candidate(draft=6, 
+    return Candidate(draft=6,
+                     foundation=args[0][0:31],
                      username=args[0],
                      component_id=args[1],
                      password=args[2],
@@ -132,66 +133,43 @@ def createCandidate6(args):
 
 class CandidateTestCase(unittest.TestCase):
 
-    def setUp(self):
-        pass
-
-    def assertCandidate19(self, candidate, args):
-        self.assertEqual(candidate.foundation, args[0])
-        self.assertEqual(candidate.component_id, args[1])
-        self.assertEqual(candidate.transport, args[2])
-        self.assertEqual(candidate.priority, args[3])
-        self.assertEqual(candidate.ip, args[4])
-        self.assertEqual(candidate.port, args[5])
-        self.assertEqual(candidate.type, args[6])
-        self.assertEqual(candidate.base_ip, args[7])
-        self.assertEqual(candidate.base_port, args[8])
-
-    def assertCandidate6(self, candidate, args):
-        self.assertEqual(candidate.username, args[0])
-        self.assertEqual(candidate.component_id, args[1])
-        self.assertEqual(candidate.password, args[2])
-        self.assertEqual(candidate.transport, args[3])
-        self.assertEqual(candidate.priority, args[4])
-        self.assertEqual(candidate.ip, args[5])
-        self.assertEqual(candidate.port, args[6])
-
     def testParse19(self):
         for args, line in audio_candidates19:
             candidate = Candidate(draft=19)
             candidate.parse(line)
-            self.assertCandidate19(candidate, args)
+            self.assertEqual(candidate, createCandidate19(args))
 
     def testBuildLocal19(self):
         for args, line in audio_candidates19:
             candidate = createCandidate19(args)
-            print candidate.build_local()
+            print str(candidate)
 
     def testBuildParse19(self):
         for args, line in audio_candidates19:
             candidate = createCandidate19(args)
-            line = candidate.build_local()
+            line = str(candidate)
             candidate = Candidate(draft=19)
             candidate.parse(line)
-            self.assertCandidate19(candidate, args)
+            self.assertEqual(candidate, createCandidate19(args))
 
     def testParse6(self):
         for args, line in audio_candidates6:
             candidate = Candidate(draft=6)
             candidate.parse(line)
-            self.assertCandidate6(candidate, args)
+            self.assertEqual(candidate, createCandidate6(args))
 
     def testBuildLocal6(self):
         for args, line in audio_candidates6:
             candidate = createCandidate6(args)
-            self.assertEqual(candidate.build_local(), line)
+            self.assertEqual(str(candidate), line)
 
-    def testBuildParse19(self):
+    def testBuildParse6(self):
         for args, line in audio_candidates6:
             candidate = createCandidate6(args)
-            line = candidate.build_local()
+            line = str(candidate)
             candidate = Candidate(draft=6)
             candidate.parse(line)
-            self.assertCandidate6(candidate, args)
+            self.assertEqual(candidate, createCandidate6(args))
 
 
 class Session19TestCase(unittest.TestCase):

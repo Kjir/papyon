@@ -153,12 +153,12 @@ class MessageTestCase(unittest.TestCase):
 
     def testBuildMessageA(self):
         self.message.medias["audio"] = self.audio
-        print self.message.build()
+        print self.message
 
     def testBuildMessageAV(self):
         self.message.medias["audio"] = self.audio
         self.message.medias["video"] = self.video
-        print self.message.build()
+        print self.message
 
 
 if __name__ == "__main__":

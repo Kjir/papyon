@@ -54,7 +54,7 @@ class Session(object):
         for name, codecs in self._local_codecs.iteritems():
             media = self.build_media(name, codecs)
             sdp.medias[media.name] = media
-        return sdp.build()
+        return str(sdp)
 
     def build_media(self, name, codecs):
         ip, port, rtcp = self.get_default_address(name)
@@ -67,11 +67,11 @@ class Session(object):
                 media.add_attribute("ice-ufrag", candidates[0].username)
                 media.add_attribute("ice-pwd", candidates[0].password)
             for candidate in candidates:
-                media.add_attribute("candidate", candidate.build_local())
+                media.add_attribute("candidate", str(candidate))
 
         candidates = self.get_active_remote_candidates(name)
         if candidates:
-            list = map(lambda c: c.build_remote(), candidates)
+            list = map(lambda c: c.get_remote_id(), candidates)
             media.add_attribute("remote-candidate", " ".join(list))
 
         return media
@@ -218,7 +218,7 @@ class Candidate(object):
         elif self.draft is 19:
             return (self.type == "relay")
 
-    def build_local(self):
+    def __str__(self):
         if self.draft is 6:
             return "%s %i %s %s %.3f %s %i" % (self.username, self.component_id,
                 self.password, self.transport, self.priority, self.ip, self.port)
@@ -230,7 +230,7 @@ class Candidate(object):
             return "%i %i %s %i %s %i %s" % (self.foundation, self.component_id,
                 self.transport, self.priority, self.ip, self.port, " ".join(ext))
 
-    def build_remote(self):
+    def get_remote_id(self):
         if self.draft is 6:
             return self.username
         elif self.draft is 19:
@@ -266,4 +266,4 @@ class Candidate(object):
                 self.base_port == other.base_port)
 
     def __repr__(self):
-        return "<ICE Candidate: %s>" % self.build_local()
+        return "<ICE Candidate: %s>" % self
