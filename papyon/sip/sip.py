@@ -32,7 +32,6 @@ class Call(object):
 class Message(object):
 
     def __init__(self):
-        self._start = ""
         self._headers = {}
         self.set_content("")
 
