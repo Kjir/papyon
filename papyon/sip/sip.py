@@ -45,8 +45,9 @@ class SIPConnection(gobject.GObject):
 
 class SIPBaseCall(object):
 
-    def __init__(self, transport, callid=None, tunneled=False):
+    def __init__(self, transport, user, callid=None, tunneled=False):
         self._transport = transport
+        self._user = user
         self._callid = callid
         self._tunneled = tunneled
         self._cseq = random.randint(1000, 5000)
@@ -95,7 +96,7 @@ class SIPBaseCall(object):
     def send(self, message):
         self._transport.send(str(message))
 
-    def build_request(self, code, uri=None, to=None, name="", user="", incr=False):
+    def build_request(self, code, uri=None, to=None, name="", incr=False):
         request = SIPRequest(code, uri)
         request.add_header("Via", "SIP/2.0/%s %s:%s" %
             (self._transport.protocol, self.get_local_address()))
@@ -104,7 +105,7 @@ class SIPBaseCall(object):
         request.add_header("CSeq", "%i %s" % (self.get_cseq(incr), code))
         request.add_header("To", to)
         request.add_header("From", "%s<sip:%s%s>;tag=%s;epid=%s" %
-            (name, user, self.get_mepid(), self.get_tag(), self.get_epid()))
+            (name, self._user, self.get_mepid(), self.get_tag(), self.get_epid()))
         request.add_header("User-Agent", USER_AGENT)
         return request
 
@@ -174,14 +175,64 @@ class SIPCall(SIPBaseCall):
 
 class SIPRegistration(SIPBaseCall):
 
-    def register(self):
-        pass
+    __gsignals__ = {
+        'registered': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ([])),
+        'unregistered': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ([])),
+        'failed': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ([]))
+    }
 
-    def unregister(self):
-        pass
+    def __init__(self, transport, user, password, tunneled=False):
+        SIPBaseCall.__init__(self, transport, user, None, tunneled)
+        self._state = "NEW"
+        self._password = password
+
+    @property
+    def registered(self):
+        return (self._state == "REGISTERED")
+
+    def build_register_request(self, timeout, auth):
+        uri = self._user.split('@')[1]
+        request = self.build_request("REGISTER", uri, self._user)
+        request.add_header("ms-keep-alive", "UAC;hop-hop=yes"
+        request.add_header("Contact", "<sip:%s:%s;transport=%s>proxy=replace" %
+            (self.get_local_address(), self._transport.protocol))
+        request.add_header("Event", "registration")
+        request.add_header("Expires", timeout)
+        request.add_header("Authorization", "Basic %s" % auth)
+
+    def register(self):
+        auth = "msmsgs:RPS_%s" % self._password
+        auth = base64.encodestring(auth).replace("\n", "")
+        request = self.build_register_request(900, auth)
+        self._state = "REGISTERING"
+        self.send(request)
+
+    def cancel(self):
+        gobject.remove_source(self._src)
+        auth = "%s:%s" % (self._user, self._password)
+        auth = base64.encodestring(auth).replace("\n", "")
+        request = self.build_register_request(0, auth)
+        self._state = "UNREGISTERING"
+        self.send(request)
+
+    def on_expire(self):
+        self.register()
+        return False
 
     def on_register_response(self, response):
-        pass
+        if self._state == "UNREGISTERING":
+            self._state = "UNREGISTERED"
+            self.emit("unregistered")
+        elif self._state != "REGISTERING":
+            return # strange !?
+        elif response.status is 200:
+            self._state = "REGISTERED"
+            self.emit("registered")
+            timeout = response.get_header("Expires", 30)
+            self._src = gobject.timeout_add(timeout * 1000, self.on_expire)
+        else:
+            self._state = "UNREGISTERED"
+            self.emit("failed")
 
 
 class SIPMessage(object):
@@ -198,14 +249,14 @@ class SIPMessage(object):
         name = name.lower()
         self._headers[name] = [value]
 
-    def get_headers(self, name):
+    def get_headers(self, name, default=None):
         name = name.lower()
-        if name not in self._headers:
+        if name not in self._headers and name in COMPACT_HEADERS:
             name = COMPACT_HEADERS.get(name)
-        return self._headers.get(name)
+        return self._headers.get(name, default)
 
-    def get_header(self, name):
-        value = self.get_headers(name)
+    def get_header(self, name, dafault=None):
+        value = self.get_headers(name, default)
         if type(value) == list:
             return value[0]
         return value
