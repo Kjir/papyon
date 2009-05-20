@@ -34,10 +34,10 @@ class ICESession(object):
         self._remote_active = {}
 
     def get_remote_codecs(self, name):
-        return self._remote_codecs.get(name)
+        return self._remote_codecs.get(name, [])
 
     def get_remote_candidates(self, name):
-        return self._remote_candidates.get(name)
+        return self._remote_candidates.get(name, [])
 
     def set_local_codecs(self, name, codecs):
         self._local_codecs[name] = codecs
@@ -114,8 +114,8 @@ class ICESession(object):
         return candidates
 
     def get_active_local_candidates(self, name):
-        active = self._local_active.get(name)
-        candidates = self._local_candidates.get(name)
+        active = self._local_active.get(name, None)
+        candidates = self._local_candidates.get(name, [])
         if active:
             return reduce(lambda x: (x.foundation == active.foundation), candidates)
         return candidates
@@ -123,10 +123,10 @@ class ICESession(object):
     def get_active_remote_candidates(self, name):
         candidates = []
         components = []
-        active = self._remote_active.get(name)
+        active = self._remote_active.get(name, None)
         if active is None:
             return candidates
-        for candidate in self._remote_candidates.get(name):
+        for candidate in self._remote_candidates.get(name, []):
             if candidate.foundation == active.foundation:
                 if self.draft is 6:
                     candidates.append(candidate)
@@ -143,11 +143,11 @@ class ICESession(object):
         port = None
         rtcp = None
 
-        active = self._local_active.get(name)
+        active = self._local_active.get(name, None)
         if not active:
             active = self.search_relay(name)
 
-        for candidate in self._local_candidates.get(name):
+        for candidate in self._local_candidates.get(name, []):
             if candidate.foundation == active.foundation and \
                candidate.component_id is COMPONENTS.RTP:
                 ip = candidate.ip
@@ -160,7 +160,7 @@ class ICESession(object):
 
     def search_relay(self, name):
         relay = None
-        for candidate in self._local_candidates.get(name):
+        for candidate in self._local_candidates.get(name, []):
             if candidate.transport != "UDP":
                 continue
             if candidate.is_relay():
@@ -193,7 +193,7 @@ class ICECandidate(object):
     @rw_property
     def type():
         def fget(self):
-            return self._extensions.get("typ")
+            return self._extensions.get("typ", None)
         def fset(self, value):
             self._extensions["typ"] = value
         return locals()
@@ -201,7 +201,7 @@ class ICECandidate(object):
     @rw_property
     def base_ip():
         def fget(self):
-            return self._extensions.get("raddr")
+            return self._extensions.get("raddr", None)
         def fset(self, value):
             self._extensions["raddr"] = value
         return locals()
@@ -209,7 +209,7 @@ class ICECandidate(object):
     @rw_property
     def base_port():
         def fget(self):
-            return self._extensions.get("rport")
+            return self._extensions.get("rport", None)
         def fset(self, value):
             self._extensions["rport"] = value
         return locals()
