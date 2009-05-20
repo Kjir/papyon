@@ -229,7 +229,7 @@ class ICECandidate(object):
             for k, v in self._extensions.iteritems():
                 if v is not None:
                     ext.append("%s %s" % (k, str(v)))
-            return "%i %i %s %i %s %i %s" % (self.foundation, self.component_id,
+            return "%s %i %s %i %s %i %s" % (self.foundation, self.component_id,
                 self.transport, self.priority, self.ip, self.port, " ".join(ext))
 
     def get_remote_id(self):
@@ -240,7 +240,6 @@ class ICECandidate(object):
 
     def parse(self, line):
         parts = line.split()
-        parts = map(lambda x: ((x.isdigit() and int(x)) or x), parts)
 
         if self.draft is 19:
             (self.foundation, self.component_id, self.transport,
@@ -251,7 +250,15 @@ class ICECandidate(object):
             (self.username, self.component_id, self.password, self.transport,
                 self.priority, self.ip, self.port) = parts[0:7]
             self.foundation = self.username[0:31]
+
+        if self.draft is 19:
+            self.priority = int(self.priority)
+        elif self.draft is 6:
             self.priority = float(self.priority)
+        self.component_id = int(self.component_id)
+        self.port = int(self.port)
+        if self.base_port is not None:
+            self.base_port = int(self.base_port)
 
     def __eq__(self, other):
         return (self.draft == other.draft and

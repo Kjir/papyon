@@ -22,27 +22,27 @@ import sys
 import unittest
 
 audio_candidates19 = [
-((1, 1, "UDP", 2013266431, "192.168.1.107", 54751, "host", None, None),
+(("1", 1, "UDP", 2013266431, "192.168.1.107", 54751, "host", None, None),
 "1 1 UDP 2013266431 192.168.1.107 54751 typ host"),
-((3, 1, "UDP", 1677721855, "70.25.46.249", 54751, "srflx", "192.168.1.107", 54751),
+(("3", 1, "UDP", 1677721855, "70.25.46.249", 54751, "srflx", "192.168.1.107", 54751),
 "3 1 UDP 1677721855 70.25.46.249 54751 typ srflx raddr 192.168.1.107 rport 54751"),
-((4, 1, "UDP", 1006633215, "64.4.35.48", 30797, "relay", "192.168.1.107", 54751),
+(("4", 1, "UDP", 1006633215, "64.4.35.48", 30797, "relay", "192.168.1.107", 54751),
 "4 1 UDP 1006633215 64.4.35.48 30797 typ relay raddr 192.168.1.107 rport 54751"),
-((1, 2, "UDP", 2013266430, "192.168.1.107", 49259, "host", None, None),
+(("1", 2, "UDP", 2013266430, "192.168.1.107", 49259, "host", None, None),
 "1 2 UDP 2013266430 192.168.1.107 49259 typ host"),
-((3, 2, "UDP", 1677721854, "70.25.46.249", 49259, "srflx", "192.168.1.107", 49259),
+(("3", 2, "UDP", 1677721854, "70.25.46.249", 49259, "srflx", "192.168.1.107", 49259),
 "3 2 UDP 1677721854 70.25.46.249 49259 typ srflx raddr 192.168.1.107 rport 49259"),
-((4, 2, "UDP", 1006633214, "64.4.35.48", 45694, "relay", "192.168.1.107", 49259),
+(("4", 2, "UDP", 1006633214, "64.4.35.48", 45694, "relay", "192.168.1.107", 49259),
 "4 2 UDP 1006633214 64.4.35.48 45694 typ relay raddr 192.168.1.107 rport 49259")]
 
 video_candidates19 = [
-((2, 1, "UDP", 2013266431, "192.168.1.116", 52826, "host", None, None),
+(("2", 1, "UDP", 2013266431, "192.168.1.116", 52826, "host", None, None),
 "2 1 UDP 2013266431 192.168.1.116 52826 typ host"),
-((5, 1, "UDP", 1677721855, "69.70.191.106", 52826, "srflx", "192.168.1.116", 52826),
+(("5", 1, "UDP", 1677721855, "69.70.191.106", 52826, "srflx", "192.168.1.116", 52826),
 "5 1 UDP 1677721855 69.70.191.106 52826 typ srflx raddr 192.168.1.116 rport 52826"),
-((2, 2, "UDP", 2013266430, "192.168.1.116", 37649, "host", None, None),
+(("2", 2, "UDP", 2013266430, "192.168.1.116", 37649, "host", None, None),
 "2 2 UDP 2013266430 192.168.1.116 37649 typ host"),
-((5, 2, "UDP", 1677721854, "69.70.191.106", 37649, "srflx", "192.168.1.116", 37649),
+(("5", 2, "UDP", 1677721854, "69.70.191.106", 37649, "srflx", "192.168.1.116", 37649),
 "5 2 UDP 1677721854 69.70.191.106 37649 typ srflx raddr 192.168.1.116 rport 37649")]
 
 audio_candidates6 = [
@@ -67,7 +67,7 @@ audio_candidates6 = [
 
 audio_codecs = [((8, "PCMA", 8000, None), "8 PCMA/8000", ""),
                 ((0, "PCMU", 8000, None), "0 PCMU/8000", ""),
-                ((101, "telephone-event", 8000, "0-16"), 
+                ((101, "telephone-event", 8000, "0-16"),
                  "101 telephone-event/8000", "101 0-16")]
 
 video_codecs = [((34, "H263", 90000, None), "34 H263/90000", "")]
@@ -109,7 +109,7 @@ a=encryption:rejected"""
 
 
 def createCandidate19(args):
-    return ICECandidate(draft=19, 
+    return ICECandidate(draft=19,
                         foundation=args[0],
                         component_id=args[1],
                         transport=args[2],
@@ -199,12 +199,12 @@ class Session19TestCase(unittest.TestCase):
     def testGetAudioRelay(self):
         self.session.set_local_candidates("audio", self.audio_candidates)
         relay = self.session.search_relay("audio")
-        self.assertEqual(relay.foundation, 4)
+        self.assertEqual(relay.foundation, '4')
 
     def testGetVideoRelay(self):
         self.session.set_local_candidates("video", self.video_candidates)
         relay = self.session.search_relay("video")
-        self.assertEqual(relay.foundation, 5)
+        self.assertEqual(relay.foundation, '5')
 
     def testParseSdpA(self):
         self.session.parse_sdp(audio_msg19)
@@ -233,8 +233,8 @@ class Session19TestCase(unittest.TestCase):
                          self.audio_codecs)
         self.assertEqual(self.session.get_remote_candidates("audio"),
                          self.audio_candidates)
-        self.assertEqual(self.session.get_remote_codecs("video"), None)
-        self.assertEqual(self.session.get_remote_candidates("video"), None)
+        self.assertEqual(self.session.get_remote_codecs("video"), [])
+        self.assertEqual(self.session.get_remote_candidates("video"), [])
 
     def testBuildParseSdpAV(self):
         self.session.set_local_codecs("audio", self.audio_codecs)
