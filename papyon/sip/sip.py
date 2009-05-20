@@ -201,7 +201,7 @@ class Message(object):
     def get_headers(self, name):
         name = name.lower()
         if name not in self._headers:
-            name = SHORT_HEADERS.get(name)
+            name = COMPACT_HEADERS.get(name)
         return self._headers.get(name)
 
     def get_header(self, name):

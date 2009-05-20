@@ -18,14 +18,16 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-SHORT_HEADERS = {
+COMPACT_HEADERS = {
     "call-id": "i",
     "contact": "m",
     "content-encoding": "e",
     "content-length": "l",
     "content-type": "c",
+    "event": "o",
     "from": "f",
     "subject": "s",
+    "supported": "k",
     "to": "t",
     "via": "v",
 }
