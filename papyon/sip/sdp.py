@@ -21,7 +21,7 @@
 from papyon.sip.constants import *
 from papyon.util.decorator import rw_property
 
-class Codec(object):
+class SDPCodec(object):
 
     def __init__(self, payload=None, encoding=None, bitrate=None, fmtp=None):
         self.payload = payload
@@ -59,7 +59,7 @@ class Codec(object):
         return "<Codec: %s%s>" % (self.build_rtpmap(), fmtp)
 
 
-class Media(object):
+class SDPMedia(object):
 
     def __init__(self, name, ip=None, port=None, rtcp=None):
         self._attributes = {}
@@ -112,7 +112,7 @@ class Media(object):
             self.rtcp = int(value)
         else:
             if key == "rtpmap":
-                codec = Codec()
+                codec = SDPCodec()
                 codec.parse_rtpmap(value)
                 self.codecs.append(codec)
             elif key == "fmtp":
@@ -144,7 +144,7 @@ class Media(object):
         return "<SDP Media: %s>" % self.name
 
 
-class Message(object):
+class SDPMessage(object):
 
     def __init__(self):
         self._medias = {}
@@ -184,7 +184,7 @@ class Message(object):
             val = line[2:]
 
             if key == 'm':
-                media = Media(val.split()[0])
+                media = SDPMedia(val.split()[0])
                 media.port = int(val.split()[1])
                 media.rtcp = media.port + 1 # default RTCP port
                 self._medias[media.name] = media

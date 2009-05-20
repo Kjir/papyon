@@ -22,7 +22,7 @@ from papyon.sip.constants import *
 
 import gobject
 
-class Connection(gobject.GObject):
+class SIPConnection(gobject.GObject):
 
     def __init__(self, transport, user, password):
         gobject.GObject.__init__(self)
@@ -36,14 +36,14 @@ class Connection(gobject.GObject):
         if not call:
             if isinstance(message, Request) and message.code == "INVITE":
                 callid = message.get_header("Call-ID")
-                call = Call(self._transport, callid)
+                call = SIPCall(self._transport, callid)
                 self._calls[callid] = call
             else:
                 pass #something's wrong
         call.on_message_received(message)
 
 
-class BaseCall(object):
+class SIPBaseCall(object):
 
     def __init__(self, transport, callid=None, tunneled=False):
         self._transport = transport
@@ -96,9 +96,9 @@ class BaseCall(object):
         self._transport.send(str(message))
 
     def build_request(self, code, uri=None, to=None, name="", user="", incr=False):
-        request = Request(code, uri)
+        request = SIPRequest(code, uri)
         request.add_header("Via", "SIP/2.0/%s %s:%s" %
-            (self._transport.protocol, self.get_local_address())
+            (self._transport.protocol, self.get_local_address()))
         request.add_header("Max-Forwards", 70)
         request.add_header("Call-ID", self.get_call_id())
         request.add_header("CSeq", "%i %s" % (self.get_cseq(incr), code))
@@ -109,7 +109,7 @@ class BaseCall(object):
         return request
 
     def build_response(self, request, status, reason=None):
-        response = Response(status, reason)
+        response = SIPResponse(status, reason)
         for via in request.get_headers("Via"):
             response.add_header("Via", via)
         response.add_header("Max-Forwards", 70)
@@ -121,16 +121,16 @@ class BaseCall(object):
         return response
 
     def on_message_received(self, msg):
-        if type(msg) is Response:
+        if type(msg) is SIPResponse:
             handler_name = "on_%s_response" % msg.code.lower()
-        elif type(msg) is Request:
+        elif type(msg) is SIPRequest:
             handler_name = "on_%s_received" % msg.code.lower()
         handler = getattr(self, handler_name, None)
         if handler is not None:
             handler(msg)
 
 
-class Call(BaseCall):
+class SIPCall(SIPBaseCall):
 
     def invite(self, uri):
         pass
@@ -172,7 +172,7 @@ class Call(BaseCall):
         pass
 
 
-class Registration(BaseCall):
+class SIPRegistration(SIPBaseCall):
 
     def register(self):
         pass
@@ -184,7 +184,7 @@ class Registration(BaseCall):
         pass
 
 
-class Message(object):
+class SIPMessage(object):
 
     def __init__(self):
         self._headers = {}
@@ -232,10 +232,10 @@ class Message(object):
         return "\r\n".join(s)
 
 
-class Request(Message):
+class SIPRequest(SIPMessage):
 
     def __init__(self, code, uri):
-        Message.__init__(self)
+        SIPMessage.__init__(self)
         self._code = code
         self._uri = uri
 
@@ -254,10 +254,10 @@ class Request(Message):
         return "<SIP Request %d:%s %s>" % (id(self), self._code, self._uri)
 
 
-class Response(Message):
+class SIPResponse(SIPMessage):
 
     def __init__(self, status, reason=None):
-        Message.__init__(self)
+        SIPMessage.__init__(self)
         self._status = status
         if not reason:
             reason = RESPONSE_CODES[status]
@@ -285,7 +285,7 @@ class Response(Message):
         return "<SIP Response %d:%s %s>" % (id(self), self._status, self._reason)
 
 
-class MessageParser(gobject.GObject):
+class SIPMessageParser(gobject.GObject):
 
     version = "SIP/2.0"
 
@@ -308,9 +308,9 @@ class MessageParser(gobject.GObject):
             a, b, c = line.split(" ", 2)
             if a == self.version:
                 code = int(b)
-                self._message = Response(code, a)
+                self._message = SIPResponse(code, a)
             elif c == self.version:
-                self._message = Request(a, b[4:])
+                self._message = SIPRequest(a, b[4:])
             self._state = "headers"
         elif self._state == "headers":
             if line:

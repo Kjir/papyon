@@ -59,12 +59,12 @@ class CodecTestCase(unittest.TestCase):
 
     def testBuilding(self):
         for args, rtpmap, fmtp in audio_definitions:
-            codec = Codec(*args)
+            codec = SDPCodec(*args)
             self.assertEqual(codec.build_rtpmap(), rtpmap)
 
     def testParsing(self):
         for args, rtpmap, fmtp in audio_definitions:
-            codec = Codec()
+            codec = SDPCodec()
             codec.parse_rtpmap(rtpmap)
             self.assertEqual(codec.payload, args[0])
             self.assertEqual(codec.encoding, args[1])
@@ -73,10 +73,10 @@ class CodecTestCase(unittest.TestCase):
 class MediaTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.media = Media("")
+        self.media = SDPMedia("")
         self.codecs = []
         for args, rtpmap, fmtp in audio_definitions:
-            self.codecs.append(Codec(*args))
+            self.codecs.append(SDPCodec(*args))
 
     def testRtcpAssigned(self):
         self.media.rtcp = 42
@@ -120,16 +120,16 @@ class MediaTestCase(unittest.TestCase):
 class MessageTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.message = Message()
+        self.message = SDPMessage()
         audio_codecs = []
         video_codecs = []
         for args, rtpmap, fmtp in audio_definitions:
-            audio_codecs.append(Codec(*args))
+            audio_codecs.append(SDPCodec(*args))
         for args, rtpmap, fmtp in video_definitions:
-            video_codecs.append(Codec(*args))
-        self.audio = Media("audio", "64.4.34.205", 42821, 41965)
+            video_codecs.append(SDPCodec(*args))
+        self.audio = SDPMedia("audio", "64.4.34.205", 42821, 41965)
         self.audio.codecs = audio_codecs
-        self.video = Media("video", "192.168.1.116", 52826, 37649)
+        self.video = SDPMedia("video", "192.168.1.116", 52826, 37649)
         self.video.codecs = video_codecs
 
     def testParseMessageA(self):
@@ -164,5 +164,4 @@ class MessageTestCase(unittest.TestCase):
 if __name__ == "__main__":
     sys.path.insert(0, "")
     from papyon.sip.sdp import *
-    
     unittest.main()

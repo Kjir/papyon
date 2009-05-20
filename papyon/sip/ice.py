@@ -22,7 +22,7 @@ from papyon.sip.constants import *
 from papyon.sip.sdp import *
 from papyon.util.decorator import rw_property
 
-class Session(object):
+class ICESession(object):
 
     def __init__(self, draft=0):
         self.draft = draft
@@ -50,7 +50,7 @@ class Session(object):
         self._remote_active[name] = remote
 
     def build_sdp(self):
-        sdp = Message()
+        sdp = SDPMessage()
         for name, codecs in self._local_codecs.iteritems():
             media = self.build_media(name, codecs)
             sdp.medias[media.name] = media
@@ -58,7 +58,7 @@ class Session(object):
 
     def build_media(self, name, codecs):
         ip, port, rtcp = self.get_default_address(name)
-        media = Media(name, ip, port, rtcp)
+        media = SDPMedia(name, ip, port, rtcp)
         media.codecs = codecs
 
         candidates = self.get_active_local_candidates(name)
@@ -77,7 +77,7 @@ class Session(object):
         return media
 
     def parse_sdp(self, message):
-        sdp = Message()
+        sdp = SDPMessage()
         sdp.parse(message)
         for media in sdp.medias.values():
             self.parse_media(media)
@@ -91,10 +91,12 @@ class Session(object):
 
         if not media.get_attribute("candidate"):
             self.draft = 0
-            candidates.append(Candidate(component_id=COMPONENTS.RTP, ip=media.ip,
-                port=media.port, transport="UDP", priority=1, type="host"))
-            candidates.append(Candidate(component_id=COMPONENTS.RTCP, ip=media.ip,
-                port=media.rtcp, transport="UDP", priority=1, type="host"))
+            candidates.append(ICECandidate(component_id=COMPONENTS.RTP,
+                ip=media.ip, port=media.port, transport="UDP", priority=1,
+                type="host"))
+            candidates.append(ICECandidate(component_id=COMPONENTS.RTCP,
+                ip=media.ip, port=media.rtcp, transport="UDP", priority=1,
+                type="host"))
         else:
             ufrag = media.get_attribute("ice-ufrag")
             pwd = media.get_attribute("ice-pwd")
@@ -104,8 +106,8 @@ class Session(object):
                 self.draft = 6
 
             for attribute in media.get_attributes("candidate"):
-                candidate = Candidate(draft=self.draft, username=ufrag,
-                                      password=pwd)
+                candidate = ICECandidate(draft=self.draft, username=ufrag,
+                                         password=pwd)
                 candidate.parse(attribute)
                 candidates.append(candidate)
 
@@ -168,7 +170,7 @@ class Session(object):
         return relay
 
 
-class Candidate(object):
+class ICECandidate(object):
 
     def __init__(self, draft=0, foundation=None, component_id=None,
                  transport=None, priority=None, username=None, password=None,

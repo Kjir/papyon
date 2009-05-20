@@ -109,33 +109,33 @@ a=encryption:rejected"""
 
 
 def createCandidate19(args):
-    return Candidate(draft=19, 
-                     foundation=args[0],
-                     component_id=args[1],
-                     transport=args[2],
-                     priority=args[3],
-                     ip=args[4],
-                     port=args[5],
-                     type=args[6],
-                     base_ip=args[7],
-                     base_port=args[8])
+    return ICECandidate(draft=19, 
+                        foundation=args[0],
+                        component_id=args[1],
+                        transport=args[2],
+                        priority=args[3],
+                        ip=args[4],
+                        port=args[5],
+                        type=args[6],
+                        base_ip=args[7],
+                        base_port=args[8])
 
 def createCandidate6(args):
-    return Candidate(draft=6,
-                     foundation=args[0][0:31],
-                     username=args[0],
-                     component_id=args[1],
-                     password=args[2],
-                     transport=args[3],
-                     priority=args[4],
-                     ip=args[5],
-                     port=args[6])
+    return ICECandidate(draft=6,
+                        foundation=args[0][0:31],
+                        username=args[0],
+                        component_id=args[1],
+                        password=args[2],
+                        transport=args[3],
+                        priority=args[4],
+                        ip=args[5],
+                        port=args[6])
 
 class CandidateTestCase(unittest.TestCase):
 
     def testParse19(self):
         for args, line in audio_candidates19:
-            candidate = Candidate(draft=19)
+            candidate = ICECandidate(draft=19)
             candidate.parse(line)
             self.assertEqual(candidate, createCandidate19(args))
 
@@ -148,13 +148,13 @@ class CandidateTestCase(unittest.TestCase):
         for args, line in audio_candidates19:
             candidate = createCandidate19(args)
             line = str(candidate)
-            candidate = Candidate(draft=19)
+            candidate = ICECandidate(draft=19)
             candidate.parse(line)
             self.assertEqual(candidate, createCandidate19(args))
 
     def testParse6(self):
         for args, line in audio_candidates6:
-            candidate = Candidate(draft=6)
+            candidate = ICECandidate(draft=6)
             candidate.parse(line)
             self.assertEqual(candidate, createCandidate6(args))
 
@@ -167,7 +167,7 @@ class CandidateTestCase(unittest.TestCase):
         for args, line in audio_candidates6:
             candidate = createCandidate6(args)
             line = str(candidate)
-            candidate = Candidate(draft=6)
+            candidate = ICECandidate(draft=6)
             candidate.parse(line)
             self.assertEqual(candidate, createCandidate6(args))
 
@@ -175,7 +175,7 @@ class CandidateTestCase(unittest.TestCase):
 class Session19TestCase(unittest.TestCase):
 
     def setUp(self):
-        self.session = Session(draft=19)
+        self.session = ICESession(draft=19)
         self.audio_candidates = []
         for args, line in audio_candidates19:
             candidate = createCandidate19(args)
@@ -191,10 +191,10 @@ class Session19TestCase(unittest.TestCase):
 
         self.audio_codecs = []
         for args, rtpmap, fmtp in audio_codecs:
-            self.audio_codecs.append(Codec(*args))
+            self.audio_codecs.append(SDPCodec(*args))
         self.video_codecs = []
         for args, rtpmap, fmtp in video_codecs:
-            self.video_codecs.append(Codec(*args))
+            self.video_codecs.append(SDPCodec(*args))
 
     def testGetAudioRelay(self):
         self.session.set_local_candidates("audio", self.audio_candidates)

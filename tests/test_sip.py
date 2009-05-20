@@ -53,37 +53,37 @@ class MessageTestCase(unittest.TestCase):
 
     def setUp(self):
         self.ttl = Transport()
-        self.parser = MessageParser()
+        self.parser = SIPMessageParser()
         self.message = None
         self.ttl.connect("line-received", self.parser.on_line_received)
 
     def testParseRequest(self):
         def verify(parser, msg, case):
-            case.assertEqual(type(msg), Request)
+            case.assertEqual(type(msg), SIPRequest)
             case.assertEqual(msg.code, "BYE")
-            case.assertEqual(msg.get_header("User-Agent"), "aTSC/0.1") 
+            case.assertEqual(msg.get_header("User-Agent"), "aTSC/0.1")
 
         self.parser.connect("message-received", verify, self)
         self.ttl.receive(bye_request)
 
     def testParseResponse(self):
         def verify(parser, msg, case):
-            case.assertEqual(type(msg), Response)
+            case.assertEqual(type(msg), SIPResponse)
             case.assertEqual(msg.code, "BYE")
             case.assertEqual(msg.status, 200)
-            case.assertEqual(msg.get_header("User-Agent"), "aTSC/0.1") 
+            case.assertEqual(msg.get_header("User-Agent"), "aTSC/0.1")
 
         self.parser.connect("message-received", verify, self)
         self.ttl.receive(bye_response)
 
     def testBuildParseRequest(self):
         def verify(parser, msg, case):
-            case.assertEqual(type(msg), Request)
+            case.assertEqual(type(msg), SIPRequest)
             case.assertEqual(msg.code, "BYE")
             case.assertEqual(msg.uri, "test@example.com")
             case.assertEqual(msg.get_header("User-Agent"), "aTSC/0.1")
 
-        message = Request("BYE", "test@example.com")
+        message = SIPRequest("BYE", "test@example.com")
         message.add_header("User-Agent", "aTSC/0.1")
         self.parser.connect("message-received", verify, self)
         self.ttl.receive(str(message))
