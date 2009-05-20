@@ -90,9 +90,16 @@ RESPONSE_CODES = {
     606: "Not Acceptable"
 }
 
+XCAPS = {
+    "audio" : {
+    },
+    "video" : {
+        34: "34 65537:352:288:15.0:256000:1;131074:176:144:15.0:180000:1"
+    }
+}
+
 SIP_INSTANCE = "0E04CFC3-0272-5A5C-B7C3-6FBE8DA71EAD"
 USER_AGENT = "papyon/0.1"
-VID_XCAPS = "34 65537:352:288:15.0:256000:1;131074:176:144:15.0:180000:1"
 
 class COMPONENTS:
     RTP = 1

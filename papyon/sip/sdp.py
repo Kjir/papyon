@@ -29,6 +29,20 @@ class SDPCodec(object):
         self.bitrate = bitrate
         self.fmtp = fmtp
 
+    @staticmethod
+    def get_payload_from_rtpmap(rtpmap):
+        if rtpmap is None:
+            return -1
+        payload, codec = rtpmap.split(' ', 1)
+        return int(payload)
+
+    @staticmethod
+    def get_payload_from_fmtp(fmtp):
+        if fmtp is None:
+            return -1
+        payload, fmtp = fmtp.split(' ', 1)
+        return int(payload)
+
     def build_rtpmap(self):
         return "%i %s/%i" % (self.payload, self.encoding, self.bitrate)
 
@@ -36,40 +50,43 @@ class SDPCodec(object):
         return "%i %s" % (self.payload, self.fmtp)
 
     def parse_rtpmap(self, rtpmap):
-        if not rtpmap: return
         payload, codec = rtpmap.split()
         self.payload = int(payload)
         self.encoding = codec.split('/')[0]
         self.bitrate = int(codec.split('/')[1])
 
     def parse_fmtp(self, fmtp):
-        if not fmtp: return
-        payload, fmtp = fmtp.split()
-        if int(payload) != self.payload: return
+        payload, fmtp = fmtp.split(' ', 1)
         self.fmtp = fmtp
 
     def __eq__(self, other):
         return (self.payload == other.payload and
                 self.encoding == other.encoding and
-                self.bitrate == other.bitrate)
-                #self.fmtp == other.fmtp)
+                self.bitrate == other.bitrate and
+                self.fmtp == other.fmtp)
 
     def __repr__(self):
-        fmtp = ((self.fmtp and (" " + self.fmtp)) or "")
+        if self.fmtp:
+            fmtp = " %s" % self.fmtp
+        else:
+            fmtp = ""
         return "<Codec: %s%s>" % (self.build_rtpmap(), fmtp)
 
 
 class SDPMedia(object):
 
     def __init__(self, name, ip=None, port=None, rtcp=None):
-        self._attributes = {}
+        self._attributes = {"encryption": ["rejected"]}
         self._codecs = []
-        self._codec = None
 
         self.name = name
         self.ip = ip
         self.port = port
         self.rtcp = rtcp
+
+    @property
+    def attributes(self):
+        return self._attributes
 
     @rw_property
     def rtcp():
@@ -91,17 +108,23 @@ class SDPMedia(object):
                 self.add_attribute("rtpmap", codec.build_rtpmap())
                 if codec.fmtp:
                     self.add_attribute("fmtp", codec.build_fmtp())
+                caps = XCAPS[self.name].get(codec.payload, None)
+                if caps is not None:
+                    self.add_attribute("x-caps", caps)
         return locals()
 
-    @property
-    def attributes(self):
-        return self._attributes
-
-    @property
-    def payload_types(self):
-        return map(lambda x: str(x.payload), self._codecs)
+    @rw_property
+    def payload_types():
+        def fget(self):
+            return map(lambda x: str(x.payload), self._codecs)
+        def fset(self, value):
+            for payload in value:
+                self._codecs.append(SDPCodec(int(payload)))
+        return locals()
 
     def get_codec(self, payload):
+        if payload < 0:
+            return None
         for codec in self._codecs:
             if codec.payload == payload:
                 return codec
@@ -112,11 +135,13 @@ class SDPMedia(object):
             self.rtcp = int(value)
         else:
             if key == "rtpmap":
-                codec = SDPCodec()
-                codec.parse_rtpmap(value)
-                self.codecs.append(codec)
+                payload = SDPCodec.get_payload_from_rtpmap(value)
+                codec = self.get_codec(payload)
+                if codec:
+                    codec.parse_rtpmap(value)
             elif key == "fmtp":
-                codec = self.get_codec(int(value.split()[0]))
+                payload = SDPCodec.get_payload_from_fmtp(value)
+                codec = self.get_codec(payload)
                 if codec:
                     codec.parse_fmtp(value)
             self.add_attribute(key, value)
@@ -128,7 +153,7 @@ class SDPMedia(object):
         self._attributes[key] = [value]
 
     def get_attributes(self, key):
-        return self._attributes.get(key)
+        return self._attributes.get(key, None)
 
     def get_attribute(self, key):
         values = self.get_attributes(key)
@@ -148,6 +173,7 @@ class SDPMessage(object):
 
     def __init__(self):
         self._medias = {}
+        self.ip = ""
 
     @property
     def medias(self):
@@ -155,6 +181,7 @@ class SDPMessage(object):
 
     def __str__(self):
         out = []
+        out.append("v=0")
         out.append("o=- 0 0 IN IP4 %s" % self.medias["audio"].ip)
         out.append("s=session")
         out.append("b=CT:99980")
@@ -164,12 +191,9 @@ class SDPMessage(object):
             types = " ".join(media.payload_types)
             out.append("m=%s %s RTP/AVP %s" % (name, media.port, types))
             out.append("c=IN IP4 %s" % media.ip)
-            if name == "video":
-                out.append("a=x-caps:%s" % VID_XCAPS)
             for k, v in media.attributes.iteritems():
                 for value in v:
                     out.append("a=%s:%s" % (k, value))
-            out.append("a=encryption:rejected")
 
         return "\r\n".join(out)
 
@@ -183,13 +207,22 @@ class SDPMessage(object):
             key = line[0]
             val = line[2:]
 
-            if key == 'm':
+            if key == 'o':
+                self.ip = val.split()[5]
+            elif key == 'm':
                 media = SDPMedia(val.split()[0])
                 media.port = int(val.split()[1])
+                media.ip = self.ip # default IP address
                 media.rtcp = media.port + 1 # default RTCP port
+                media.payload_types = val.split()[3:]
                 self._medias[media.name] = media
             elif key == 'c':
-                media.ip = val.split()[2]
+                if media is None:
+                    self.ip = val.split()[2]
+                else:
+                    media.ip = val.split()[2]
             elif key == 'a':
+                if media is None:
+                    continue
                 subkey, val = val.split(':', 1)
                 media.parse_attribute(subkey, val)

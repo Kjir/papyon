@@ -73,7 +73,7 @@ class CodecTestCase(unittest.TestCase):
 class MediaTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.media = SDPMedia("")
+        self.media = SDPMedia("audio")
         self.codecs = []
         for args, rtpmap, fmtp in audio_definitions:
             self.codecs.append(SDPCodec(*args))
@@ -107,6 +107,7 @@ class MediaTestCase(unittest.TestCase):
             attributes["fmtp"])
 
     def testParseAttributes(self):
+        self.media.payload_types = ['8', '0', '101']
         for key, values in attributes.iteritems():
             for value in values:
                 self.media.parse_attribute(key, value)
