@@ -260,7 +260,7 @@ class Response(Message):
         Message.__init__(self)
         self._status = status
         if not reason:
-            reason = MESSAGE_TYPES[status]
+            reason = RESPONSE_CODES[status]
         self._reason = reason
 
     @property

@@ -32,7 +32,7 @@ COMPACT_HEADERS = {
     "via": "v",
 }
 
-MESSAGE_TYPES = {
+RESPONSE_CODES = {
     100: "Trying",
     180: "Ringing",
     181: "Call Is Being Forwarded",
