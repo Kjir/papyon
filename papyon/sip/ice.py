@@ -22,9 +22,16 @@ from papyon.sip.constants import *
 from papyon.sip.sdp import *
 from papyon.util.decorator import rw_property
 
-class ICESession(object):
+import gobject
+
+class ICESession(gobject.GObject):
+
+    __gsignals__ = {
+        "candidates_ready": (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ())
+    }
 
     def __init__(self, draft=0):
+        gobject.GObject.__init__(self)
         self.draft = draft
         self._local_codecs = {}
         self._remote_codecs = {}
@@ -32,6 +39,13 @@ class ICESession(object):
         self._remote_candidates = {}
         self._local_active = {}
         self._remote_active = {}
+
+    @property
+    def candidates_ready(self):
+        for name in self._local_candidates:
+            if self._local_active.get(name, None) is None:
+                return False
+        return True
 
     def get_remote_codecs(self, name):
         return self._remote_codecs.get(name, [])
@@ -48,6 +62,8 @@ class ICESession(object):
     def set_active_candidates(self, name, local, remote):
         self._local_active[name] = local
         self._remote_active[name] = remote
+        if self.candidates_ready:
+            self.emit("candidates-ready")
 
     def build_sdp(self):
         sdp = SDPMessage()

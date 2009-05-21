@@ -21,6 +21,7 @@
 from papyon.sip.constants import *
 
 import gobject
+import re
 
 class SIPConnection(gobject.GObject):
 
@@ -51,6 +52,7 @@ class SIPBaseCall(object):
         self._callid = callid
         self._tunneled = tunneled
         self._cseq = random.randint(1000, 5000)
+        self._uri = None
 
     def gen_call_id(self):
         return 400000000 + random.randint(0,2000000)
@@ -90,13 +92,16 @@ class SIPBaseCall(object):
             self._tag = self.gen_hex()
         return self._tag
 
+    def get_sip_instance(self):
+        return SIP_INSTANCE
+
     def get_local_address(self):
         return (self._transport.ip, self._transport.port)
 
     def send(self, message):
         self._transport.send(str(message))
 
-    def build_request(self, code, uri=None, to=None, name="", incr=False):
+    def build_request(self, code, uri, to, name="0", incr=False):
         request = SIPRequest(code, uri)
         request.add_header("Via", "SIP/2.0/%s %s:%s" %
             (self._transport.protocol, self.get_local_address()))
@@ -104,24 +109,32 @@ class SIPBaseCall(object):
         request.add_header("Call-ID", self.get_call_id())
         request.add_header("CSeq", "%i %s" % (self.get_cseq(incr), code))
         request.add_header("To", to)
-        request.add_header("From", "%s<sip:%s%s>;tag=%s;epid=%s" %
+        request.add_header("From", "\"%s\" <sip:%s%s>;tag=%s;epid=%s" %
             (name, self._user, self.get_mepid(), self.get_tag(), self.get_epid()))
         request.add_header("User-Agent", USER_AGENT)
         return request
 
     def build_response(self, request, status, reason=None):
+        to = request.get_header("To")
+        if not "tag=" in to:
+            to += ";tag=" + self.get_tag()
+
         response = SIPResponse(status, reason)
-        for via in request.get_headers("Via"):
-            response.add_header("Via", via)
-        response.add_header("Max-Forwards", 70)
-        response.add_header("From", request.get_header("From"))
-        response.add_header("To", request.get_header("To"))
+        response.clone_headers("From", request)
+        response.add_header("To", to)
+        response.clone_headers("CSeq", request)
+        response.clone_headers("Record-Route", request)
+        response.clone_headers("Via", request)
         response.add_header("Call-ID", self.get_call_id())
-        response.add_header("CSeq", request.get_header("CSeq"))
+        response.add_header("Max-Forwards", 70)
         response.add_header("User-Agent", self.USER_AGENT)
         return response
 
     def on_message_received(self, msg):
+        route = response.get_header("Record-Route")
+        if route is not None:
+            self._uri = re.search("<sip:(.*)>", route).group(1)
+
         if type(msg) is SIPResponse:
             handler_name = "on_%s_response" % msg.code.lower()
         elif type(msg) is SIPRequest:
@@ -133,44 +146,132 @@ class SIPBaseCall(object):
 
 class SIPCall(SIPBaseCall):
 
+    def __init__(self, transport, user, callid=None, tunneled=False):
+        SIPBaseCall.__init__(transport, user, callid, tunneled)
+        self._state = None
+        self._ice = ICESession(draft=19)
+        self._ice.connect("candidates-ready", self.on_candidates_ready)
+
+    def build_invite_contact(self):
+        if self._tunneled:
+            m = "<sip:%s%s>;proxy=replace;+sip.instance=\"<urn:uuid:%s>\"" % (
+                self._user, self.get_mepid(), self.get_sip_instance())
+        else:
+            ip, port = self.get_local_address()
+            m = "<sip:%s:%i;maddr=%s;transport=%s;proxy=replace" % (
+                self._user, port, ip, self._transport.protocol)
+        return m
+
+    def build_invite_request(self, uri, to):
+        request = self.build_request("INVITE", uri, to, incr=True)
+        request.add_header("Ms-Conversation-ID", "f=%s" % int(self._tunneled))
+        request.add_header("Contact", self.build_invite_contact())
+        request.add_header("Record-Route", "<sip:127.0.0.1:50930;transport=tcp>")
+        request.set_content(self._ice.build_sdp(), "application/sdp")
+        return request
+
     def invite(self, uri):
-        pass
+        self._state = "CALLING"
+        self._remote = "<sip:%s>" % uri
+        self._invite = self.build_invite_request(uri, self._remote)
+        self.send(self._invite)
+
+    def reinvite(self):
+        self._state = "REINVITING"
+        self._invite = self.build_invite_request(self._uri, self._remote)
+        self.send(self._invite)
 
     def accept(self):
-        pass
+        response = self.build_response(self._invite, 200)
+        response.add_header("Contact", self.build_invite_contact())
+        response.set_content(self._ice.build_sdp(), "application/sdp")
+        self.send(response)
 
-    def reject(self):
-        pass
+    def reject(self, status=603):
+        response = self.build_response(self._invite, status)
+        response.add_header("Contact", self.build_invite_contact())
+        self.send(response)
 
-    def send_ack(self):
-        pass
+    def send_ack(self, response):
+        self._state = "CONFIRMED"
+        to = response.get_header("To")
+        request = self.build_request("ACK", self._uri, to)
+        self.send(request)
 
     def cancel(self):
-        pass
+        if self._state != "CALLING":
+            return
+        self._state = "DISCONNECTING"
+        uri = self._invite.uri
+        to = self._invite.get_header("To")
+        request = self.build_request("CANCEL", uri, to)
+        self.send(request)
 
     def send_bye(self):
-        pass
+        self._state = "DISCONNECTING"
+        request = self.build_request("BYE", self._uri, self._remote, incr=True)
+        self.send(request)
 
     def on_invite_received(self, invite):
-        pass
+        self._invite = invite
+        self._remote = invite.get_header("From")
+        self._ice.parse_sdp(invite.get_content())
+        ringing = self.build_response(invite, 180)
+        self.send(ringing)
+
+        if self._state == "CONFIRMED":
+            if self._ice.candidates_ready:
+                self.accept()
+            else:
+                self._state = "REINVITED"
+        else:
+            self._state = "INCOMING"
+
+    def on_candidates_ready(self, session):
+        if self._state == "REINVITED":
+            self.accept()
+        elif self._state == "CONFIRMED":
+            self.reinvite()
 
     def on_ack_received(self, ack):
-        pass
+        self._state = "CONFIRMED"
 
     def on_cancel_received(self, cancel):
-        pass
+        if self._state == "INVITED":
+            self.reject(487)
+        self._state = "DISCONNECTED"
+        response = self.build_response(cancel, 200)
+        self.send(response)
 
     def on_bye_received(self, bye):
-        pass
+        self._state = "DISCONNECTED"
+        response = self.build_response(bye, 200)
+        self.send(response)
 
     def on_invite_response(self, response):
-        pass
+        self._remote = response.get_header("To")
+        if response.status >= 200:
+            old_state = self._state # state is changed in send_ack()
+            self.send_ack(response)
+
+        if response.status in (100, 180, 408, 480, 486, 487, 504, 603):
+            pass
+        elif response.status is 200:
+            self._ice.parse_sdp(response.get_content())
+            if old_state == "CALLING":
+                if self._ice.candidates_ready:
+                    self.reinvite()
+        else:
+            self.send_bye()
 
     def on_cancel_response(self, response):
-        pass
+        self._state = "DISCONNECTED"
 
     def on_bye_response(self, response):
-        pass
+        if response.status in (200, 403):
+            self._state = "DISCONNECTED"
+        else:
+            self.send_bye()
 
 
 class SIPRegistration(SIPBaseCall):
@@ -193,9 +294,9 @@ class SIPRegistration(SIPBaseCall):
     def build_register_request(self, timeout, auth):
         uri = self._user.split('@')[1]
         request = self.build_request("REGISTER", uri, self._user)
-        request.add_header("ms-keep-alive", "UAC;hop-hop=yes"
-        request.add_header("Contact", "<sip:%s:%s;transport=%s>proxy=replace" %
-            (self.get_local_address(), self._transport.protocol))
+        request.add_header("ms-keep-alive", "UAC;hop-hop=yes")
+        request.add_header("Contact", "<sip:%s:%s;transport=%s>;proxy=replace" %
+            self.get_local_address(), self._transport.protocol)
         request.add_header("Event", "registration")
         request.add_header("Expires", timeout)
         request.add_header("Authorization", "Basic %s" % auth)
@@ -255,11 +356,16 @@ class SIPMessage(object):
             name = COMPACT_HEADERS.get(name)
         return self._headers.get(name, default)
 
-    def get_header(self, name, dafault=None):
+    def get_header(self, name, default=None):
         value = self.get_headers(name, default)
         if type(value) == list:
             return value[0]
         return value
+
+    def clone_headers(self, name, other):
+        values = other.get_headers(name)
+        if values is not None:
+            self._headers[name] = values
 
     def set_content(self, content, type=None):
         if type:
