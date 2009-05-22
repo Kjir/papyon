@@ -20,33 +20,46 @@
 
 from papyon.sip.constants import *
 
+import base64
 import gobject
+import random
 import re
 
 class SIPConnection(gobject.GObject):
 
     def __init__(self, transport, user, password):
         gobject.GObject.__init__(self)
+        self._user = user
+        self._password = password
         self._calls = {}
-        self._parser = MessageParser()
+        self._parser = SIPMessageParser()
         self._parser.connect("message-received", self.on_message_received)
         self._transport = transport
         self._transport.connect("line-received", self._parser.on_line_received)
 
+    def register(self, user, password):
+        registration = SIPRegistration(self._transport, user, password)
+        self._calls[registration.get_call_id()] = registration
+        registration.register()
+
     def on_message_received(self, parser, message):
-        if not call:
-            if isinstance(message, Request) and message.code == "INVITE":
+        callid = int(message.get_header("Call-ID"))
+        call = self._calls.get(callid, None)
+        if call is None:
+            if isinstance(message, SIPRequest) and message.code == "INVITE":
                 callid = message.get_header("Call-ID")
                 call = SIPCall(self._transport, callid)
-                self._calls[callid] = call
+                self._calls[call.get_call_id()] = call
             else:
-                pass #something's wrong
+                print call
+                return #something's wrong
         call.on_message_received(message)
 
 
-class SIPBaseCall(object):
+class SIPBaseCall(gobject.GObject):
 
     def __init__(self, transport, user, callid=None, tunneled=False):
+        gobject.GObject.__init__(self)
         self._transport = transport
         self._user = user
         self._callid = callid
@@ -95,16 +108,15 @@ class SIPBaseCall(object):
     def get_sip_instance(self):
         return SIP_INSTANCE
 
-    def get_local_address(self):
-        return (self._transport.ip, self._transport.port)
-
     def send(self, message):
         self._transport.send(str(message))
 
     def build_request(self, code, uri, to, name="0", incr=False):
         request = SIPRequest(code, uri)
         request.add_header("Via", "SIP/2.0/%s %s:%s" %
-            (self._transport.protocol, self.get_local_address()))
+            (self._transport.protocol,
+             self._transport.ip,
+             self._transport.port))
         request.add_header("Max-Forwards", 70)
         request.add_header("Call-ID", self.get_call_id())
         request.add_header("CSeq", "%i %s" % (self.get_cseq(incr), code))
@@ -131,7 +143,7 @@ class SIPBaseCall(object):
         return response
 
     def on_message_received(self, msg):
-        route = response.get_header("Record-Route")
+        route = msg.get_header("Record-Route")
         if route is not None:
             self._uri = re.search("<sip:(.*)>", route).group(1)
 
@@ -293,17 +305,18 @@ class SIPRegistration(SIPBaseCall):
 
     def build_register_request(self, timeout, auth):
         uri = self._user.split('@')[1]
-        request = self.build_request("REGISTER", uri, self._user)
+        request = self.build_request("REGISTER", uri, "<sip:%s>" % self._user)
         request.add_header("ms-keep-alive", "UAC;hop-hop=yes")
         request.add_header("Contact", "<sip:%s:%s;transport=%s>;proxy=replace" %
-            self.get_local_address(), self._transport.protocol)
+            (self._transport.ip, self._transport.port, self._transport.protocol))
         request.add_header("Event", "registration")
         request.add_header("Expires", timeout)
         request.add_header("Authorization", "Basic %s" % auth)
+        return request
 
     def register(self):
         auth = "msmsgs:RPS_%s" % self._password
-        auth = base64.encodestring(auth).replace("\n", "")
+        auth = base64.b64encode(auth).replace("\n", "")
         request = self.build_register_request(900, auth)
         self._state = "REGISTERING"
         self.send(request)
@@ -329,7 +342,7 @@ class SIPRegistration(SIPBaseCall):
         elif response.status is 200:
             self._state = "REGISTERED"
             self.emit("registered")
-            timeout = response.get_header("Expires", 30)
+            timeout = int(response.get_header("Expires", 30))
             self._src = gobject.timeout_add(timeout * 1000, self.on_expire)
         else:
             self._state = "UNREGISTERED"
