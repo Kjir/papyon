@@ -67,10 +67,10 @@ class MSNObjectType(object):
 
 class MSNObject(object):
     "Represents an MSNObject."
-    def __init__(self, creator, size, type, location, friendly, 
+    def __init__(self, creator, size, type, location, friendly,
                  shad=None, shac=None, data=None):
         """Initializer
-        
+
             @param creator: the creator of this MSNObject
             @type creator: utf-8 encoded string representing the account
 
@@ -102,7 +102,7 @@ class MSNObject(object):
 
         if shad is None:
             if data is None:
-                raise NotImplementedError                
+                raise NotImplementedError
             shad = self.__compute_data_hash(data)
         self._data_sha = shad
         self.__data = data
@@ -143,7 +143,7 @@ class MSNObject(object):
             element = ElementTree.parse(data).getroot().attrib
         except:
             raise ParseError('Invalid MSNObject')
-        
+
         try:
             creator = client.address_book.contacts.\
                 search_by_account(element["Creator"]).\
@@ -191,11 +191,11 @@ class MSNObject(object):
         if self._repr is not None:
             return self._repr
         dump = "<msnobj Creator=%s Type=%s SHA1D=%s Size=%s Location=%s Friendly=%s/>" % \
-            (xml.quoteattr(self._creator.account), 
-                xml.quoteattr(str(self._type)), 
-                xml.quoteattr(base64.b64encode(self._data_sha)), 
+            (xml.quoteattr(self._creator.account),
+                xml.quoteattr(str(self._type)),
+                xml.quoteattr(base64.b64encode(self._data_sha)),
                 xml.quoteattr(str(self._size)),
-                xml.quoteattr(str(self._location)), 
+                xml.quoteattr(str(self._location)),
                 xml.quoteattr(base64.b64encode(self._friendly)))
         return dump
 
@@ -214,9 +214,9 @@ class MSNObjectStore(object):
             return True
         else:
             return False
-        
+
     def _handle_message(self, peer, message):
-        session = MSNObjectP2PSession(self._client._p2p_session_manager, 
+        session = MSNObjectP2PSession(self._client._p2p_session_manager,
                 msn_object._creator, message.body.application_id, message)
 
         handle_id = session.connect("transfer-completed",
@@ -244,7 +244,7 @@ class MSNObjectStore(object):
         else:
             raise NotImplementedError
 
-        session = MSNObjectP2PSession(self._client._p2p_session_manager, 
+        session = MSNObjectP2PSession(self._client._p2p_session_manager,
                 msn_object._creator, application_id)
         handle_id = session.connect("transfer-completed",
                 self._outgoing_session_transfer_completed)
