@@ -216,7 +216,7 @@ class MSNObjectStore(object):
             return False
 
     def _handle_message(self, peer, message):
-        session = MSNObjectP2PSession(self._client._p2p_session_manager,
+        session = MSNObjectSession(self._client._p2p_session_manager,
                 msn_object._creator, message.body.application_id, message)
 
         handle_id = session.connect("transfer-completed",
@@ -244,7 +244,7 @@ class MSNObjectStore(object):
         else:
             raise NotImplementedError
 
-        session = MSNObjectP2PSession(self._client._p2p_session_manager,
+        session = MSNObjectSession(self._client._p2p_session_manager,
                 msn_object._creator, application_id)
         handle_id = session.connect("transfer-completed",
                 self._outgoing_session_transfer_completed)
