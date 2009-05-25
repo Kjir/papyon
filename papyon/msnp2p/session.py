@@ -58,7 +58,7 @@ class P2PSession(gobject.GObject):
         self._branch = "{%s}" % guid.generate_guid()
         self._session_manager._register_session(self)
 
-    def _generate_id(max=MAX_INT32):
+    def _generate_id(self, max=MAX_INT32):
         """
         Returns a random ID.
 
