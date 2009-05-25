@@ -75,7 +75,7 @@ class WebcamSession(P2PSession, EventsDispatcher):
     def session_id():
         def fget(self):
             return self._session_id
-        def fset(self, session_id)
+        def fset(self, session_id):
             self._session_id = session_id
             if self._xml_needed and self._local_candidates != 0:
                 self._send_xml()
