@@ -23,5 +23,5 @@ protocol used to transfer data between peers, such as transfer of files
 and display pictures."""
 
 from session_manager import P2PSessionManager
-from session import OutgoingP2PSession
+from session import P2PSession
 from constants import EufGuid, ApplicationID

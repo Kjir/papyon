@@ -22,7 +22,6 @@
 from papyon.msnp2p.transport import *
 from papyon.msnp2p.exceptions import *
 from papyon.msnp2p.SLP import *
-from papyon.msnp2p.session import IncomingP2PSession
 from papyon.msnp2p.constants import SLPContentType, SLPRequestMethod
 
 import papyon.profile

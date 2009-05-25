@@ -31,7 +31,7 @@ import papyon.util.guid as guid
 import gobject
 import base64
 import random
-__all__ = ['IncomingP2PSession', 'OutgoingP2PSession']
+__all__ = ['P2PSession']
 
 MAX_INT32 = 0x7fffffff
 MAX_INT16 = 0x7fff
@@ -146,67 +146,3 @@ class P2PSession(gobject.GObject):
         self.emit("transfer-completed", blob.data)
 
 gobject.type_register(P2PSession)
-
-
-class IncomingP2PSession(P2PSession):
-    def __init__(self, session_manager, peer, id, message):
-        P2PSession.__init__(self, session_manager, peer,
-                message.body.euf_guid, message.body.application_id)
-        self._id =  id
-        self._call_id = message.call_id
-
-        self._cseq = message.cseq
-        self._branch = message.branch
-        try:
-            self._context = message.body.context.strip('\x00')
-        except AttributeError:
-            raise SLPError("Incoming INVITE without context")
-
-    def accept(self, data_file):
-        #Made an edit here, removing the file transfer code 
-        #gobject.idle_add(self._start_transfer, data_file)
-        self._respond(200)
-    
-    def reject(self):
-        self._respond(603)
-
-    def _respond(self, status_code):
-        body = SLPSessionRequestBody(session_id=self._id,capabilities_flags=None,s_channel_state=None)
-        self._cseq += 1
-        response = SLPResponseMessage(status_code,
-            to=self._peer.account,
-            frm=self._session_manager._client.profile.account,
-            cseq=self._cseq,
-            branch=self._branch,
-            call_id=self._call_id)
-        response.body = body
-        self._send_p2p_data(response)
-
-    def _start_transfer(self, data_file):
-        self._respond(200)
-        self._send_p2p_data("\x00" * 4)
-        self._send_p2p_data(data_file)
-        return False
-
-class OutgoingP2PSession(P2PSession): 
-    def __init__(self, session_manager, peer, context, euf_guid, application_id):
-        P2PSession.__init__(self, session_manager, peer, euf_guid, application_id)
-        gobject.idle_add(self._invite, str(context))
-
-    def _invite(self, context):
-        self._session_manager._register_session(self)
-        body = SLPSessionRequestBody(self._euf_guid, self._application_id,
-                context, self._id)
-
-        message = SLPRequestMessage(SLPRequestMethod.INVITE,
-                "MSNMSGR:" + self._peer.account,
-                to=self._peer.account,
-                frm=self._session_manager._client.profile.account,
-                branch=self._branch,
-                cseq=self._cseq,
-                call_id=self._call_id)
-
-        message.body = body
-        self._send_p2p_data(message)
-        return False
- 

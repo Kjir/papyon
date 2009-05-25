@@ -25,9 +25,9 @@ This module contains the classes needed to engage in a peer to peer transfer
 with a contact.
     @group MSNObject: MSNObjectStore, MSNObject, MSNObjectType
     @sort: MSNObjectStore, MSNObject, MSNObjectType"""
-from msnp2p.session import IncomingP2PSession
+from msnp2p.msnobject import MSNObjectSession
 from msnp2p.webcam import WebcamSession
-from msnp2p import OutgoingP2PSession, EufGuid, ApplicationID
+from msnp2p import EufGuid, ApplicationID
 from msnp2p.exceptions import ParseError
 from profile import NetworkID
 
@@ -222,13 +222,13 @@ class MSNObjectStore(object):
         else:
             raise NotImplementedError
 
-        session = OutgoingP2PSession(self._client._p2p_session_manager, 
-                msn_object._creator, msn_object, 
-                EufGuid.MSN_OBJECT, application_id)
+        session = MSNObjectP2PSession(self._client._p2p_session_manager, 
+                msn_object._creator, application_id)
         handle_id = session.connect("transfer-completed",
                 self._outgoing_session_transfer_completed)
         self._outgoing_sessions[session] = \
                 (handle_id, callback, errback, msn_object)
+        session.invite(msn_object)
 
     def publish(self, msn_object):
         if msn_object._data is None:
@@ -243,23 +243,6 @@ class MSNObjectStore(object):
 
         callback[0](msn_object, *callback[1:])
         del self._outgoing_sessions[session]
-
-    def _incoming_session_received(self, session_manager, session):
-        if session._euf_guid != EufGuid.MSN_OBJECT:
-            return
-        handle_id = session.connect("transfer-completed",
-                        self._incoming_session_transfer_completed)
-        self._incoming_sessions[session] = handle_id
-        try:
-            msn_object = MSNObject.parse(self._client, session._context)
-        except ParseError:
-            session.reject()
-            return
-        for obj in self._published_objects:
-            if obj._data_sha == msn_object._data_sha:
-                session.accept(obj._data)
-                return
-        session.reject()
 
     def _incoming_session_transfer_completed(self, session, data):
         handle_id = self._incoming_sessions[session]
