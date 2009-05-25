@@ -207,9 +207,31 @@ class MSNObjectStore(object):
         self._outgoing_sessions = {} # session => (handle_id, callback, errback)
         self._incoming_sessions = {}
         self._published_objects = set()
-        # Made an edit here - do we really want to call MSNObjectStore on each new session ?
-        #self._client._p2p_session_manager.connect("incoming-session",
-        #        self._incoming_session_received)
+
+    def _can_handle_message (self, message):
+        euf_guid = message.body.euf_guid
+        if euf_guid == EufGuid.MSN_OBJECT:
+            return True
+        else:
+            return False
+        
+    def _handle_message(self, peer, message):
+        session = MSNObjectP2PSession(self._client._p2p_session_manager, 
+                msn_object._creator, message.body.application_id, message)
+
+        handle_id = session.connect("transfer-completed",
+                        self._incoming_session_transfer_completed)
+        self._incoming_sessions[session] = handle_id
+        try:
+            msn_object = MSNObject.parse(self._client, session._context)
+        except ParseError:
+            session.reject()
+            return
+        for obj in self._published_objects:
+            if obj._data_sha == msn_object._data_sha:
+                session.accept(obj._data)
+                return
+        session.reject()
 
     def request(self, msn_object, callback, errback=None):
         if msn_object._data is not None:
@@ -262,15 +284,15 @@ class WebcamHandler(gobject.GObject):
         self._client = client
         self._sessions = []
 
-    def _can_handle_euf_guid(self,message):
+    def _can_handle_message (self, message):
         euf_guid = message.body.euf_guid
         if (euf_guid == EufGuid.MEDIA_SESSION or
             euf_guid == EufGuid.MEDIA_RECEIVE_ONLY):
             return True
         else:
             return False
-        
-    def _create_new_recv_session(self, peer, session_id, message):
+
+    def _handle_message (self, peer, message):
         euf_guid = message.body.euf_guid
         if (euf_guid == EufGuid.MEDIA_SESSION):
             producer = False
