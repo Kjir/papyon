@@ -300,17 +300,19 @@ class WebcamHandler(gobject.GObject):
             producer = True
 
         session = WebcamSession(producer, self._client._p2p_session_manager, \
-                                    peer, message.body.euf_guid, \
-                                    ApplicationID.WEBCAM, session_id)
+                                    peer, message.body.euf_guid, message)
         self._sessions.append(session)
         self.emit("session-created", session, producer)
         return session
-    
-    def _create_new_send_session(self, peer):
+
+    def invite(self, peer, producer=True):
         print "Creating New Send Session"
-        session = WebcamSession(True, self._client._p2p_session_manager, \
-                                    peer, EufGuid.MEDIA_SESSION, \
-                                    ApplicationID.WEBCAM)
+        if producer:
+            euf_guid = EufGuid.MEDIA_SESSION
+        else:
+            euf_guid = EufGuid.MEDIA_RECEIVE_ONLY
+        session = WebcamSession(producer, self._client._p2p_session_manager, \
+                                    peer, euf_guid)
         self._sessions.append(session)
         session.invite()
         return session
