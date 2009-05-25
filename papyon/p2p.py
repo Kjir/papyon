@@ -217,7 +217,7 @@ class MSNObjectStore(object):
 
     def _handle_message(self, peer, message):
         session = MSNObjectSession(self._client._p2p_session_manager,
-                msn_object._creator, message.body.application_id, message)
+                peer, message.body.application_id, message)
 
         handle_id = session.connect("transfer-completed",
                         self._incoming_session_transfer_completed)
