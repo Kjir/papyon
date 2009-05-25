@@ -20,39 +20,86 @@
 
 import getpass
 import gobject
+import logging
 import sys
 import time
 import unittest
 
 sys.path.insert(0, "")
 
+import papyon
+from papyon.sip.conference import *
 from papyon.sip.sip import *
-from papyon.service.description.SingleSignOn.RequestMultipleSecurityTokens import LiveService
 from papyon.gnet.io.ssl_tcp import SSLTCPClient
 from papyon.gnet.constants import *
 from papyon.service.SingleSignOn import *
+from papyon.transport import HTTPPollConnection
 
-class SIPClient(object):
+def get_proxies():
+    import urllib
+    proxies = urllib.getproxies()
+    result = {}
+    if 'https' not in proxies and \
+            'http' in proxies:
+        url = proxies['http'].replace("http://", "https://")
+        result['https'] = papyon.Proxy(url)
+    for type, url in proxies.items():
+        if type == 'no': continue
+        if type == 'https' and url.startswith('http://'):
+            url = url.replace('http://', 'https://', 1)
+        result[type] = papyon.Proxy(url)
+    return result
 
-    def __init__(self, account, password):
-        self.ttl = SSLTransport("vp.sip.messenger.msn.com", 443)
-        self.ttl.connect("connected", self.on_client_connected)
-        self.connection = SIPConnection(self.ttl, None, None)
+class SIPClient(papyon.Client):
+
+    def __init__(self, account, password, invite):
+        server = ('messenger.hotmail.com', 1863)
+        papyon.Client.__init__(self, server, proxies = get_proxies())
+
         self.account = account
         self.password = password
+        self.invite = invite
+        self.conference = Conference()
+        self.ttl = SSLTransport("vp.sip.messenger.msn.com", 443)
+        self.sso = SingleSignOn(self.account, self.password)
+        self.ttl.connect("connected", self.on_client_connected)
+        self.connection = SIPConnection(self.ttl, self.sso, account, password)
+        self._event_handler = ClientEvents(self, self.connection,
+                self.conference)
         gobject.idle_add(self.connect)
 
     def connect(self):
         self.ttl.open()
 
     def on_client_connected(self, transport):
-        sso = SingleSignOn(self.account, self.password)
-        sso.RequestMultipleSecurityTokens((self.on_token_received, ), None,
-                LiveService.MESSENGER_SECURE)
+        self.login(self.account, self.password)
 
-    def on_token_received(self, tokens):
-        ticket = tokens[LiveService.MESSENGER_SECURE]
-        self.connection.register(self.account, ticket)
+
+class ClientEvents(papyon.event.ClientEventInterface):
+
+    def __init__(self, client, connection, conference):
+        papyon.event.ClientEventInterface.__init__(self, client)
+        self.connection = connection
+        self.conference = conference
+
+    def on_client_state_changed(self, state):
+        if state == papyon.event.ClientState.CLOSED:
+            self._client.quit()
+        elif state == papyon.event.ClientState.OPEN:
+            self._client.profile.display_name = "Louis-Francis"
+            self._client.profile.presence = papyon.Presence.ONLINE
+            for contact in self._client.address_book.contacts:
+                print contact
+            gobject.timeout_add(5000, self.invite)
+
+    def invite(self):
+        print "INVITE"
+        call = self.connection.invite(invite)
+        self.conference.setup(call)
+        return False
+
+    def on_client_error(self, error_type, error):
+        print "ERROR :", error_type, " ->", error
 
 
 class SSLTransport(gobject.GObject):
@@ -82,6 +129,10 @@ class SSLTransport(gobject.GObject):
     @property
     def protocol(self):
         return self._protocol
+
+    @property
+    def needs_registration(self):
+        return True
 
     def open(self):
         self._client.open()
@@ -113,6 +164,13 @@ if __name__ == "__main__":
     else:
         password = sys.argv[2]
 
+    if len(sys.argv) < 4:
+        invite = raw_input('Invite: ')
+    else:
+        invite = sys.argv[3]
+
+    logging.basicConfig(level=0)
+
     mainloop = gobject.MainLoop(is_running=True)
-    client = SIPClient(account, password)
+    client = SIPClient(account, password, invite)
     mainloop.run()

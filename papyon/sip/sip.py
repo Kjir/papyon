@@ -19,6 +19,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.sip.constants import *
+from papyon.sip.ice import *
+from papyon.service.SingleSignOn import *
 
 import base64
 import gobject
@@ -27,20 +29,55 @@ import re
 
 class SIPConnection(gobject.GObject):
 
-    def __init__(self, transport, user, password):
+    def __init__(self, transport, sso, user, password):
         gobject.GObject.__init__(self)
         self._user = user
         self._password = password
-        self._calls = {}
-        self._parser = SIPMessageParser()
-        self._parser.connect("message-received", self.on_message_received)
+        self._parser = SIPMessageParser(transport)
+        self._sso = sso
         self._transport = transport
-        self._transport.connect("line-received", self._parser.on_line_received)
 
-    def register(self, user, password):
-        registration = SIPRegistration(self._transport, user, password)
-        self._calls[registration.get_call_id()] = registration
-        registration.register()
+        self._calls = {}
+        self._tokens = {}
+        self._registration = SIPRegistration(self, user, password)
+        self._calls[self._registration.get_call_id()] = self._registration
+        self._msg_queue = []
+
+        self._parser.connect("message-received", self.on_message_received)
+        self._registration.connect("registered", self.on_registration_success)
+
+    @property
+    def registered(self):
+        if not self._transport.needs_registration:
+            return True
+        return self._registration.registered
+
+    @property
+    def transport(self):
+        return self._transport
+
+    @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
+    def register(self, callback=None, errcb=None):
+        token = self._tokens[LiveService.MESSENGER_SECURE]
+        self._registration.register(token)
+
+    def on_registration_success(self, registration):
+        while len(self._msg_queue) > 0:
+            msg = self._msg_queue.pop()
+            self.send(msg)
+
+    def send(self, message, registration=False):
+        if self.registered or registration:
+            self._transport.send(str(message))
+        else:
+            self._msg_queue.append(message)
+            self.register(None, None)
+
+    def invite(self, uri):
+        call = SIPCall(self, self._user)
+        self._calls[call.get_call_id()] = call
+        call.invite(uri)
+        return call
 
     def on_message_received(self, parser, message):
         callid = int(message.get_header("Call-ID"))
@@ -51,16 +88,18 @@ class SIPConnection(gobject.GObject):
                 call = SIPCall(self._transport, callid)
                 self._calls[call.get_call_id()] = call
             else:
-                print call
                 return #something's wrong
         call.on_message_received(message)
 
 
 class SIPBaseCall(gobject.GObject):
 
-    def __init__(self, transport, user, callid=None, tunneled=False):
+    def __init__(self, connection, user, callid=None, tunneled=False):
         gobject.GObject.__init__(self)
-        self._transport = transport
+        self._connection = connection
+        self._ip = "127.0.0.1"
+        self._port = 50390
+        self._transport_protocol = connection.transport.protocol
         self._user = user
         self._callid = callid
         self._tunneled = tunneled
@@ -108,15 +147,13 @@ class SIPBaseCall(gobject.GObject):
     def get_sip_instance(self):
         return SIP_INSTANCE
 
-    def send(self, message):
-        self._transport.send(str(message))
+    def send(self, message, registration=False):
+        self._connection.send(message, registration)
 
     def build_request(self, code, uri, to, name="0", incr=False):
         request = SIPRequest(code, uri)
         request.add_header("Via", "SIP/2.0/%s %s:%s" %
-            (self._transport.protocol,
-             self._transport.ip,
-             self._transport.port))
+            (self._transport_protocol, self._ip, self._port))
         request.add_header("Max-Forwards", 70)
         request.add_header("Call-ID", self.get_call_id())
         request.add_header("CSeq", "%i %s" % (self.get_cseq(incr), code))
@@ -158,54 +195,64 @@ class SIPBaseCall(gobject.GObject):
 
 class SIPCall(SIPBaseCall):
 
-    def __init__(self, transport, user, callid=None, tunneled=False):
-        SIPBaseCall.__init__(transport, user, callid, tunneled)
+    def __init__(self, connection, user, callid=None, tunneled=False):
+        SIPBaseCall.__init__(self, connection, user, callid, tunneled)
         self._state = None
-        self._ice = ICESession(draft=19)
+        self._ice = ICESession(["audio"], draft=6)
+        self._ice.connect("candidates-prepared", self.on_candidates_prepared)
         self._ice.connect("candidates-ready", self.on_candidates_ready)
 
-    def build_invite_contact(self):
+    def set_local_candidates(self, name, candidates):
+        self._ice.set_local_candidates(name, candidates)
+
+    def set_local_codecs(self, name, codecs):
+        self._ice.set_local_codecs(name, codecs)
+
+    def build_invite_contact(self, uri):
         if self._tunneled:
             m = "<sip:%s%s>;proxy=replace;+sip.instance=\"<urn:uuid:%s>\"" % (
-                self._user, self.get_mepid(), self.get_sip_instance())
+                uri, self.get_mepid(), self.get_sip_instance())
         else:
-            ip, port = self.get_local_address()
-            m = "<sip:%s:%i;maddr=%s;transport=%s;proxy=replace" % (
-                self._user, port, ip, self._transport.protocol)
+            m = "<sip:%s:%i;maddr=%s;transport=%s>;proxy=replace" % (
+                uri, self._port, self._ip, self._transport_protocol)
         return m
 
     def build_invite_request(self, uri, to):
         request = self.build_request("INVITE", uri, to, incr=True)
         request.add_header("Ms-Conversation-ID", "f=%s" % int(self._tunneled))
-        request.add_header("Contact", self.build_invite_contact())
+        request.add_header("Contact", self.build_invite_contact(uri))
         request.add_header("Record-Route", "<sip:127.0.0.1:50930;transport=tcp>")
         request.set_content(self._ice.build_sdp(), "application/sdp")
         return request
 
     def invite(self, uri):
+        self._uri = uri
+        if not self._ice.candidates_prepared:
+            return
         self._state = "CALLING"
         self._remote = "<sip:%s>" % uri
         self._invite = self.build_invite_request(uri, self._remote)
         self.send(self._invite)
 
     def reinvite(self):
+        if not self._ice.candidates_ready:
+            return
         self._state = "REINVITING"
         self._invite = self.build_invite_request(self._uri, self._remote)
         self.send(self._invite)
 
     def accept(self):
         response = self.build_response(self._invite, 200)
-        response.add_header("Contact", self.build_invite_contact())
+        response.add_header("Contact", self.build_invite_contact(self._user))
         response.set_content(self._ice.build_sdp(), "application/sdp")
         self.send(response)
 
     def reject(self, status=603):
         response = self.build_response(self._invite, status)
-        response.add_header("Contact", self.build_invite_contact())
+        response.add_header("Contact", self.build_invite_contact(self._user))
         self.send(response)
 
     def send_ack(self, response):
-        self._state = "CONFIRMED"
         to = response.get_header("To")
         request = self.build_request("ACK", self._uri, to)
         self.send(request)
@@ -239,6 +286,12 @@ class SIPCall(SIPBaseCall):
         else:
             self._state = "INCOMING"
 
+    def on_candidates_prepared(self, session):
+        if self._state is None:
+            self.invite(self._uri)
+        elif self._state == "INCOMING":
+            pass
+
     def on_candidates_ready(self, session):
         if self._state == "REINVITED":
             self.accept()
@@ -261,18 +314,18 @@ class SIPCall(SIPBaseCall):
         self.send(response)
 
     def on_invite_response(self, response):
+        old_state = self._state
         self._remote = response.get_header("To")
         if response.status >= 200:
-            old_state = self._state # state is changed in send_ack()
             self.send_ack(response)
 
         if response.status in (100, 180, 408, 480, 486, 487, 504, 603):
             pass
         elif response.status is 200:
+            self._state = "CONFIRMED"
             self._ice.parse_sdp(response.get_content())
             if old_state == "CALLING":
-                if self._ice.candidates_ready:
-                    self.reinvite()
+                self.reinvite()
         else:
             self.send_bye()
 
@@ -283,7 +336,7 @@ class SIPCall(SIPBaseCall):
         if response.status in (200, 403):
             self._state = "DISCONNECTED"
         else:
-            self.send_bye()
+            pass #self.send_bye()
 
 
 class SIPRegistration(SIPBaseCall):
@@ -294,8 +347,8 @@ class SIPRegistration(SIPBaseCall):
         'failed': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ([]))
     }
 
-    def __init__(self, transport, user, password, tunneled=False):
-        SIPBaseCall.__init__(self, transport, user, None, tunneled)
+    def __init__(self, connection, user, password, tunneled=False):
+        SIPBaseCall.__init__(self, connection, user, None, tunneled)
         self._state = "NEW"
         self._password = password
 
@@ -308,18 +361,18 @@ class SIPRegistration(SIPBaseCall):
         request = self.build_request("REGISTER", uri, "<sip:%s>" % self._user)
         request.add_header("ms-keep-alive", "UAC;hop-hop=yes")
         request.add_header("Contact", "<sip:%s:%s;transport=%s>;proxy=replace" %
-            (self._transport.ip, self._transport.port, self._transport.protocol))
+            (self._ip, self._port, self._transport_protocol))
         request.add_header("Event", "registration")
         request.add_header("Expires", timeout)
         request.add_header("Authorization", "Basic %s" % auth)
         return request
 
-    def register(self):
-        auth = "msmsgs:RPS_%s" % self._password
+    def register(self, ticket):
+        auth = "msmsgs:RPS_%s" % ticket
         auth = base64.b64encode(auth).replace("\n", "")
         request = self.build_register_request(900, auth)
         self._state = "REGISTERING"
-        self.send(request)
+        self.send(request, True)
 
     def cancel(self):
         gobject.remove_source(self._src)
@@ -327,7 +380,7 @@ class SIPRegistration(SIPBaseCall):
         auth = base64.encodestring(auth).replace("\n", "")
         request = self.build_register_request(0, auth)
         self._state = "UNREGISTERING"
-        self.send(request)
+        self.send(request, True)
 
     def on_expire(self):
         self.register()
@@ -464,8 +517,9 @@ class SIPMessageParser(gobject.GObject):
             ([object]))
     }
 
-    def __init__(self):
+    def __init__(self, transport):
         gobject.GObject.__init__(self)
+        transport.connect("line-received", self.on_line_received)
         self.reset()
 
     def reset(self):

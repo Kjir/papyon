@@ -182,7 +182,7 @@ class SDPMessage(object):
     def __str__(self):
         out = []
         out.append("v=0")
-        out.append("o=- 0 0 IN IP4 %s" % self.medias["audio"].ip)
+        out.append("o=- 0 0 IN IP4 %s" % self.ip)
         out.append("s=session")
         out.append("b=CT:99980")
         out.append("t=0 0")

@@ -27,18 +27,27 @@ import gobject
 class ICESession(gobject.GObject):
 
     __gsignals__ = {
-        "candidates_ready": (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ())
+        "candidates-prepared": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
+        "candidates-ready": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ())
     }
 
-    def __init__(self, draft=0):
+    def __init__(self, media_types, draft=0):
         gobject.GObject.__init__(self)
         self.draft = draft
+        self._media_types = media_types
         self._local_codecs = {}
         self._remote_codecs = {}
         self._local_candidates = {}
         self._remote_candidates = {}
         self._local_active = {}
         self._remote_active = {}
+
+    @property
+    def candidates_prepared(self):
+        for name in self._media_types:
+            if not self._local_candidates.get(name, None):
+                return False
+        return True
 
     @property
     def candidates_ready(self):
@@ -58,6 +67,7 @@ class ICESession(gobject.GObject):
 
     def set_local_candidates(self, name, candidates):
         self._local_candidates[name] = candidates
+        self.emit("candidates-prepared")
 
     def set_active_candidates(self, name, local, remote):
         self._local_active[name] = local
@@ -67,25 +77,26 @@ class ICESession(gobject.GObject):
 
     def build_sdp(self):
         sdp = SDPMessage()
-        for name, codecs in self._local_codecs.iteritems():
-            media = self.build_media(name, codecs)
+        for type in self._media_types:
+            media = self.build_media(type)
             sdp.medias[media.name] = media
         return str(sdp)
 
-    def build_media(self, name, codecs):
-        ip, port, rtcp = self.get_default_address(name)
-        media = SDPMedia(name, ip, port, rtcp)
-        media.codecs = codecs
+    def build_media(self, type):
+        ip, port, rtcp = self.get_default_address(type)
+        media = SDPMedia(type, ip, port, rtcp)
+        media.codecs = self._local_codecs.get(type, [])
 
-        candidates = self.get_active_local_candidates(name)
+        candidates = self.get_active_local_candidates(type)
         if candidates:
             if self.draft is 19:
                 media.add_attribute("ice-ufrag", candidates[0].username)
                 media.add_attribute("ice-pwd", candidates[0].password)
             for candidate in candidates:
+                print str(candidate)
                 media.add_attribute("candidate", str(candidate))
 
-        candidates = self.get_active_remote_candidates(name)
+        candidates = self.get_active_remote_candidates(type)
         if candidates:
             list = map(lambda c: c.get_remote_id(), candidates)
             media.add_attribute("remote-candidate", " ".join(list))
