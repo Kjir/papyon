@@ -1,0 +1,97 @@
+# -*- coding: utf-8 -*-
+#
+# papyon - a python client library for Msn
+#
+# Copyright (C) 2007 Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2008 Richard Spiers <richard.spiers@gmail.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+from papyon.msnp2p.constants import *
+from papyon.msnp2p.SLP import *
+from papyon.msnp2p.transport import *
+from papyon.msnp2p.exceptions import *
+from papyon.msnp2p.session import P2PSession
+from papyon.event import EventsDispatcher
+from papyon.util.decorator import rw_property
+
+
+import gobject
+import base64
+import random
+
+__all__ = ['MSNObjectSession']
+
+class MSNObjectSession(P2PSession):
+    def __init__(self, session_manager, peer, application_id, message = None):
+        P2PSession.__init__(self, session_manager, peer,
+                EufGuid.MSN_OBJECT, application_id)
+
+        if message is not None:
+            self._id =  message.body.session_id
+            self._call_id = message.call_id
+
+            self._cseq = message.cseq
+            self._branch = message.branch
+            self._application_id = message.body.application_id
+            try: 
+                self._context = message.body.context.strip('\x00')
+            except AttributeError:
+                raise SLPError("Incoming INVITE without context")
+
+
+    def accept(self, data_file):
+        #Made an edit here, removing the file transfer code 
+        #gobject.idle_add(self._start_transfer, data_file)
+        self._respond(200)
+    
+    def reject(self):
+        self._respond(603)
+
+    def _respond(self, status_code):
+        body = SLPSessionRequestBody(session_id=self._id,capabilities_flags=None,s_channel_state=None)
+        self._cseq += 1
+        response = SLPResponseMessage(status_code,
+            to=self._peer.account,
+            frm=self._session_manager._client.profile.account,
+            cseq=self._cseq,
+            branch=self._branch,
+            call_id=self._call_id)
+        response.body = body
+        self._send_p2p_data(response)
+
+    def _start_transfer(self, data_file):
+        self._respond(200)
+        self._send_p2p_data("\x00" * 4)
+        self._send_p2p_data(data_file)
+        return False
+
+    def invite(self, context):
+        self._session_manager._register_session(self)
+        body = SLPSessionRequestBody(self._euf_guid, self._application_id,
+                context, self._id)
+
+        message = SLPRequestMessage(SLPRequestMethod.INVITE,
+                "MSNMSGR:" + self._peer.account,
+                to=self._peer.account,
+                frm=self._session_manager._client.profile.account,
+                branch=self._branch,
+                cseq=self._cseq,
+                call_id=self._call_id)
+
+        message.body = body
+        self._send_p2p_data(message)
+        return False
+

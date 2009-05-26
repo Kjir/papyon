@@ -41,6 +41,10 @@ class WebcamEventInterface(BaseEventInterface):
         """Called when our invitation got accepted"""
         pass
 
-    def on_webcam_rejected(self, session):
+    def on_webcam_rejected(self):
         """Called when our invitation got rejected"""
+        pass
+
+    def on_webcam_paused(self):
+        """Called when the webcam is paused"""
         pass

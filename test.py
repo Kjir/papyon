@@ -104,7 +104,7 @@ class Client(papyon.Client):
                     print "%s is %s" % (contact.display_name, state)
                     if contact.account == peer:
                         print "Inviting %s for a webcam" % contact.display_name
-                        self._webcam_handler._create_new_send_session(contact)
+                        self._webcam_handler.invite(contact)
                         
                         return False
 

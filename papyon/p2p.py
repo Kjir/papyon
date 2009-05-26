@@ -25,9 +25,9 @@ This module contains the classes needed to engage in a peer to peer transfer
 with a contact.
     @group MSNObject: MSNObjectStore, MSNObject, MSNObjectType
     @sort: MSNObjectStore, MSNObject, MSNObjectType"""
-from msnp2p.session import IncomingP2PSession
+from msnp2p.msnobject import MSNObjectSession
 from msnp2p.webcam import WebcamSession
-from msnp2p import OutgoingP2PSession, EufGuid, ApplicationID
+from msnp2p import EufGuid, ApplicationID
 from msnp2p.exceptions import ParseError
 from profile import NetworkID
 
@@ -67,10 +67,10 @@ class MSNObjectType(object):
 
 class MSNObject(object):
     "Represents an MSNObject."
-    def __init__(self, creator, size, type, location, friendly, 
+    def __init__(self, creator, size, type, location, friendly,
                  shad=None, shac=None, data=None):
         """Initializer
-        
+
             @param creator: the creator of this MSNObject
             @type creator: utf-8 encoded string representing the account
 
@@ -102,7 +102,7 @@ class MSNObject(object):
 
         if shad is None:
             if data is None:
-                raise NotImplementedError                
+                raise NotImplementedError
             shad = self.__compute_data_hash(data)
         self._data_sha = shad
         self.__data = data
@@ -143,7 +143,7 @@ class MSNObject(object):
             element = ElementTree.parse(data).getroot().attrib
         except:
             raise ParseError('Invalid MSNObject')
-        
+
         try:
             creator = client.address_book.contacts.\
                 search_by_account(element["Creator"]).\
@@ -191,11 +191,11 @@ class MSNObject(object):
         if self._repr is not None:
             return self._repr
         dump = "<msnobj Creator=%s Type=%s SHA1D=%s Size=%s Location=%s Friendly=%s/>" % \
-            (xml.quoteattr(self._creator.account), 
-                xml.quoteattr(str(self._type)), 
-                xml.quoteattr(base64.b64encode(self._data_sha)), 
+            (xml.quoteattr(self._creator.account),
+                xml.quoteattr(str(self._type)),
+                xml.quoteattr(base64.b64encode(self._data_sha)),
                 xml.quoteattr(str(self._size)),
-                xml.quoteattr(str(self._location)), 
+                xml.quoteattr(str(self._location)),
                 xml.quoteattr(base64.b64encode(self._friendly)))
         return dump
 
@@ -207,9 +207,31 @@ class MSNObjectStore(object):
         self._outgoing_sessions = {} # session => (handle_id, callback, errback)
         self._incoming_sessions = {}
         self._published_objects = set()
-        # Made an edit here - do we really want to call MSNObjectStore on each new session ?
-        #self._client._p2p_session_manager.connect("incoming-session",
-        #        self._incoming_session_received)
+
+    def _can_handle_message (self, message):
+        euf_guid = message.body.euf_guid
+        if euf_guid == EufGuid.MSN_OBJECT:
+            return True
+        else:
+            return False
+
+    def _handle_message(self, peer, message):
+        session = MSNObjectSession(self._client._p2p_session_manager,
+                peer, message.body.application_id, message)
+
+        handle_id = session.connect("transfer-completed",
+                        self._incoming_session_transfer_completed)
+        self._incoming_sessions[session] = handle_id
+        try:
+            msn_object = MSNObject.parse(self._client, session._context)
+        except ParseError:
+            session.reject()
+            return
+        for obj in self._published_objects:
+            if obj._data_sha == msn_object._data_sha:
+                session.accept(obj._data)
+                return session
+        session.reject()
 
     def request(self, msn_object, callback, errback=None):
         if msn_object._data is not None:
@@ -222,13 +244,13 @@ class MSNObjectStore(object):
         else:
             raise NotImplementedError
 
-        session = OutgoingP2PSession(self._client._p2p_session_manager, 
-                msn_object._creator, msn_object, 
-                EufGuid.MSN_OBJECT, application_id)
+        session = MSNObjectSession(self._client._p2p_session_manager,
+                msn_object._creator, application_id)
         handle_id = session.connect("transfer-completed",
                 self._outgoing_session_transfer_completed)
         self._outgoing_sessions[session] = \
                 (handle_id, callback, errback, msn_object)
+        session.invite(msn_object)
 
     def publish(self, msn_object):
         if msn_object._data is None:
@@ -243,23 +265,6 @@ class MSNObjectStore(object):
 
         callback[0](msn_object, *callback[1:])
         del self._outgoing_sessions[session]
-
-    def _incoming_session_received(self, session_manager, session):
-        if session._euf_guid != EufGuid.MSN_OBJECT:
-            return
-        handle_id = session.connect("transfer-completed",
-                        self._incoming_session_transfer_completed)
-        self._incoming_sessions[session] = handle_id
-        try:
-            msn_object = MSNObject.parse(self._client, session._context)
-        except ParseError:
-            session.reject()
-            return
-        for obj in self._published_objects:
-            if obj._data_sha == msn_object._data_sha:
-                session.accept(obj._data)
-                return
-        session.reject()
 
     def _incoming_session_transfer_completed(self, session, data):
         handle_id = self._incoming_sessions[session]
@@ -279,15 +284,15 @@ class WebcamHandler(gobject.GObject):
         self._client = client
         self._sessions = []
 
-    def _can_handle_euf_guid(self,message):
+    def _can_handle_message (self, message):
         euf_guid = message.body.euf_guid
         if (euf_guid == EufGuid.MEDIA_SESSION or
             euf_guid == EufGuid.MEDIA_RECEIVE_ONLY):
             return True
         else:
             return False
-        
-    def _create_new_recv_session(self, peer, session_id, message):
+
+    def _handle_message (self, peer, message):
         euf_guid = message.body.euf_guid
         if (euf_guid == EufGuid.MEDIA_SESSION):
             producer = False
@@ -295,17 +300,19 @@ class WebcamHandler(gobject.GObject):
             producer = True
 
         session = WebcamSession(producer, self._client._p2p_session_manager, \
-                                    peer, message.body.euf_guid, \
-                                    ApplicationID.WEBCAM, session_id)
+                                    peer, message.body.euf_guid, message)
         self._sessions.append(session)
         self.emit("session-created", session, producer)
         return session
-    
-    def _create_new_send_session(self, peer):
+
+    def invite(self, peer, producer=True):
         print "Creating New Send Session"
-        session = WebcamSession(True, self._client._p2p_session_manager, \
-                                    peer, EufGuid.MEDIA_SESSION, \
-                                    ApplicationID.WEBCAM)
+        if producer:
+            euf_guid = EufGuid.MEDIA_SESSION
+        else:
+            euf_guid = EufGuid.MEDIA_RECEIVE_ONLY
+        session = WebcamSession(producer, self._client._p2p_session_manager, \
+                                    peer, euf_guid)
         self._sessions.append(session)
         session.invite()
         return session

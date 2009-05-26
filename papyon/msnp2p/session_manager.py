@@ -22,7 +22,6 @@
 from papyon.msnp2p.transport import *
 from papyon.msnp2p.exceptions import *
 from papyon.msnp2p.SLP import *
-from papyon.msnp2p.session import IncomingP2PSession
 from papyon.msnp2p.constants import SLPContentType, SLPRequestMethod
 
 import papyon.profile
@@ -156,11 +155,13 @@ class P2PSessionManager(gobject.GObject):
                 if isinstance(message.body, SLPSessionRequestBody):
                     try:
                         for handler in self._handlers:
-                            if handler._can_handle_euf_guid(message):
-                                session = handler._create_new_recv_session(peer,session_id,message)
-                                self._register_session(session)
+                            if handler._can_handle_message(message):
+                                session = handler._handle_message(peer, message)
+                                if session is not None:
+                                    self._register_session(session)
+                                    break
                         if session is None:
-                            logger.error("No handler could handle euf-guid %s" % (message.euf_guid))
+                            logger.error("No handler could handle euf-guid %s" % (message.body.euf_guid))
                             return
                     except SLPError:
                         #TODO: answer with a 603 Decline ?
