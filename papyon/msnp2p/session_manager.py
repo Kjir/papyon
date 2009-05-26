@@ -161,7 +161,7 @@ class P2PSessionManager(gobject.GObject):
                                     self._register_session(session)
                                     break
                         if session is None:
-                            logger.error("No handler could handle euf-guid %s" % (message.euf_guid))
+                            logger.error("No handler could handle euf-guid %s" % (message.body.euf_guid))
                             return
                     except SLPError:
                         #TODO: answer with a 603 Decline ?
