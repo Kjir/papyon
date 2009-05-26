@@ -28,7 +28,8 @@ class ICESession(gobject.GObject):
 
     __gsignals__ = {
         "candidates-prepared": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
-        "candidates-ready": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ())
+        "candidates-ready": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
+        "remote-ready": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ())
     }
 
     def __init__(self, media_types, draft=0):
@@ -108,6 +109,7 @@ class ICESession(gobject.GObject):
         sdp.parse(message)
         for media in sdp.medias.values():
             self.parse_media(media)
+        self.emit("remote-ready")
 
     def parse_media(self, media):
         self._remote_codecs[media.name] = media.codecs
@@ -144,7 +146,7 @@ class ICESession(gobject.GObject):
         active = self._local_active.get(name, None)
         candidates = self._local_candidates.get(name, [])
         if active:
-            return reduce(lambda x: (x.foundation == active.foundation), candidates)
+            return filter(lambda x: (x.foundation == active.foundation), candidates)
         return candidates
 
     def get_active_remote_candidates(self, name):

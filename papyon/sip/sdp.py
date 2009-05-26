@@ -195,7 +195,7 @@ class SDPMessage(object):
                 for value in v:
                     out.append("a=%s:%s" % (k, value))
 
-        return "\r\n".join(out)
+        return "\r\n".join(out) + "\r\n\r\n"
 
     def parse(self, message):
         media = None

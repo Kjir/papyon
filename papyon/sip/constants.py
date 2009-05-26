@@ -32,6 +32,18 @@ COMPACT_HEADERS = {
     "via": "v",
 }
 
+UNIQUE_HEADERS = [
+    "call-id",
+    "contact",
+    "content-encoding",
+    "content-length",
+    "content-type",
+    "event",
+    "from",
+    "subject",
+    "to"
+]
+
 RESPONSE_CODES = {
     100: "Trying",
     180: "Ringing",

@@ -90,7 +90,7 @@ class ClientEvents(papyon.event.ClientEventInterface):
             self._client.profile.presence = papyon.Presence.ONLINE
             for contact in self._client.address_book.contacts:
                 print contact
-            gobject.timeout_add(5000, self.invite)
+            gobject.timeout_add(3000, self.invite)
 
     def invite(self):
         print "INVITE"
@@ -106,7 +106,7 @@ class SSLTransport(gobject.GObject):
 
     __gsignals__ = {
         "connected": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
-        "line-received": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ([object]))
+        "chunk-received": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ([object]))
     }
 
     def __init__(self, host, port):
@@ -117,6 +117,7 @@ class SSLTransport(gobject.GObject):
         self._client = SSLTCPClient(host, port)
         self._client.connect("received", self.on_received)
         self._client.connect("notify::status", self.on_status_changed)
+        self._buffer = ""
 
     @property
     def ip(self):
@@ -136,6 +137,11 @@ class SSLTransport(gobject.GObject):
 
     def open(self):
         self._client.open()
+        gobject.timeout_add(5000, self.on_keep_alive)
+
+    def on_keep_alive(self):
+        self.send("\r\n\r\n\r\n\r\n")
+        return True
 
     def send(self, message):
         for line in message.splitlines():
@@ -145,12 +151,14 @@ class SSLTransport(gobject.GObject):
     def on_received(self, client, message, len):
         for line in message.splitlines():
             print "<<", line
-            self.emit("line-received", line)
+        self.emit("chunk-received", message)
 
     def on_status_changed(self, client, param):
         print "STATUS", self._client.status
         if self._client.status == IoStatus.OPEN:
             self.emit("connected")
+        elif self._client.status == IoStatus.CLOSED:
+            self.open()
 
 if __name__ == "__main__":
 

@@ -115,6 +115,7 @@ class SIPBaseCall(gobject.GObject):
         return ret
 
     def gen_mepid(self):
+        # TODO generate a machine guid
         pass
 
     def get_call_id(self):
@@ -176,13 +177,16 @@ class SIPBaseCall(gobject.GObject):
         response.clone_headers("Via", request)
         response.add_header("Call-ID", self.get_call_id())
         response.add_header("Max-Forwards", 70)
-        response.add_header("User-Agent", self.USER_AGENT)
+        response.add_header("User-Agent", USER_AGENT)
         return response
 
     def on_message_received(self, msg):
         route = msg.get_header("Record-Route")
         if route is not None:
             self._uri = re.search("<sip:(.*)>", route).group(1)
+        contact = msg.get_header("Contact")
+        if contact is not None:
+            self._contact = re.search("<sip:.*>", contact).group(0)
 
         if type(msg) is SIPResponse:
             handler_name = "on_%s_response" % msg.code.lower()
@@ -202,25 +206,23 @@ class SIPCall(SIPBaseCall):
         self._ice.connect("candidates-prepared", self.on_candidates_prepared)
         self._ice.connect("candidates-ready", self.on_candidates_ready)
 
-    def set_local_candidates(self, name, candidates):
-        self._ice.set_local_candidates(name, candidates)
+    @property
+    def ice(self):
+        return self._ice
 
-    def set_local_codecs(self, name, codecs):
-        self._ice.set_local_codecs(name, codecs)
-
-    def build_invite_contact(self, uri):
+    def build_invite_contact(self):
         if self._tunneled:
             m = "<sip:%s%s>;proxy=replace;+sip.instance=\"<urn:uuid:%s>\"" % (
-                uri, self.get_mepid(), self.get_sip_instance())
+                self._user, self.get_mepid(), self.get_sip_instance())
         else:
             m = "<sip:%s:%i;maddr=%s;transport=%s>;proxy=replace" % (
-                uri, self._port, self._ip, self._transport_protocol)
+                self._user, self._port, self._ip, self._transport_protocol)
         return m
 
     def build_invite_request(self, uri, to):
         request = self.build_request("INVITE", uri, to, incr=True)
         request.add_header("Ms-Conversation-ID", "f=%s" % int(self._tunneled))
-        request.add_header("Contact", self.build_invite_contact(uri))
+        request.add_header("Contact", self.build_invite_contact())
         request.add_header("Record-Route", "<sip:127.0.0.1:50930;transport=tcp>")
         request.set_content(self._ice.build_sdp(), "application/sdp")
         return request
@@ -239,17 +241,19 @@ class SIPCall(SIPBaseCall):
             return
         self._state = "REINVITING"
         self._invite = self.build_invite_request(self._uri, self._remote)
+        self._invite.add_header("Route", self._contact)
+        self._invite.add_header("Supported", "ms-dialog-route-set-update")
         self.send(self._invite)
 
     def accept(self):
         response = self.build_response(self._invite, 200)
-        response.add_header("Contact", self.build_invite_contact(self._user))
+        response.add_header("Contact", self.build_invite_contact())
         response.set_content(self._ice.build_sdp(), "application/sdp")
         self.send(response)
 
     def reject(self, status=603):
         response = self.build_response(self._invite, status)
-        response.add_header("Contact", self.build_invite_contact(self._user))
+        response.add_header("Contact", self.build_invite_contact())
         self.send(response)
 
     def send_ack(self, response):
@@ -274,7 +278,7 @@ class SIPCall(SIPBaseCall):
     def on_invite_received(self, invite):
         self._invite = invite
         self._remote = invite.get_header("From")
-        self._ice.parse_sdp(invite.get_content())
+        self._ice.parse_sdp(invite.body)
         ringing = self.build_response(invite, 180)
         self.send(ringing)
 
@@ -323,7 +327,7 @@ class SIPCall(SIPBaseCall):
             pass
         elif response.status is 200:
             self._state = "CONFIRMED"
-            self._ice.parse_sdp(response.get_content())
+            self._ice.parse_sdp(response.body)
             if old_state == "CALLING":
                 self.reinvite()
         else:
@@ -408,18 +412,39 @@ class SIPMessage(object):
         self._headers = {}
         self.set_content("")
 
-    def add_header(self, name, value):
+    @rw_property
+    def body():
+        def fget(self):
+            return self._body
+        def fset(self, value):
+            self._body = value
+        return locals()
+
+    @property
+    def length(self):
+        return int(self.get_header("Content-Length", 0))
+
+    def normalize_name(self, name):
         name = name.lower()
-        self._headers.setdefault(name, []).append(value)
+        if len(name) is 1:
+            for long, compact in COMPACT_HEADERS.iteritems():
+                if name == compact:
+                    return long
+        return name
+
+    def add_header(self, name, value):
+        name = self.normalize_name(name)
+        if name in UNIQUE_HEADERS:
+            self._headers[name] = [value]
+        else:
+            self._headers.setdefault(name, []).append(value)
 
     def set_header(self, name, value):
-        name = name.lower()
+        name = self.normalize_name(name)
         self._headers[name] = [value]
 
     def get_headers(self, name, default=None):
-        name = name.lower()
-        if name not in self._headers and name in COMPACT_HEADERS:
-            name = COMPACT_HEADERS.get(name)
+        name = self.normalize_name(name)
         return self._headers.get(name, default)
 
     def get_header(self, name, default=None):
@@ -429,6 +454,7 @@ class SIPMessage(object):
         return value
 
     def clone_headers(self, name, other):
+        name = self.normalize_name(name)
         values = other.get_headers(name)
         if values is not None:
             self._headers[name] = values
@@ -438,9 +464,6 @@ class SIPMessage(object):
             self.set_header("Content-Type", type)
         self.set_header("Content-Length", len(content))
         self._body = content
-
-    def get_content(self):
-        return self._body
 
     def get_header_line(self):
         raise NotImplementedError
@@ -519,16 +542,26 @@ class SIPMessageParser(gobject.GObject):
 
     def __init__(self, transport):
         gobject.GObject.__init__(self)
-        transport.connect("line-received", self.on_line_received)
+        transport.connect("chunk-received", self.on_chunk_received)
         self.reset()
 
     def reset(self):
         self._message = None
         self._length = 0
         self._state = "start"
+        self._buffer = ""
 
-    def on_line_received(self, transport, line):
+    def on_chunk_received(self, transport, chunk):
+        self._buffer += chunk
+        finished = False
+        while not finished:
+            finished = self.parse_buffer()
+
+    def parse_buffer(self):
         if self._state == "start":
+            line = self.consume_line()
+            if line is None:
+                return True
             a, b, c = line.split(" ", 2)
             if a == self.version:
                 code = int(b)
@@ -536,21 +569,47 @@ class SIPMessageParser(gobject.GObject):
             elif c == self.version:
                 self._message = SIPRequest(a, b[4:])
             self._state = "headers"
-        elif self._state == "headers":
-            if line:
+
+        if self._state == "headers":
+            line = self.consume_line()
+            if line is None:
+                return True
+            elif line == "":
+                self._state = "body"
+            else:
                 name, value = line.split(":", 1)
                 self._message.add_header(name, value.strip())
-            else:
-                self._length = int(self._message.get_header("Content-Length"))
-                if self._length > 0:
-                    self._state = "body"
-                else:
-                    self._state = "done"
-        elif self._state == "body":
-            self._message.body += "%s\r\n" % line
-            if len(self._message.body) >= self._length:
+
+        if self._state == "body":
+            missing = self._message.length - len(self._message.body)
+            self._message.body += self.consume_chars(missing)
+            if len(self._message.body) >= self._message.length:
                 self._state = "done"
+            else:
+                return True
 
         if self._state == "done":
             self.emit("message-received", self._message)
             self.reset()
+            return True
+
+        return False
+
+    def consume_line(self):
+        try:
+            line, self._buffer = self._buffer.split("\r\n", 1)
+        except:
+            return None
+        return line
+
+    def consume_chars(self, count):
+        if count is 0:
+            ret = ""
+        elif count >= len(self._buffer):
+            ret = self._buffer
+            self._buffer = ""
+        else:
+            ret = self._buffer[0:count]
+            self._buffer = self._buffer[count:]
+        return ret
+
