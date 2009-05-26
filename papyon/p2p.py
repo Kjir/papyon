@@ -230,7 +230,7 @@ class MSNObjectStore(object):
         for obj in self._published_objects:
             if obj._data_sha == msn_object._data_sha:
                 session.accept(obj._data)
-                return
+                return session
         session.reject()
 
     def request(self, msn_object, callback, errback=None):
