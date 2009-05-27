@@ -27,24 +27,63 @@ import gobject
 import random
 import re
 
-class SIPConnection(gobject.GObject):
+class SIPBaseConnection(gobject.GObject):
+
+    __gsignals__ = {
+        'invite-received': (gobject.SIGNAL_RUN_FIRST,
+            gobject.TYPE_NONE,
+            ([object]))
+    }
+
+    def __init__(self, transport):
+        gobject.GObject.__init__(self)
+        self._calls = {}
+        self._transport = transport
+        self._parser = SIPMessageParser(transport)
+        self._parser.connect("message-received", self.on_message_received)
+
+    @property
+    def transport(self):
+        return self._transport
+
+    def create_call(self, account, callid, tunneled):
+        call = SIPCall(self, account, callid, tunneled)
+        self.add_call(call)
+        return call
+
+    def add_call(self, call):
+        self._calls[call.get_call_id()] = call
+
+    def get_call(self, callid):
+        return self._calls.get(callid, None)
+
+    def send(self, message):
+        self._transport.send(str(message))
+
+    def on_message_received(self, parser, message):
+        callid = int(message.get_header("Call-ID"))
+        call = self.get_call(callid)
+        if call is None:
+            if isinstance(message, SIPRequest) and message.code == "INVITE":
+                call = self.create_call(callid)
+                self.emit("invite-received", call)
+            else:
+                return #something's wrong
+        call.on_message_received(message)
+
+
+class SIPConnection(SIPBaseConnection):
 
     def __init__(self, transport, sso, user, password):
-        gobject.GObject.__init__(self)
+        SIPBaseConnection.__init__(self, transport)
         self._user = user
         self._password = password
-        self._parser = SIPMessageParser(transport)
         self._sso = sso
-        self._transport = transport
-
-        self._calls = {}
         self._tokens = {}
-        self._registration = SIPRegistration(self, user, password)
-        self._calls[self._registration.get_call_id()] = self._registration
         self._msg_queue = []
-
-        self._parser.connect("message-received", self.on_message_received)
+        self._registration = SIPRegistration(self, user, password)
         self._registration.connect("registered", self.on_registration_success)
+        self.add_call(self._registration)
 
     @property
     def registered(self):
@@ -52,19 +91,15 @@ class SIPConnection(gobject.GObject):
             return True
         return self._registration.registered
 
-    @property
-    def transport(self):
-        return self._transport
-
     @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
     def register(self, callback=None, errcb=None):
         token = self._tokens[LiveService.MESSENGER_SECURE]
         self._registration.register(token)
 
-    def on_registration_success(self, registration):
-        while len(self._msg_queue) > 0:
-            msg = self._msg_queue.pop()
-            self.send(msg)
+    def invite(self, uri):
+        call = self.create_call(self._user)
+        call.invite(uri)
+        return call
 
     def send(self, message, registration=False):
         if self.registered or registration:
@@ -73,23 +108,10 @@ class SIPConnection(gobject.GObject):
             self._msg_queue.append(message)
             self.register(None, None)
 
-    def invite(self, uri):
-        call = SIPCall(self, self._user)
-        self._calls[call.get_call_id()] = call
-        call.invite(uri)
-        return call
-
-    def on_message_received(self, parser, message):
-        callid = int(message.get_header("Call-ID"))
-        call = self._calls.get(callid, None)
-        if call is None:
-            if isinstance(message, SIPRequest) and message.code == "INVITE":
-                callid = message.get_header("Call-ID")
-                call = SIPCall(self._transport, callid)
-                self._calls[call.get_call_id()] = call
-            else:
-                return #something's wrong
-        call.on_message_received(message)
+    def on_registration_success(self, registration):
+        while len(self._msg_queue) > 0:
+            msg = self._msg_queue.pop()
+            self.send(msg)
 
 
 class SIPBaseCall(gobject.GObject):
