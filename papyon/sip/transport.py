@@ -36,50 +36,66 @@ class SIPTransport(gobject.GObject):
 
     def __init__(self, host, port):
         gobject.GObject.__init__(self)
-        self._host = host
-        self._port = port
-        self._protocol = "tls"
         self._client = SSLTCPClient(host, port)
         self._client.connect("received", self.on_received)
         self._client.connect("notify::status", self.on_status_changed)
-
-    @property
-    def ip(self):
-        return self._host
-
-    @property
-    def port(self):
-        return self._port
+        self._alive_src = None
+        self._closing = False
+        self._msg_queue = []
 
     @property
     def protocol(self):
-        return self._protocol
-
-    @property
-    def needs_registration(self):
-        return True
+        return "tls"
 
     def open(self):
+        if self._client.status == IoStatus.OPEN:
+            return
+        self.close()
+        self._closing = False
         self._client.open()
-        gobject.timeout_add(5000, self.on_keep_alive)
+        self.start_keep_alive()
+
+    def close(self):
+        if self._client.status == IoStatus.CLOSED:
+            return
+        self.stop_keep_alive()
+        self._closing = True
+        self._client.close()
+
+    def start_keep_alive(self):
+        self._alive_src = gobject.timeout_add(5000, self.on_keep_alive)
+
+    def stop_keep_alive(self):
+        if self._alive_src is not None:
+            gobject.remove_source(self._alive_src)
+            self._alive_src = None
 
     def on_keep_alive(self):
-        self.send("\r\n\r\n\r\n\r\n", False)
+        self.send("\r\n\r\n\r\n\r\n", True)
         return True
 
-    def send(self, message, log=True):
-        if log:
-            for line in message.splitlines():
-                print ">>", line
-        self._client.send(message)
+    def send(self, message, ping=False):
+        elif self._client.status == IoStatus.OPEN:
+            if not ping:
+                self.log_message(">>", message)
+            self._client.send(message)
+        elif not ping:
+            self._msg_queue.append(message)
+            self.open()
 
     def on_received(self, client, message, len):
-        for line in message.splitlines():
-            print "<<", line
+        self.log_message("<<", message)
         self.emit("chunk-received", message)
 
     def on_status_changed(self, client, param):
         if self._client.status == IoStatus.OPEN:
             self.emit("connected")
+            while self._msg_queue:
+                self.send(self._msg_queue.pop())
         elif self._client.status == IoStatus.CLOSED:
-            self.open()
+            if not self._closing:
+                self.open()
+
+    def log_message(self, prefix, message):
+        for line in message.splitlines():
+            print prefix, line

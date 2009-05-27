@@ -87,8 +87,6 @@ class SIPConnection(SIPBaseConnection):
 
     @property
     def registered(self):
-        if not self._transport.needs_registration:
-            return True
         return self._registration.registered
 
     @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
