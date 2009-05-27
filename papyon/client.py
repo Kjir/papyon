@@ -93,6 +93,7 @@ from papyon.transport import *
 from papyon.switchboard_manager import SwitchboardManager
 from papyon.msnp2p import P2PSessionManager
 from papyon.p2p import MSNObjectStore, WebcamHandler
+from papyon.sip import SIPCallManager
 from papyon.conversation import SwitchboardConversation, \
     ExternalNetworkConversation
 from papyon.event import ClientState, ClientErrorType, \
@@ -143,6 +144,8 @@ class Client(EventsDispatcher):
         self._p2p_session_manager = P2PSessionManager(self)
         self._webcam_handler = WebcamHandler(self)
         self._p2p_session_manager.register_handler(self._webcam_handler)
+
+        self._call_manager = SIPCallManager(self)
         
         self._msn_object_store = MSNObjectStore(self)
         self._p2p_session_manager.register_handler(self._msn_object_store)
@@ -160,6 +163,7 @@ class Client(EventsDispatcher):
         self.__connect_protocol_signals()
         self.__connect_switchboard_manager_signals()
         self.__connect_webcam_handler_signals()
+        self.__connect_call_manager_signals()
 
     ### public:
     @property
@@ -183,6 +187,12 @@ class Client(EventsDispatcher):
         """The address book of the current user
             @rtype: L{AddressBook<papyon.service.AddressBook>}"""
         return self._address_book
+
+    @property
+    def call_manager(self):
+        """The SIP call manager
+            @type: L{SIPCallManager<papyon.sip.SIPCallManager>}"""
+        return self._call_manager
 
     @property
     def oim_box(self):
@@ -480,3 +490,10 @@ class Client(EventsDispatcher):
             self._dispatch("on_invite_webcam", session, producer)
 
         self._webcam_handler.connect("session-created", session_created)
+
+    def __connect_call_manager_signals(self):
+        """Connect SIP Call Manager signals"""
+        def invite_received(call_manager, call):
+            self._dispatch("on_invite_conference", call)
+
+        self._call_manager.connect("invite-received", invite_received)

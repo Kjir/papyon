@@ -75,7 +75,7 @@ class SIPTransport(gobject.GObject):
         return True
 
     def send(self, message, ping=False):
-        elif self._client.status == IoStatus.OPEN:
+        if self._client.status == IoStatus.OPEN:
             if not ping:
                 self.log_message(">>", message)
             self._client.send(message)

@@ -58,8 +58,7 @@ class SIPCallManager(gobject.GObject):
 
     def invite(self, uri, tunneled=False):
         connection = self.get_connection(tunneled, self.server)
-        account = self._client.profile.account
-        call = connection.create_call(account, tunneled)
+        call = connection.create_call(tunneled)
         call.invite(uri)
         return call
 

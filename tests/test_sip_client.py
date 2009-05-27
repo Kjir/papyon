@@ -60,21 +60,21 @@ class SIPClient(papyon.Client):
         self.ttl = SIPTransport("vp.sip.messenger.msn.com", 443)
         self.sso = SingleSignOn(account, password)
         self.connection = SIPConnection(self.ttl, self.sso, account, password)
-        self._event_handler = ClientEvents(self, self.connection,
-                self.conference)
+        self._event_handler = ClientEvents(self, self.conference)
         gobject.idle_add(self.login, account, password)
 
     def invite(self):
-        call = self.connection.invite(self.invited)
+        call = self.call_manager.invite(self.invited)
         self.conference.setup(call)
         return False
 
 
-class ClientEvents(papyon.event.ClientEventInterface):
+class ClientEvents(papyon.event.ClientEventInterface,
+                   papyon.event.InviteEventInterface):
 
-    def __init__(self, client, connection, conference):
+    def __init__(self, client, conference):
         papyon.event.ClientEventInterface.__init__(self, client)
-        self.connection = connection
+        papyon.event.InviteEventInterface.__init__(self, client)
         self.conference = conference
 
     def on_client_state_changed(self, state):
@@ -85,6 +85,11 @@ class ClientEvents(papyon.event.ClientEventInterface):
             self._client.profile.presence = papyon.Presence.ONLINE
             for contact in self._client.address_book.contacts:
                 print contact
+
+    def on_invite_conference(self, call):
+        print "INVITED : call-id = %s" % call.get_call_id()
+        self.conference.setup(call)
+        call.accept()
 
     def on_client_error(self, error_type, error):
         print "ERROR :", error_type, " ->", error

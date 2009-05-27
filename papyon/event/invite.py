@@ -45,3 +45,8 @@ class InviteEventInterface(BaseEventInterface):
             @type session: L{WebcamSession<papyon.msnp2p.webcam.WebcamSession>}"""
         pass
 
+    def on_invite_conference(self, call):
+        """Called when we get invited into a conference
+            @param call: the call
+            @type call: L{SIPCall<papyon.sip.sip.SIPCall>}"""
+        pass

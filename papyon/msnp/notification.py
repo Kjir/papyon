@@ -471,7 +471,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _handle_UBN(self,command): # contact infos
         if not command.payload:
             return
-        print "RECEIVED UBN : %s\n%s" % (unicode(command), repr(command.payload))
+        if command.arguments[1] == '2':
+            self._client.call_manager.on_notification_received(command)
+        else:
+            print "RECEIVED UBN : %s\n%s" % (unicode(command), repr(command.payload))
         
     def _handle_UBX(self,command): # contact infos
         if not command.payload:

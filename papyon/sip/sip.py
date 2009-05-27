@@ -95,11 +95,6 @@ class SIPConnection(SIPBaseConnection):
         token = self._tokens[LiveService.MESSENGER_SECURE]
         self._registration.register(token)
 
-    def invite(self, uri):
-        call = self.create_call()
-        call.invite(uri)
-        return call
-
     def send(self, message, registration=False):
         if self.registered or registration:
             self._transport.send(str(message))
