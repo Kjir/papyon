@@ -35,10 +35,11 @@ class SIPBaseConnection(gobject.GObject):
             ([object]))
     }
 
-    def __init__(self, transport):
+    def __init__(self, transport, account):
         gobject.GObject.__init__(self)
         self._calls = {}
         self._transport = transport
+        self._account = account
         self._parser = SIPMessageParser(transport)
         self._parser.connect("message-received", self.on_message_received)
 
@@ -46,8 +47,8 @@ class SIPBaseConnection(gobject.GObject):
     def transport(self):
         return self._transport
 
-    def create_call(self, account, callid, tunneled):
-        call = SIPCall(self, account, callid, tunneled)
+    def create_call(self, callid=None, tunneled=False):
+        call = SIPCall(self, self._account, callid, tunneled)
         self.add_call(call)
         return call
 
@@ -74,14 +75,14 @@ class SIPBaseConnection(gobject.GObject):
 
 class SIPConnection(SIPBaseConnection):
 
-    def __init__(self, transport, sso, user, password):
-        SIPBaseConnection.__init__(self, transport)
-        self._user = user
+    def __init__(self, transport, sso, account, password):
+        SIPBaseConnection.__init__(self, transport, account)
+        self._account = account
         self._password = password
         self._sso = sso
         self._tokens = {}
         self._msg_queue = []
-        self._registration = SIPRegistration(self, user, password)
+        self._registration = SIPRegistration(self, account, password)
         self._registration.connect("registered", self.on_registration_success)
         self.add_call(self._registration)
 
@@ -95,7 +96,7 @@ class SIPConnection(SIPBaseConnection):
         self._registration.register(token)
 
     def invite(self, uri):
-        call = self.create_call(self._user)
+        call = self.create_call()
         call.invite(uri)
         return call
 
@@ -114,13 +115,13 @@ class SIPConnection(SIPBaseConnection):
 
 class SIPBaseCall(gobject.GObject):
 
-    def __init__(self, connection, user, callid=None, tunneled=False):
+    def __init__(self, connection, account, callid=None, tunneled=False):
         gobject.GObject.__init__(self)
         self._connection = connection
         self._ip = "127.0.0.1"
         self._port = 50390
         self._transport_protocol = connection.transport.protocol
-        self._user = user
+        self._account = account
         self._callid = callid
         self._tunneled = tunneled
         self._cseq = random.randint(1000, 5000)
@@ -180,7 +181,8 @@ class SIPBaseCall(gobject.GObject):
         request.add_header("CSeq", "%i %s" % (self.get_cseq(incr), code))
         request.add_header("To", to)
         request.add_header("From", "\"%s\" <sip:%s%s>;tag=%s;epid=%s" %
-            (name, self._user, self.get_mepid(), self.get_tag(), self.get_epid()))
+            (name, self._account, self.get_mepid(), self.get_tag(),
+             self.get_epid()))
         request.add_header("User-Agent", USER_AGENT)
         return request
 
@@ -219,8 +221,8 @@ class SIPBaseCall(gobject.GObject):
 
 class SIPCall(SIPBaseCall):
 
-    def __init__(self, connection, user, callid=None, tunneled=False):
-        SIPBaseCall.__init__(self, connection, user, callid, tunneled)
+    def __init__(self, connection, account, callid=None, tunneled=False):
+        SIPBaseCall.__init__(self, connection, account, callid, tunneled)
         self._state = None
         self._ice = ICESession(["audio"], draft=6)
         self._ice.connect("candidates-prepared", self.on_candidates_prepared)
@@ -233,10 +235,10 @@ class SIPCall(SIPBaseCall):
     def build_invite_contact(self):
         if self._tunneled:
             m = "<sip:%s%s>;proxy=replace;+sip.instance=\"<urn:uuid:%s>\"" % (
-                self._user, self.get_mepid(), self.get_sip_instance())
+                self._account, self.get_mepid(), self.get_sip_instance())
         else:
             m = "<sip:%s:%i;maddr=%s;transport=%s>;proxy=replace" % (
-                self._user, self._port, self._ip, self._transport_protocol)
+                self._account, self._port, self._ip, self._transport_protocol)
         return m
 
     def build_invite_request(self, uri, to):
@@ -371,8 +373,8 @@ class SIPRegistration(SIPBaseCall):
         'failed': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ([]))
     }
 
-    def __init__(self, connection, user, password, tunneled=False):
-        SIPBaseCall.__init__(self, connection, user, None, tunneled)
+    def __init__(self, connection, account, password, tunneled=False):
+        SIPBaseCall.__init__(self, connection, account, None, tunneled)
         self._state = "NEW"
         self._password = password
 
@@ -381,8 +383,8 @@ class SIPRegistration(SIPBaseCall):
         return (self._state == "REGISTERED")
 
     def build_register_request(self, timeout, auth):
-        uri = self._user.split('@')[1]
-        request = self.build_request("REGISTER", uri, "<sip:%s>" % self._user)
+        uri = self._account.split('@')[1]
+        request = self.build_request("REGISTER", uri, "<sip:%s>" % self._account)
         request.add_header("ms-keep-alive", "UAC;hop-hop=yes")
         request.add_header("Contact", "<sip:%s:%s;transport=%s>;proxy=replace" %
             (self._ip, self._port, self._transport_protocol))
@@ -400,7 +402,7 @@ class SIPRegistration(SIPBaseCall):
 
     def cancel(self):
         gobject.remove_source(self._src)
-        auth = "%s:%s" % (self._user, self._password)
+        auth = "%s:%s" % (self._account, self._password)
         auth = base64.encodestring(auth).replace("\n", "")
         request = self.build_register_request(0, auth)
         self._state = "UNREGISTERING"
