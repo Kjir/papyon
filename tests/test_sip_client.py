@@ -81,7 +81,7 @@ class ClientEvents(papyon.event.ClientEventInterface):
         if state == papyon.event.ClientState.CLOSED:
             self._client.quit()
         elif state == papyon.event.ClientState.OPEN:
-            self._client.profile.display_name = "Louis-Francis"
+            self._client.profile.display_name = "Paypon (SIP test)"
             self._client.profile.presence = papyon.Presence.ONLINE
             for contact in self._client.address_book.contacts:
                 print contact
