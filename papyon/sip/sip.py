@@ -67,6 +67,7 @@ class SIPBaseConnection(gobject.GObject):
         if call is None:
             if isinstance(message, SIPRequest) and message.code == "INVITE":
                 call = self.create_call(callid)
+                call._invite = message
                 self.emit("invite-received", call)
             else:
                 return #something's wrong
@@ -121,6 +122,7 @@ class SIPBaseCall(gobject.GObject):
         self._tunneled = tunneled
         self._cseq = random.randint(1000, 5000)
         self._uri = None
+        self._contact = None
 
     def gen_call_id(self):
         return str(400000000 + random.randint(0,2000000))
@@ -244,6 +246,13 @@ class SIPCall(SIPBaseCall):
         request.set_content(self._ice.build_sdp(), "application/sdp")
         return request
 
+    def build_invite_response(self, status):
+        response = self.build_response(self._invite, status)
+        response.add_header("Contact", self.build_invite_contact())
+        if status == 200:
+            response.set_content(self._ice.build_sdp(), "application/sdp")
+        return response
+
     def invite(self, uri):
         self._uri = uri
         if not self._ice.candidates_prepared:
@@ -263,19 +272,28 @@ class SIPCall(SIPBaseCall):
         self.send(self._invite)
 
     def accept(self):
-        response = self.build_response(self._invite, 200)
-        response.add_header("Contact", self.build_invite_contact())
-        response.set_content(self._ice.build_sdp(), "application/sdp")
+        if not self._ice.candidates_prepared:
+            return
+        response = self.build_invite_response(200)
+        self.send(response)
+
+    def reaccept(self):
+        if not self._ice.candidates_ready:
+            return
+        response = self.build_invite_response(200)
         self.send(response)
 
     def reject(self, status=603):
-        response = self.build_response(self._invite, status)
-        response.add_header("Contact", self.build_invite_contact())
+        response = self.build_invite_response(status)
         self.send(response)
 
     def send_ack(self, response):
-        to = response.get_header("To")
+        to = self._invite.get_header("To")
         request = self.build_request("ACK", self._uri, to)
+        if response.status == 200:
+            request.clone_headers("Route", response, "Record-Route")
+        else:
+            request.clone_headers("Route", self._invite)
         self.send(request)
 
     def cancel(self):
@@ -285,6 +303,7 @@ class SIPCall(SIPBaseCall):
         uri = self._invite.uri
         to = self._invite.get_header("To")
         request = self.build_request("CANCEL", uri, to)
+        request.clone_headers("Route", self._invite)
         self.send(request)
 
     def send_bye(self):
@@ -300,10 +319,8 @@ class SIPCall(SIPBaseCall):
         self.send(ringing)
 
         if self._state == "CONFIRMED":
-            if self._ice.candidates_ready:
-                self.accept()
-            else:
-                self._state = "REINVITED"
+            self._state = "REINVITED"
+            self.reaccept()
         else:
             self._state = "INCOMING"
 
@@ -311,11 +328,11 @@ class SIPCall(SIPBaseCall):
         if self._state is None:
             self.invite(self._uri)
         elif self._state == "INCOMING":
-            pass
+            self.accept()
 
     def on_candidates_ready(self, session):
         if self._state == "REINVITED":
-            self.accept()
+            self.reaccept()
         elif self._state == "CONFIRMED":
             self.reinvite()
 
@@ -470,9 +487,12 @@ class SIPMessage(object):
             return value[0]
         return value
 
-    def clone_headers(self, name, other):
+    def clone_headers(self, name, other, othername=None):
+        if othername is None:
+            othername = name
         name = self.normalize_name(name)
-        values = other.get_headers(name)
+        othername = self.normalize_name(othername)
+        values = other.get_headers(othername)
         if values is not None:
             self._headers[name] = values
 
