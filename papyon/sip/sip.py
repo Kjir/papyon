@@ -61,7 +61,7 @@ class SIPBaseConnection(gobject.GObject):
         self._transport.send(str(message))
 
     def on_message_received(self, parser, message):
-        callid = int(message.get_header("Call-ID"))
+        callid = message.get_header("Call-ID")
         call = self.get_call(callid)
         if call is None:
             if isinstance(message, SIPRequest) and message.code == "INVITE":
@@ -127,7 +127,7 @@ class SIPBaseCall(gobject.GObject):
         self._uri = None
 
     def gen_call_id(self):
-        return 400000000 + random.randint(0,2000000)
+        return str(400000000 + random.randint(0,2000000))
 
     def gen_hex(self):
         ret  = ('%04x'%(random.randint(0, 2**10)))[:4]
