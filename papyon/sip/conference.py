@@ -104,7 +104,7 @@ class Conference(gobject.GObject):
         candidate.foundation = fscandidate.foundation
         candidate.component_id = fscandidate.component_id
         candidate.transport = protos[fscandidate.proto]
-        candidate.priority = fscandidate.priority
+        candidate.priority = float(fscandidate.priority) / 1000
         candidate.username = fscandidate.username
         candidate.password = fscandidate.password
         candidate.type = types[fscandidate.type]
@@ -182,6 +182,7 @@ class Conference(gobject.GObject):
                 type = s["stream"].get_property("session").get_property("media-type")
                 name = self.get_media_name(type)
                 candidates = self._local_candidates[name]
+                self._local_candidates[name] = []
                 self._ice.set_local_candidates(name, candidates)
             if s.has_name("farsight-new-active-candidate-pair"):
                 type = s["stream"].get_property("session").get_property("media-type")
