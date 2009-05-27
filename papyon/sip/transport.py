@@ -67,7 +67,7 @@ class SIPTransport(gobject.GObject):
 
     def stop_keep_alive(self):
         if self._alive_src is not None:
-            gobject.remove_source(self._alive_src)
+            gobject.source_remove(self._alive_src)
             self._alive_src = None
 
     def on_keep_alive(self):
@@ -91,7 +91,7 @@ class SIPTransport(gobject.GObject):
         if self._client.status == IoStatus.OPEN:
             self.emit("connected")
             while self._msg_queue:
-                self.send(self._msg_queue.pop())
+                self.send(self._msg_queue.pop(0))
         elif self._client.status == IoStatus.CLOSED:
             if not self._closing:
                 self.open()

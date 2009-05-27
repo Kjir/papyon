@@ -104,7 +104,7 @@ class SIPConnection(SIPBaseConnection):
 
     def on_registration_success(self, registration):
         while len(self._msg_queue) > 0:
-            msg = self._msg_queue.pop()
+            msg = self._msg_queue.pop(0)
             self.send(msg)
 
 
