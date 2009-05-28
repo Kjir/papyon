@@ -53,9 +53,7 @@ class MSNObjectSession(P2PSession):
 
 
     def accept(self, data_file):
-        #Made an edit here, removing the file transfer code 
-        #gobject.idle_add(self._start_transfer, data_file)
-        self._respond(200)
+        gobject.idle_add(self._start_transfer, data_file)
     
     def reject(self):
         self._respond(603)
