@@ -245,7 +245,7 @@ class SLPSessionRequestBody(SLPMessageBody):
         if app_id is not None:
             self.add_header("AppID", app_id)
         if context is not None:
-            self.add_header("Context",  base64.b64encode(context))
+            self.add_header("Context",  base64.b64encode(repr(context)))
             
     @property
     def euf_guid(self):
@@ -323,7 +323,7 @@ class SLPSessionCloseBody(SLPMessageBody):
                 session_id, s_channel_state, capabilities_flags)
         
         if context is not None:
-            self.add_header("Context",  base64.b64encode(context));
+            self.add_header("Context",  base64.b64encode(repr(context)));
 
     @property
     def context(self):
