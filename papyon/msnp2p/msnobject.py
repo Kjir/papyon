@@ -29,7 +29,6 @@ from papyon.util.decorator import rw_property
 
 
 import gobject
-import base64
 import random
 
 __all__ = ['MSNObjectSession']
