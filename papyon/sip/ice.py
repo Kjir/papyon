@@ -52,7 +52,7 @@ class ICESession(gobject.GObject):
 
     @property
     def candidates_ready(self):
-        for name in self._local_candidates:
+        for name in self._media_types:
             if self._local_active.get(name, None) is None:
                 return False
         return True
@@ -278,7 +278,7 @@ class ICECandidate(object):
         elif self.draft is 6:
             (self.username, self.component_id, self.password, self.transport,
                 self.priority, self.ip, self.port) = parts[0:7]
-            self.foundation = self.username[0:31]
+            self.foundation = self.username[0:32]
 
         if self.draft is 19:
             self.priority = int(self.priority)
