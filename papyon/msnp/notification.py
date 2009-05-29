@@ -72,6 +72,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 gobject.TYPE_NONE,
                 ()),
 
+            "buddy-notification-received" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+
             "mail-received" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -265,6 +269,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             payload = '<ml><d n="%s"><c n="%s" l="%d" t="%d"/></d></ml>' % \
                     (domain, user, membership, network_id)
             self._send_command("RML", payload=payload)
+
+    def send_user_notification(self, message, contact, type):
+        self._send_command("UUN", contact.account, type, len(message),
+                payload=message)
 
     def send_unmanaged_message(self, contact, message):
         content_type = message.content_type[0]
@@ -471,10 +479,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _handle_UBN(self,command): # contact infos
         if not command.payload:
             return
-        if command.arguments[1] == '2':
-            self._client.call_manager.on_notification_received(command)
-        else:
-            print "RECEIVED UBN : %s\n%s" % (unicode(command), repr(command.payload))
+        self.emit("buddy-notification-received", command)
         
     def _handle_UBX(self,command): # contact infos
         if not command.payload:

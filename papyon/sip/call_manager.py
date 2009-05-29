@@ -34,15 +34,21 @@ class SIPCallManager(gobject.GObject):
     server = "vp.sip.messenger.msn.com"
     port = 443
 
-    def __init__(self, client):
+    def __init__(self, client, protocol):
         gobject.GObject.__init__(self)
         self._client = client
+        self._protocol = protocol
+        self._protocol.connect("buddy-notification-received",
+                self.on_notification_received)
         self._connections = {}
 
     def create_connection(self, tunneled, host=None):
-        if not tunneled:
+        account = self._client.profile.account
+        if tunneled:
+            transport = SIPTunneledTransport(self._protocol)
+            connection = SIPTunneledConnection(transport, account)
+        else:
             transport = SIPTransport(host, self.port)
-            account = self._client.profile.account
             password = str(self._client.profile.password)
             sso = self._client._sso
             connection = SIPConnection(transport, sso, account, password)
@@ -62,7 +68,9 @@ class SIPCallManager(gobject.GObject):
         call.invite(uri)
         return call
 
-    def on_notification_received(self, notification):
+    def on_notification_received(self, protocol, notification):
+        if notification.arguments[1] != '2':
+            return
         args = notification.payload.split()
         if len(args) == 3 and args[0] == "INVITE":
             # Register to the server so we can take the call

@@ -20,22 +20,40 @@
 
 from papyon.gnet.constants import *
 from papyon.gnet.io import *
+from papyon.sip.sip import SIPMessageParser
 
+import base64
 import gobject
+import xml
 
-class SIPTransport(gobject.GObject):
+class SIPBaseTransport(gobject.GObject):
 
     __gsignals__ = {
-        "connected": (gobject.SIGNAL_RUN_FIRST,
-            gobject.TYPE_NONE,
-            ()),
-        "chunk-received": (gobject.SIGNAL_RUN_FIRST,
+        "message-received": (gobject.SIGNAL_RUN_FIRST,
             gobject.TYPE_NONE,
             ([object]))
     }
 
-    def __init__(self, host, port):
+    def __init__(self):
         gobject.GObject.__init__(self)
+        self._parser = SIPMessageParser()
+        self._parser.connect("message-parsed", self.on_message_parsed)
+
+    def on_message_parsed(self, parser, message):
+        self.emit("message-received", message)
+
+    def send(self, message):
+        raise NotImplementedError
+
+    def log_message(self, prefix, message):
+        for line in message.splitlines():
+            print prefix, line
+
+
+class SIPTransport(SIPBaseTransport):
+
+    def __init__(self, host, port):
+        SIPBaseTransport.__init__(self)
         self._client = SSLTCPClient(host, port)
         self._client.connect("received", self.on_received)
         self._client.connect("notify::status", self.on_status_changed)
@@ -47,55 +65,87 @@ class SIPTransport(gobject.GObject):
     def protocol(self):
         return "tls"
 
-    def open(self):
+    def send(self, message):
+        data = str(message)
+        if self._client.status == IoStatus.OPEN:
+            self.log_message(">>", data)
+            self._send(data)
+        else:
+            self._msg_queue.append(message)
+            self._open()
+
+    def _open(self):
         if self._client.status == IoStatus.OPEN:
             return
-        self.close()
+        self._close()
         self._closing = False
         self._client.open()
-        self.start_keep_alive()
+        self._start_keep_alive()
 
-    def close(self):
+    def _close(self):
         if self._client.status == IoStatus.CLOSED:
             return
-        self.stop_keep_alive()
+        self._stop_keep_alive()
         self._closing = True
         self._client.close()
 
-    def start_keep_alive(self):
-        self._alive_src = gobject.timeout_add(5000, self.on_keep_alive)
+    def _send(self, data):
+        self._client.send(data)
 
-    def stop_keep_alive(self):
+    def _start_keep_alive(self):
+        self._alive_src = gobject.timeout_add(5000, self._on_keep_alive)
+
+    def _stop_keep_alive(self):
         if self._alive_src is not None:
             gobject.source_remove(self._alive_src)
             self._alive_src = None
 
-    def on_keep_alive(self):
-        self.send("\r\n\r\n\r\n\r\n", True)
-        return True
-
-    def send(self, message, ping=False):
+    def _on_keep_alive(self):
         if self._client.status == IoStatus.OPEN:
-            if not ping:
-                self.log_message(">>", message)
-            self._client.send(message)
-        elif not ping:
-            self._msg_queue.append(message)
-            self.open()
+            self._send("\r\n\r\n\r\n\r\n")
+            return True
+        else:
+            return False
 
-    def on_received(self, client, message, len):
-        self.log_message("<<", message)
-        self.emit("chunk-received", message)
+    def on_received(self, client, chunk, len):
+        self.log_message("<<", chunk)
+        self._parser.append(chunk)
 
     def on_status_changed(self, client, param):
         if self._client.status == IoStatus.OPEN:
-            self.emit("connected")
             while self._msg_queue:
                 self.send(self._msg_queue.pop(0))
         elif self._client.status == IoStatus.CLOSED:
             if not self._closing:
-                self.open()
+                self._open()
 
-    def log_message(self, prefix, message):
-        for line in message.splitlines():
-            print prefix, line
+
+class SIPTunneledTransport(SIPBaseTransport):
+
+    def __init__(self, protocol):
+        SIPBaseTransport.__init__(self)
+        self._protocol = protocol
+        self._protocol.connect("buddy-notification-received",
+                self.on_notification_received)
+
+    @property
+    def protocol(self):
+        return "tcp"
+
+    def send(self, message):
+        call_id = message.call.id
+        contact = message.call.contact
+        data = base64.b64encode(str(message))
+        data = '<sip e="base64" fid="1" i="%s"><msg>%s</msg></sip>' % \
+                (callid, data)
+        data = data.replace("\r\n", "\n").replace("\n", "\r\n")
+        self._protocol.send_user_notification(data, contact, 12)
+
+    def on_notification_received(self, protocol, notification):
+        if notification.arguments[1] != '12':
+            return
+        doc = xml.dom.minidom.parseString(notification.payload)
+        chunk = doc.getElementsByTagName("msg")[0].firstChild.data
+        chunk = base64.b64decode(message)
+        self._parser.append(chunk)
+        doc.unlink()

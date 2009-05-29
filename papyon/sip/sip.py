@@ -39,18 +39,13 @@ class SIPBaseConnection(gobject.GObject):
     def __init__(self, transport, account):
         gobject.GObject.__init__(self)
         self._calls = {}
-        self._transport = transport
         self._account = account
-        self._parser = SIPMessageParser(transport)
-        self._parser.connect("message-received", self.on_message_received)
+        self._transport = transport
+        self._transport.connect("message-received", self.on_message_received)
 
     @property
     def transport(self):
         return self._transport
-
-    @property
-    def tunneled(self):
-        return False
 
     def create_call(self, callid=None):
         call = SIPCall(self, self._account, callid)
@@ -64,7 +59,7 @@ class SIPBaseConnection(gobject.GObject):
         return self._calls.get(callid, None)
 
     def send(self, message):
-        self._transport.send(str(message))
+        self._transport.send(message)
 
     def on_message_received(self, parser, message):
         callid = message.get_header("Call-ID")
@@ -96,6 +91,10 @@ class SIPConnection(SIPBaseConnection):
     def registered(self):
         return self._registration.registered
 
+    @property
+    def tunneled(self):
+        return False
+
     @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
     def register(self, callback=None, errcb=None):
         token = self._tokens[LiveService.MESSENGER_SECURE]
@@ -103,7 +102,7 @@ class SIPConnection(SIPBaseConnection):
 
     def send(self, message, registration=False):
         if self.registered or registration:
-            self._transport.send(str(message))
+            self._transport.send(message)
         else:
             self._msg_queue.append(message)
             self.register(None, None)
@@ -112,6 +111,13 @@ class SIPConnection(SIPBaseConnection):
         while len(self._msg_queue) > 0:
             msg = self._msg_queue.pop(0)
             self.send(msg)
+
+
+class SIPTunneledConnection(SIPBaseConnection):
+
+    @property
+    def tunneled(self):
+        return True
 
 
 class SIPBaseCall(gobject.GObject):
@@ -288,6 +294,7 @@ class SIPCall(SIPBaseCall):
     def reaccept(self):
         if not self._ice.candidates_ready:
             return
+        self._state = "CONFIRMED"
         self.answer(200)
 
     def reject(self, status=603):
@@ -358,12 +365,14 @@ class SIPCall(SIPBaseCall):
         if response.status >= 200:
             self.send_ack(response)
 
-        if response.status in (100, 180, 408, 480, 486, 487, 504, 603):
+        if response.status in (100, 180):
+            pass
+        elif response.status in (408, 480, 486, 487, 504, 603):
             pass
         elif response.status is 200:
             self._state = "CONFIRMED"
             self._ice.parse_sdp(response.body)
-            if old_state == "CALLING":
+            if old_state != "REINVITING" and not self._incoming:
                 self.reinvite()
         else:
             self.send_bye()
@@ -575,13 +584,12 @@ class SIPMessageParser(gobject.GObject):
     version = "SIP/2.0"
 
     __gsignals__ = {
-        'message-received': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
+        'message-parsed': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
             ([object]))
     }
 
-    def __init__(self, transport):
+    def __init__(self):
         gobject.GObject.__init__(self)
-        transport.connect("chunk-received", self.on_chunk_received)
         self.reset()
 
     def reset(self):
@@ -590,7 +598,7 @@ class SIPMessageParser(gobject.GObject):
         self._state = "start"
         self._buffer = ""
 
-    def on_chunk_received(self, transport, chunk):
+    def append(self, chunk):
         self._buffer += chunk
         finished = False
         while not finished:
@@ -628,7 +636,7 @@ class SIPMessageParser(gobject.GObject):
                 return True
 
         if self._state == "done":
-            self.emit("message-received", self._message)
+            self.emit("message-parsed", self._message)
             self.reset()
             return True
 

@@ -145,7 +145,7 @@ class Client(EventsDispatcher):
         self._webcam_handler = WebcamHandler(self)
         self._p2p_session_manager.register_handler(self._webcam_handler)
 
-        self._call_manager = SIPCallManager(self)
+        self._call_manager = SIPCallManager(self, self._protocol)
         
         self._msn_object_store = MSNObjectStore(self)
         self._p2p_session_manager.register_handler(self._msn_object_store)
