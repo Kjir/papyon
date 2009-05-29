@@ -120,7 +120,8 @@ class SIPBaseCall(gobject.GObject):
         self._account = account
         self._callid = callid
         self._tunneled = tunneled
-        self._cseq = random.randint(1000, 5000)
+        self._cseq = 0
+        self._remote = None
         self._uri = None
         self._contact = None
 
@@ -202,14 +203,16 @@ class SIPBaseCall(gobject.GObject):
     def on_message_received(self, msg):
         route = msg.get_header("Record-Route")
         if route is not None:
-            self._uri = re.search("<sip:(.*)>", route).group(1)
+            self._uri = re.search("<sip:([^>]*)>", route).group(1)
         contact = msg.get_header("Contact")
         if contact is not None:
-            self._contact = re.search("<sip:.*>", contact).group(0)
+            self._contact = re.search("<sip:[^>]*>", contact).group(0)
 
         if type(msg) is SIPResponse:
+            self._remote = msg.get_header("To")
             handler_name = "on_%s_response" % msg.code.lower()
         elif type(msg) is SIPRequest:
+            self._remote = msg.get_header("From")
             handler_name = "on_%s_received" % msg.code.lower()
         handler = getattr(self, handler_name, None)
         if handler is not None:
@@ -246,13 +249,6 @@ class SIPCall(SIPBaseCall):
         request.set_content(self._ice.build_sdp(), "application/sdp")
         return request
 
-    def build_invite_response(self, status):
-        response = self.build_response(self._invite, status)
-        response.add_header("Contact", self.build_invite_contact())
-        if status == 200:
-            response.set_content(self._ice.build_sdp(), "application/sdp")
-        return response
-
     def invite(self, uri):
         self._uri = uri
         if not self._ice.candidates_prepared:
@@ -271,63 +267,62 @@ class SIPCall(SIPBaseCall):
         self._invite.add_header("Supported", "ms-dialog-route-set-update")
         self.send(self._invite)
 
+    def answer(self, status):
+        response = self.build_response(self._invite, status)
+        if status == 200:
+            response.add_header("Contact", self.build_invite_contact())
+            response.set_content(self._ice.build_sdp(), "application/sdp")
+        self.send(response)
+
     def accept(self):
         if not self._ice.candidates_prepared:
             return
-        response = self.build_invite_response(200)
-        self.send(response)
+        self.answer(200)
 
     def reaccept(self):
         if not self._ice.candidates_ready:
             return
-        response = self.build_invite_response(200)
-        self.send(response)
+        self.answer(200)
 
     def reject(self, status=603):
-        response = self.build_invite_response(status)
-        self.send(response)
+        self.answer(status)
 
     def send_ack(self, response):
-        to = self._invite.get_header("To")
-        request = self.build_request("ACK", self._uri, to)
-        if response.status == 200:
-            request.clone_headers("Route", response, "Record-Route")
-        else:
-            request.clone_headers("Route", self._invite)
+        request = self.build_request("ACK", self._uri, self._remote)
+        request.add_header("Route", self._contact)
         self.send(request)
 
     def cancel(self):
         if self._state != "CALLING":
             return
         self._state = "DISCONNECTING"
-        uri = self._invite.uri
-        to = self._invite.get_header("To")
-        request = self.build_request("CANCEL", uri, to)
+        request = self.build_request("CANCEL", self._invite.uri, None)
+        request.clone_headers("To", self._invite)
         request.clone_headers("Route", self._invite)
         self.send(request)
 
     def send_bye(self):
         self._state = "DISCONNECTING"
         request = self.build_request("BYE", self._uri, self._remote, incr=True)
+        request.add_header("Route", self._contact)
         self.send(request)
 
     def on_invite_received(self, invite):
         self._invite = invite
-        self._remote = invite.get_header("From")
-        self._ice.parse_sdp(invite.body)
-        ringing = self.build_response(invite, 180)
-        self.send(ringing)
+        self.answer(100)
 
         if self._state == "CONFIRMED":
             self._state = "REINVITED"
             self.reaccept()
         else:
             self._state = "INCOMING"
+            self._ice.parse_sdp(invite.body)
 
     def on_candidates_prepared(self, session):
         if self._state is None:
             self.invite(self._uri)
         elif self._state == "INCOMING":
+            self.answer(180)
             self.accept()
 
     def on_candidates_ready(self, session):
@@ -396,7 +391,8 @@ class SIPRegistration(SIPBaseCall):
 
     def build_register_request(self, timeout, auth):
         uri = self._account.split('@')[1]
-        request = self.build_request("REGISTER", uri, "<sip:%s>" % self._account)
+        to =  "<sip:%s>" % self._account
+        request = self.build_request("REGISTER", uri, to, incr=1)
         request.add_header("ms-keep-alive", "UAC;hop-hop=yes")
         request.add_header("Contact", "<sip:%s:%s;transport=%s>;proxy=replace" %
             (self._ip, self._port, self._transport_protocol))
