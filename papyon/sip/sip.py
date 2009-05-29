@@ -26,6 +26,7 @@ import base64
 import gobject
 import random
 import re
+import uuid
 
 class SIPBaseConnection(gobject.GObject):
 
@@ -128,21 +129,13 @@ class SIPBaseCall(gobject.GObject):
         self._route = None
         self._uri = None
 
-    def gen_call_id(self):
-        return str(400000000 + random.randint(0,2000000))
-
-    def gen_hex(self):
-        ret  = ('%04x'%(random.randint(0, 2**10)))[:4]
-        ret += ('%04x'%(random.randint(0, 2**10)))[:4]
-        return ret
-
     def gen_mepid(self):
         # TODO generate a machine guid
         pass
 
     def get_call_id(self):
         if not self._callid:
-            self._callid = self.gen_call_id()
+            self._callid = uuid.uuid4().get_hex()
         return self._callid
 
     def get_conversation_id(self):
@@ -158,7 +151,7 @@ class SIPBaseCall(gobject.GObject):
 
     def get_epid(self):
         if not hasattr(self, '_epid'):
-            self._epid = self.gen_hex()
+            self._epid = uuid.uuid4().get_hex()[:10]
         return self._epid
 
     def get_mepid(self):
@@ -170,7 +163,7 @@ class SIPBaseCall(gobject.GObject):
 
     def get_tag(self):
         if not hasattr(self, '_tag'):
-            self._tag = self.gen_hex()
+            self._tag = uuid.uuid4().get_hex()
         return self._tag
 
     def get_sip_instance(self):
