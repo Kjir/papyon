@@ -224,7 +224,9 @@ class Conference(gobject.GObject):
             return "video"
 
     def make_audio_source(self, name="audiotestsrc"):
-        return gst.element_factory_make(name)
+        element = gst.element_factory_make(name)
+        element.set_property("is-live", True)
+        return element
 
     def make_audio_sink(self, async=False):
         pass
