@@ -173,7 +173,13 @@ class SDPMessage(object):
 
     def __init__(self):
         self._medias = {}
-        self.ip = ""
+        self._ip = ""
+
+    @property
+    def ip(self):
+        if self._ip == "":
+            return self._medias["audio"].ip
+        return self._ip
 
     @property
     def medias(self):
@@ -208,7 +214,7 @@ class SDPMessage(object):
             val = line[2:]
 
             if key == 'o':
-                self.ip = val.split()[5]
+                self._ip = val.split()[5]
             elif key == 'm':
                 media = SDPMedia(val.split()[0])
                 media.port = int(val.split()[1])
@@ -218,7 +224,7 @@ class SDPMessage(object):
                 self._medias[media.name] = media
             elif key == 'c':
                 if media is None:
-                    self.ip = val.split()[2]
+                    self._ip = val.split()[2]
                 else:
                     media.ip = val.split()[2]
             elif key == 'a':
