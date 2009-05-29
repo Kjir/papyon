@@ -47,8 +47,12 @@ class SIPBaseConnection(gobject.GObject):
     def transport(self):
         return self._transport
 
-    def create_call(self, callid=None, tunneled=False):
-        call = SIPCall(self, self._account, callid, tunneled)
+    @property
+    def tunneled(self):
+        return False
+
+    def create_call(self, callid=None):
+        call = SIPCall(self, self._account, callid)
         self.add_call(call)
         return call
 
@@ -111,7 +115,7 @@ class SIPConnection(SIPBaseConnection):
 
 class SIPBaseCall(gobject.GObject):
 
-    def __init__(self, connection, account, callid=None, tunneled=False):
+    def __init__(self, connection, account, callid=None):
         gobject.GObject.__init__(self)
         self._connection = connection
         self._ip = "127.0.0.1"
@@ -119,7 +123,6 @@ class SIPBaseCall(gobject.GObject):
         self._transport_protocol = connection.transport.protocol
         self._account = account
         self._callid = callid
-        self._tunneled = tunneled
         self._cseq = 0
         self._remote = None
         self._route = None
@@ -143,7 +146,7 @@ class SIPBaseCall(gobject.GObject):
         return self._callid
 
     def get_conversation_id(self):
-        if self._tunneled:
+        if self._connection.tunneled:
             return 1
         else:
             return 0
@@ -159,7 +162,7 @@ class SIPBaseCall(gobject.GObject):
         return self._epid
 
     def get_mepid(self):
-        if not self._tunneled:
+        if not self._connection.tunneled:
             return ""
         if not hasattr(self, '_mepid'):
             self._mepid = self.gen_mepid()
@@ -227,8 +230,12 @@ class SIPBaseCall(gobject.GObject):
 
 class SIPCall(SIPBaseCall):
 
-    def __init__(self, connection, account, callid=None, tunneled=False):
-        SIPBaseCall.__init__(self, connection, account, callid, tunneled)
+    def __init__(self, connection, account, callid=None):
+        SIPBaseCall.__init__(self, connection, account, callid)
+        if callid is None:
+            self._incoming = False
+        else:
+            self._incoming = True
         self._state = None
         self._ice = ICESession(["audio"], draft=6)
         self._ice.connect("candidates-prepared", self.on_candidates_prepared)
@@ -239,7 +246,7 @@ class SIPCall(SIPBaseCall):
         return self._ice
 
     def build_invite_contact(self):
-        if self._tunneled:
+        if self._connection.tunneled:
             m = "<sip:%s%s>;proxy=replace;+sip.instance=\"<urn:uuid:%s>\"" % (
                 self._account, self.get_mepid(), self.get_sip_instance())
         else:
@@ -334,7 +341,7 @@ class SIPCall(SIPBaseCall):
     def on_candidates_ready(self, session):
         if self._state == "REINVITED":
             self.reaccept()
-        elif self._state == "CONFIRMED":
+        elif self._state == "CONFIRMED" and not self._incoming:
             self.reinvite()
 
     def on_ack_received(self, ack):
@@ -386,8 +393,8 @@ class SIPRegistration(SIPBaseCall):
         'failed': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ([]))
     }
 
-    def __init__(self, connection, account, password, tunneled=False):
-        SIPBaseCall.__init__(self, connection, account, None, tunneled)
+    def __init__(self, connection, account, password):
+        SIPBaseCall.__init__(self, connection, account)
         self._state = "NEW"
         self._password = password
 
