@@ -26,6 +26,7 @@ from papyon.sip.sdp import *
 import pygst
 pygst.require('0.10')
 
+import base64
 import farsight
 import gobject
 import gst
@@ -125,10 +126,23 @@ class Conference(gobject.GObject):
             fscandidate.ip = candidate.ip
             fscandidate.port = candidate.port
             fscandidate.component_id = candidate.component_id
-            fscandidate.username = candidate.username
             fscandidate.proto = proto
             fscandidate.type = type
+            fscandidate.username = candidate.username
+            #FIXME
+            while True:
+                try:
+                    base64.b64decode(fscandidate.username)
+                    break
+                except:
+                    fscandidate.username += "="
             fscandidate.password = candidate.password
+            while True:
+                try:
+                    base64.b64decode(fscandidate.password)
+                    break
+                except:
+                    fscandidate.password += "="
             fscandidate.priority = int(candidate.priority * 1000)
             fscandidates.append(fscandidate)
         return fscandidates
@@ -162,11 +176,13 @@ class Conference(gobject.GObject):
         self.stream.set_remote_candidates(candidates)
 
     def on_bus_message(self, bus, msg):
+        ret = gst.BUS_PASS
         if msg.type == gst.MESSAGE_ELEMENT:
             s = msg.structure
             if s.has_name("farsight-error"):
                 print "Farsight error :", s["error-msg"]
             if s.has_name("farsight-codecs-changed"):
+                ret = gst.BUS_DROP
                 type = s["session"].get_property("media-type")
                 name = self.get_media_name(type)
                 ready = s["session"].get_property("codecs-ready")
@@ -174,22 +190,26 @@ class Conference(gobject.GObject):
                     codecs = s["session"].get_property("codecs")
                     self._ice.set_local_codecs(name, self.convert_codecs(codecs))
             if s.has_name("farsight-new-local-candidate"):
+                ret = gst.BUS_DROP
                 type = s["stream"].get_property("session").get_property("media-type")
                 name = self.get_media_name(type)
                 candidate = self.convert_candidate(s["candidate"])
                 self._local_candidates.setdefault(name, []).append(candidate)
             if s.has_name("farsight-local-candidates-prepared"):
+                ret = gst.BUS_DROP
                 type = s["stream"].get_property("session").get_property("media-type")
                 name = self.get_media_name(type)
                 candidates = self._local_candidates[name]
                 self._local_candidates[name] = []
                 self._ice.set_local_candidates(name, candidates)
             if s.has_name("farsight-new-active-candidate-pair"):
+                ret = gst.BUS_DROP
                 type = s["stream"].get_property("session").get_property("media-type")
                 name = self.get_media_name(type)
                 local = self.convert_candidate(s["local-candidate"])
                 remote = self.convert_candidate(s["remote-candidate"])
                 self._ice.set_active_candidates(name, local, remote)
+        return ret
 
     def on_src_pad_added(self, stream, pad, codec, pipeline):
         audiosink = gst.element_factory_make("alsasink")
