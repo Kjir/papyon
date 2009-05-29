@@ -122,8 +122,8 @@ class SIPBaseCall(gobject.GObject):
         self._tunneled = tunneled
         self._cseq = 0
         self._remote = None
+        self._route = None
         self._uri = None
-        self._contact = None
 
     def gen_call_id(self):
         return str(400000000 + random.randint(0,2000000))
@@ -141,6 +141,12 @@ class SIPBaseCall(gobject.GObject):
         if not self._callid:
             self._callid = self.gen_call_id()
         return self._callid
+
+    def get_conversation_id(self):
+        if self._tunneled:
+            return 1
+        else:
+            return 0
 
     def get_cseq(self, incr=False):
         if incr:
@@ -203,10 +209,10 @@ class SIPBaseCall(gobject.GObject):
     def on_message_received(self, msg):
         route = msg.get_header("Record-Route")
         if route is not None:
-            self._uri = re.search("<sip:([^>]*)>", route).group(1)
+            self._route = re.search("<sip:[^>]*>", route).group(0)
         contact = msg.get_header("Contact")
         if contact is not None:
-            self._contact = re.search("<sip:[^>]*>", contact).group(0)
+            self._uri = re.search("<sip:([^>]*)>", contact).group(1)
 
         if type(msg) is SIPResponse:
             self._remote = msg.get_header("To")
@@ -242,10 +248,10 @@ class SIPCall(SIPBaseCall):
         return m
 
     def build_invite_request(self, uri, to):
+        conversation_id = self.get_conversation_id()
         request = self.build_request("INVITE", uri, to, incr=True)
-        request.add_header("Ms-Conversation-ID", "f=%s" % int(self._tunneled))
+        request.add_header("Ms-Conversation-ID", "f=%s" % conversation_id)
         request.add_header("Contact", self.build_invite_contact())
-        request.add_header("Record-Route", "<sip:127.0.0.1:50930;transport=tcp>")
         request.set_content(self._ice.build_sdp(), "application/sdp")
         return request
 
@@ -263,7 +269,7 @@ class SIPCall(SIPBaseCall):
             return
         self._state = "REINVITING"
         self._invite = self.build_invite_request(self._uri, self._remote)
-        self._invite.add_header("Route", self._contact)
+        self._invite.add_header("Route", self._route)
         self._invite.add_header("Supported", "ms-dialog-route-set-update")
         self.send(self._invite)
 
@@ -289,7 +295,7 @@ class SIPCall(SIPBaseCall):
 
     def send_ack(self, response):
         request = self.build_request("ACK", self._uri, self._remote)
-        request.add_header("Route", self._contact)
+        request.add_header("Route", self._route)
         self.send(request)
 
     def cancel(self):
@@ -304,7 +310,7 @@ class SIPCall(SIPBaseCall):
     def send_bye(self):
         self._state = "DISCONNECTING"
         request = self.build_request("BYE", self._uri, self._remote, incr=True)
-        request.add_header("Route", self._contact)
+        request.add_header("Route", self._route)
         self.send(request)
 
     def on_invite_received(self, invite):
