@@ -81,7 +81,10 @@ def process_response(soap_response):
             result[role.text] = members
         last_changes = service.find("./ab:LastChange")
     else:
-        last_changes = {'text':"0-0-0T0:0:0.0-0:0"}
+        # FIXME: This has probably to be handled in a better way
+        # This is a "lambda object", dinamically modifiable
+        # http://evaisse.com/post/52748807/python-lambda-object-php-stdclass-equivalent
+        last_changes = type('lambdaobject', (object,), {'text':"0-0-0T0:0:0.0-0:0"})()
         result = {'Allow':{},'Block':{},'Reverse':{},'Pending':{}}
     return (result, last_changes)
 
