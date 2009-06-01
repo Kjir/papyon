@@ -60,18 +60,6 @@ class MSNObjectSession(P2PSession):
     def reject(self):
         self._respond(603)
 
-    def _respond(self, status_code):
-        body = SLPSessionRequestBody(session_id=self._id,capabilities_flags=None,s_channel_state=None)
-        self._cseq += 1
-        response = SLPResponseMessage(status_code,
-            to=self._peer.account,
-            frm=self._session_manager._client.profile.account,
-            cseq=self._cseq,
-            branch=self._branch,
-            call_id=self._call_id)
-        response.body = body
-        self._send_p2p_data(response)
-
     def _start_transfer(self, data_file):
         self._respond(200)
         self._send_p2p_data("\x00" * 4)

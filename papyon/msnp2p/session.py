@@ -79,6 +79,18 @@ class P2PSession(gobject.GObject):
     def peer(self):
         return self._peer
 
+    def _respond(self, status_code):
+        body = SLPSessionRequestBody(session_id=self._id,capabilities_flags=None,s_channel_state=None)
+        self._cseq += 1
+        response = SLPResponseMessage(status_code,
+            to=self._peer.account,
+            frm=self._session_manager._client.profile.account,
+            cseq=self._cseq,
+            branch=self._branch,
+            call_id=self._call_id)
+        response.body = body
+        self._send_p2p_data(response)
+
     def _close(self):
         body = SLPSessionCloseBody()
         self._cseq = 0
