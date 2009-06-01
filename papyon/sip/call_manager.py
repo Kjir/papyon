@@ -42,6 +42,7 @@ class SIPCallManager(gobject.GObject):
                 self.on_notification_received)
         self._connections = {}
         self._disconnecting = []
+        self.create_connection(True, "NS")
 
     def create_connection(self, tunneled, host=None):
         if tunneled:
@@ -65,12 +66,14 @@ class SIPCallManager(gobject.GObject):
             del self._connections[host]
 
     def get_connection(self, tunneled, host=None):
+        if tunneled:
+            host = "NS"
         connection = self._connections.get(host, None)
         if connection is None:
             connection = self.create_connection(tunneled, host)
         return connection
 
-    def invite(self, uri, tunneled=False):
+    def invite(self, uri, tunneled=True):
         connection = self.get_connection(tunneled, self.server)
         call = connection.create_call()
         call.invite(uri)
