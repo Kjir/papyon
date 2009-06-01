@@ -81,7 +81,10 @@ class SIPBaseConnection(gobject.GObject):
                 call._invite = message
                 self.emit("invite-received", call)
             else:
-                return #something's wrong
+                call = SIPCall(self, self._account, callid)
+                response = call.build_response(message, 481)
+                self.send(response) # call/transaction does not exist
+                return
         call.on_message_received(message)
 
 
