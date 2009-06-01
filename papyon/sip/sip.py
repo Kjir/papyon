@@ -18,6 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from papyon.event import EventsDispatcher
 from papyon.sip.constants import *
 from papyon.sip.ice import *
 from papyon.service.SingleSignOn import *
@@ -252,18 +253,24 @@ class SIPBaseCall(gobject.GObject):
             handler(msg)
 
 
-class SIPCall(SIPBaseCall):
+class SIPCall(SIPBaseCall, EventsDispatcher):
 
     def __init__(self, connection, account, callid=None):
         SIPBaseCall.__init__(self, connection, account, callid)
+        EventsDispatcher.__init__(self)
         if callid is None:
             self._incoming = False
         else:
             self._incoming = True
+        self._answered = False
+        self._early = False
         self._state = None
         self._ice = ICESession(["audio"], draft=6)
         self._ice.connect("candidates-prepared", self.on_candidates_prepared)
         self._ice.connect("candidates-ready", self.on_candidates_ready)
+        self._invite_src = None
+        self._response_src = None
+        self._end_src = None
 
     @property
     def ice(self):
@@ -291,18 +298,21 @@ class SIPCall(SIPBaseCall):
         if not self._ice.candidates_prepared:
             return
         self._state = "CALLING"
+        self._early = False
         self._remote = "<sip:%s>" % uri
         self._invite = self.build_invite_request(uri, self._remote)
         self.send(self._invite)
+        self._invite_src = gobject.timeout_add(10000, self.on_invite_timeout)
 
     def reinvite(self):
-        if not self._ice.candidates_ready:
+        if self._incoming or not self._ice.candidates_ready:
             return
         self._state = "REINVITING"
         self._invite = self.build_invite_request(self._uri, self._remote)
         self._invite.add_header("Route", self._route)
         self._invite.add_header("Supported", "ms-dialog-route-set-update")
         self.send(self._invite)
+        self._invite_src = gobject.timeout_add(10000, self.on_invite_timeout)
 
     def answer(self, status):
         response = self.build_response(self._invite, status)
@@ -311,19 +321,34 @@ class SIPCall(SIPBaseCall):
             response.set_content(self._ice.build_sdp(), "application/sdp")
         self.send(response)
 
-    def accept(self):
+    def ring(self):
         if not self._ice.candidates_prepared:
             return
+        self.answer(180)
+        self._dispatch("on_call_incoming")
+        self._resonse_src = gobject.timeout_add(10000, self.on_response_timeout)
+
+    def accept(self):
+        if self._answered:
+            return
+        gobject.source_remove(self._response_src)
+        self._answered = True
         self.answer(200)
+
+    def reject(self, status=603):
+        if self._answered:
+            return
+        gobject.source_remove(self._response_src)
+        self._answered = True
+        self.answer(status)
+        self.end()
 
     def reaccept(self):
         if not self._ice.candidates_ready:
             return
         self._state = "CONFIRMED"
         self.answer(200)
-
-    def reject(self, status=603):
-        self.answer(status)
+        self._dispatch("on_call_connected")
 
     def send_ack(self, response):
         request = self.build_request("ACK", self._uri, self._remote)
@@ -331,85 +356,129 @@ class SIPCall(SIPBaseCall):
         self.send(request)
 
     def cancel(self):
-        if self._state != "CALLING":
+        if self._state not in ("CALLING", "REINVITING"):
             return
         self._state = "DISCONNECTING"
         request = self.build_request("CANCEL", self._invite.uri, None)
         request.clone_headers("To", self._invite)
         request.clone_headers("Route", self._invite)
         self.send(request)
+        self._end_src = gobject.timeout_add(5000, self.on_end_timeout)
 
     def send_bye(self):
         self._state = "DISCONNECTING"
         request = self.build_request("BYE", self._uri, self._remote, incr=True)
         request.add_header("Route", self._route)
         self.send(request)
+        self._end_src = gobject.timeout_add(5000, self.on_end_timeout)
+
+    def end(self):
+        if self._invite_src is not None:
+            gobject.source_remove(self._invite_src)
+        if self._response_src is not None:
+            gobject.source_remove(self._response_src)
+        if self._end_src is not None:
+            gobject.source_remove(self._end_src)
+        self._state = "DISCONNECTED"
+        self._dispatch("on_call_ended")
+        self._connection.remove_call(self)
 
     def on_invite_received(self, invite):
         self._invite = invite
         self.answer(100)
 
-        if self._state == "CONFIRMED":
+        if self._state is None:
+            self._state = "INCOMING"
+            self._ice.parse_sdp(invite.body)
+            self._response_src = gobject.timeout_add(10000, self.on_response_timeout)
+        elif self._state == "CONFIRMED":
             self._state = "REINVITED"
             self.reaccept()
         else:
-            self._state = "INCOMING"
-            self._ice.parse_sdp(invite.body)
+            self.answer(488) # not acceptable here
 
     def on_candidates_prepared(self, session):
         if self._state is None:
             self.invite(self._uri)
         elif self._state == "INCOMING":
-            self.answer(180)
-            self.accept()
+            self.ring()
 
     def on_candidates_ready(self, session):
         if self._state == "REINVITED":
             self.reaccept()
-        elif self._state == "CONFIRMED" and not self._incoming:
+        elif self._state == "CONFIRMED":
             self.reinvite()
 
     def on_ack_received(self, ack):
         self._state = "CONFIRMED"
 
     def on_cancel_received(self, cancel):
-        if self._state == "INVITED":
+        if self._incoming and not self._answered:
             self.reject(487)
-        self._state = "DISCONNECTED"
         response = self.build_response(cancel, 200)
         self.send(response)
+        self.end()
 
     def on_bye_received(self, bye):
-        self._state = "DISCONNECTED"
         response = self.build_response(bye, 200)
         self.send(response)
+        self.end()
 
     def on_invite_response(self, response):
-        old_state = self._state
+        if self._state == "REINVITING":
+            self.on_reinvite_response(response)
+        elif self._state != "INVITING":
+            return
+
         self._remote = response.get_header("To")
         if response.status >= 200:
             self.send_ack(response)
+            gobject.source_remove(self._invite_src)
 
-        if response.status in (100, 180):
-            pass
-        elif response.status in (408, 480, 486, 487, 504, 603):
-            pass
+        if response.status is 100:
+            self._early = True
+        elif response.status is 180:
+            self._dispatch("on_call_ringing")
         elif response.status is 200:
             self._state = "CONFIRMED"
+            self._dispatch("on_call_accepted")
             self._ice.parse_sdp(response.body)
-            if old_state != "REINVITING" and not self._incoming:
-                self.reinvite()
+            self.reinvite()
+        elif response.status in (408, 480, 486, 487, 504, 603):
+            self._dispatch("on_call_rejected", response)
+            self.end()
+        else:
+            self.send_bye()
+
+    def on_reinvite_response(self, response):
+        if response.status >= 200:
+            self.send_ack(response)
+            gobject.source_remove(self._invite_src)
+
+        if response.status is 200:
+            self._state = "CONFIRMED"
+            self._dispatch("on_call_connected")
         else:
             self.send_bye()
 
     def on_cancel_response(self, response):
-        self._state = "DISCONNECTED"
+        self.end()
 
     def on_bye_response(self, response):
-        if response.status in (200, 403):
-            self._state = "DISCONNECTED"
-        else:
-            pass #self.send_bye()
+        self.end()
+
+    def on_invite_timeout(self):
+        self.cancel()
+        return False
+
+    def on_response_timeout(self):
+        self.reject(408)
+        self._dispatch("on_call_missed")
+        return False
+
+    def on_end_timeout(self):
+        self.end()
+        return False
 
 
 class SIPRegistration(SIPBaseCall):
