@@ -205,6 +205,11 @@ class SIPBaseCall(gobject.GObject):
     def send(self, message, registration=False):
         self._connection.send(message, registration)
 
+    def build_from_header(self, name="0"):
+        return '"%s" <sip:%s%s>;tag=%s;epid=%s' % \
+            (name, self._account, self.get_mepid(), self.get_tag(),
+             self.get_epid())
+
     def build_request(self, code, uri, to, name="0", incr=False):
         request = SIPRequest(code, uri)
         request.add_header("Via", "SIP/2.0/%s %s:%s" %
@@ -213,20 +218,14 @@ class SIPBaseCall(gobject.GObject):
         request.add_header("Call-ID", self.id)
         request.add_header("CSeq", "%i %s" % (self.get_cseq(incr), code))
         request.add_header("To", to)
-        request.add_header("From", "\"%s\" <sip:%s%s>;tag=%s;epid=%s" %
-            (name, self._account, self.get_mepid(), self.get_tag(),
-             self.get_epid()))
+        request.add_header("From", self.build_from_header(name))
         request.add_header("User-Agent", USER_AGENT)
         return request
 
     def build_response(self, request, status, reason=None):
-        to = request.get_header("To")
-        if not "tag=" in to:
-            to += ";tag=" + self.get_tag()
-
         response = SIPResponse(status, reason)
         response.clone_headers("From", request)
-        response.add_header("To", to)
+        response.add_header("To", self.build_from_header())
         response.clone_headers("CSeq", request)
         response.clone_headers("Record-Route", request)
         response.clone_headers("Via", request)
