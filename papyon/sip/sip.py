@@ -70,7 +70,7 @@ class SIPBaseConnection(gobject.GObject):
     def get_call(self, callid):
         return self._calls.get(callid, None)
 
-    def send(self, message):
+    def send(self, message, registration=False):
         self._transport.send(message)
 
     def on_message_received(self, parser, message):
@@ -84,7 +84,7 @@ class SIPBaseConnection(gobject.GObject):
                 account = self._client.profile.account
                 call = SIPCall(self, account, callid)
                 response = call.build_response(message, 481)
-                self.send(response) # call/transaction does not exist
+                call.send(response) # call/transaction does not exist
                 return
         call.on_message_received(message)
 
@@ -202,6 +202,7 @@ class SIPBaseCall(gobject.GObject):
         return SIP_INSTANCE
 
     def send(self, message, registration=False):
+        message.call = self
         self._connection.send(message, registration)
 
     def build_from_header(self, name="0"):
@@ -546,6 +547,8 @@ class SIPRegistration(SIPBaseCall):
 class SIPMessage(object):
 
     def __init__(self):
+        self._body = None
+        self._call = None
         self._headers = {}
         self.set_content("")
 
@@ -555,6 +558,14 @@ class SIPMessage(object):
             return self._body
         def fset(self, value):
             self._body = value
+        return locals()
+
+    @rw_property
+    def call():
+        def fget(self):
+            return self._call
+        def fset(self, value):
+            self._call = value
         return locals()
 
     @property
