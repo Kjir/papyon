@@ -170,13 +170,9 @@ class SIPBaseCall(gobject.GObject):
             self._id = uuid.uuid4().get_hex()
         return self._id
 
-    def gen_mepid(self):
-        # TODO generate a machine guid
-        pass
-
     def get_conversation_id(self):
         if self._connection.tunneled:
-            return 1
+            return 0
         else:
             return 0
 
