@@ -43,10 +43,10 @@ class SIPBaseConnection(gobject.GObject):
             ())
     }
 
-    def __init__(self, transport, account):
+    def __init__(self, client, transport):
         gobject.GObject.__init__(self)
         self._calls = {}
-        self._account = account
+        self._client = client
         self._transport = transport
         self._transport.connect("message-received", self.on_message_received)
 
@@ -55,7 +55,8 @@ class SIPBaseConnection(gobject.GObject):
         return self._transport
 
     def create_call(self, callid=None):
-        call = SIPCall(self, self._account, callid)
+        account = self._client.profile.account
+        call = SIPCall(self, account, callid)
         self.add_call(call)
         return call
 
@@ -78,10 +79,10 @@ class SIPBaseConnection(gobject.GObject):
         if call is None:
             if isinstance(message, SIPRequest) and message.code == "INVITE":
                 call = self.create_call(callid)
-                call._invite = message
                 self.emit("invite-received", call)
             else:
-                call = SIPCall(self, self._account, callid)
+                account = self._client.profile.account
+                call = SIPCall(self, account, callid)
                 response = call.build_response(message, 481)
                 self.send(response) # call/transaction does not exist
                 return
@@ -90,14 +91,12 @@ class SIPBaseConnection(gobject.GObject):
 
 class SIPConnection(SIPBaseConnection):
 
-    def __init__(self, transport, sso, account, password):
-        SIPBaseConnection.__init__(self, transport, account)
-        self._account = account
-        self._password = password
-        self._sso = sso
+    def __init__(self, client, transport):
+        SIPBaseConnection.__init__(self, client, transport)
+        self._sso = self._client._sso
         self._tokens = {}
         self._msg_queue = []
-        self._registration = SIPRegistration(self, account, password)
+        self._registration = SIPRegistration(self, self._client.profile.account)
         self._registration.connect("registered", self.on_registration_success)
         self._registration.connect("unregistered", self.on_unregistration_success)
         self.add_call(self._registration)
@@ -489,10 +488,9 @@ class SIPRegistration(SIPBaseCall):
         'failed': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ([]))
     }
 
-    def __init__(self, connection, account, password):
+    def __init__(self, connection, account):
         SIPBaseCall.__init__(self, connection, account)
         self._state = "NEW"
-        self._password = password
 
     @property
     def registered(self):

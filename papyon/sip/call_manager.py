@@ -44,15 +44,12 @@ class SIPCallManager(gobject.GObject):
         self._disconnecting = []
 
     def create_connection(self, tunneled, host=None):
-        account = self._client.profile.account
         if tunneled:
             transport = SIPTunneledTransport(self._protocol)
-            connection = SIPTunneledConnection(transport, account)
+            connection = SIPTunneledConnection(self._client, transport)
         else:
             transport = SIPTransport(host, self.port)
-            password = str(self._client.profile.password)
-            sso = self._client._sso
-            connection = SIPConnection(transport, sso, account, password)
+            connection = SIPConnection(self._client, transport)
         connection.connect("invite-received", self.on_invite_received)
         connection.connect("disconnecting", self.on_connection_disconnecting)
         connection.connect("disconnected", self.on_connection_disconnected)
