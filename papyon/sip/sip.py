@@ -191,11 +191,12 @@ class SIPBaseCall(gobject.GObject):
         return self._epid
 
     def get_mepid(self):
-        if not self._connection.tunneled:
+        if self._connection.tunneled:
+            mepid = self._connection._client.machine_guid
+            mepid = filter(lambda c: c not in "{-}", mepid).upper()
+            return ";mepid=%s" % mepid
+        else:
             return ""
-        if not hasattr(self, '_mepid'):
-            self._mepid = self.gen_mepid()
-        return ";mepid=%s" % self._mepid
 
     def get_tag(self):
         if not hasattr(self, '_tag'):
