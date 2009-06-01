@@ -85,12 +85,11 @@ class ClientEvents(papyon.event.ClientEventInterface,
             self._client.profile.presence = papyon.Presence.ONLINE
             for contact in self._client.address_book.contacts:
                 print contact
-            gobject.timeout_add(2000, self._client.invite)
+            #gobject.timeout_add(2000, self._client.invite)
 
     def on_invite_conference(self, call):
         print "INVITED : call-id = %s" % call.get_call_id()
         self.conference.setup(call)
-        call.accept()
 
     def on_client_error(self, error_type, error):
         print "ERROR :", error_type, " ->", error

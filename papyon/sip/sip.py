@@ -60,11 +60,11 @@ class SIPBaseConnection(gobject.GObject):
         return call
 
     def add_call(self, call):
-        self._calls[call.get_call_id()] = call
+        self._calls[call.id] = call
 
     def remove_call(self, call):
-        if call.get_call_id() in self._calls:
-            del self._calls[call.get_call_id()]
+        if call.id in self._calls:
+            del self._calls[call.id]
 
     def get_call(self, callid):
         return self._calls.get(callid, None)
@@ -151,27 +151,28 @@ class SIPTunneledConnection(SIPBaseConnection):
 
 class SIPBaseCall(gobject.GObject):
 
-    def __init__(self, connection, account, callid=None):
+    def __init__(self, connection, account, id=None):
         gobject.GObject.__init__(self)
         self._connection = connection
         self._ip = "127.0.0.1"
         self._port = 50390
         self._transport_protocol = connection.transport.protocol
         self._account = account
-        self._callid = callid
+        self._id = id
         self._cseq = 0
         self._remote = None
         self._route = None
         self._uri = None
 
+    @property
+    def id(self):
+        if not self._id:
+            self._id = uuid.uuid4().get_hex()
+        return self._id
+
     def gen_mepid(self):
         # TODO generate a machine guid
         pass
-
-    def get_call_id(self):
-        if not self._callid:
-            self._callid = uuid.uuid4().get_hex()
-        return self._callid
 
     def get_conversation_id(self):
         if self._connection.tunneled:
@@ -212,7 +213,7 @@ class SIPBaseCall(gobject.GObject):
         request.add_header("Via", "SIP/2.0/%s %s:%s" %
             (self._transport_protocol, self._ip, self._port))
         request.add_header("Max-Forwards", 70)
-        request.add_header("Call-ID", self.get_call_id())
+        request.add_header("Call-ID", self.id)
         request.add_header("CSeq", "%i %s" % (self.get_cseq(incr), code))
         request.add_header("To", to)
         request.add_header("From", "\"%s\" <sip:%s%s>;tag=%s;epid=%s" %
@@ -232,7 +233,7 @@ class SIPBaseCall(gobject.GObject):
         response.clone_headers("CSeq", request)
         response.clone_headers("Record-Route", request)
         response.clone_headers("Via", request)
-        response.add_header("Call-ID", self.get_call_id())
+        response.add_header("Call-ID", self.id)
         response.add_header("Max-Forwards", 70)
         response.add_header("User-Agent", USER_AGENT)
         return response
@@ -258,10 +259,10 @@ class SIPBaseCall(gobject.GObject):
 
 class SIPCall(SIPBaseCall, EventsDispatcher):
 
-    def __init__(self, connection, account, callid=None):
-        SIPBaseCall.__init__(self, connection, account, callid)
+    def __init__(self, connection, account, id=None):
+        SIPBaseCall.__init__(self, connection, account, id)
         EventsDispatcher.__init__(self)
-        if callid is None:
+        if id is None:
             self._incoming = False
         else:
             self._incoming = True
