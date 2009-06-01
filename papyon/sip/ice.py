@@ -201,6 +201,8 @@ class ICESession(gobject.GObject):
 
 class ICECandidate(object):
 
+    REL_EXT = [("typ", "type"), ("raddr", "base_ip"), ("rport", "base_port")]
+
     def __init__(self, draft=0, foundation=None, component_id=None,
                  transport=None, priority=None, username=None, password=None,
                  type=None, ip=None, port=None, base_ip=None, base_port=None):
@@ -219,30 +221,6 @@ class ICECandidate(object):
         self.base_ip = base_ip
         self.base_port = base_port
 
-    @rw_property
-    def type():
-        def fget(self):
-            return self._extensions.get("typ", None)
-        def fset(self, value):
-            self._extensions["typ"] = value
-        return locals()
-
-    @rw_property
-    def base_ip():
-        def fget(self):
-            return self._extensions.get("raddr", None)
-        def fset(self, value):
-            self._extensions["raddr"] = value
-        return locals()
-
-    @rw_property
-    def base_port():
-        def fget(self):
-            return self._extensions.get("rport", None)
-        def fset(self, value):
-            self._extensions["rport"] = value
-        return locals()
-
     def is_relay(self):
         if self.draft is 6:
             return (self.priority < 0.5)
@@ -255,6 +233,9 @@ class ICECandidate(object):
                 self.password, self.transport, self.priority, self.ip, self.port)
         elif self.draft is 19:
             ext = []
+            for (name, attr) in self.REL_EXT:
+                if getattr(self, attr):
+                    ext.append("%s %s" % (name, getattr(self, attr)))
             for k, v in self._extensions.iteritems():
                 if v is not None:
                     ext.append("%s %s" % (k, str(v)))
