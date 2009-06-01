@@ -24,7 +24,7 @@ from papyon.sip.sip import SIPMessageParser
 
 import base64
 import gobject
-import xml
+import xml.dom.minidom
 
 class SIPBaseTransport(gobject.GObject):
 
@@ -135,9 +135,10 @@ class SIPTunneledTransport(SIPBaseTransport):
     def send(self, message):
         call_id = message.call.id
         contact = message.call.contact
+        self.log_message(">>", str(message))
         data = base64.b64encode(str(message))
         data = '<sip e="base64" fid="1" i="%s"><msg>%s</msg></sip>' % \
-                (callid, data)
+                (call_id, data)
         data = data.replace("\r\n", "\n").replace("\n", "\r\n")
         self._protocol.send_user_notification(data, contact, 12)
 
@@ -146,6 +147,7 @@ class SIPTunneledTransport(SIPBaseTransport):
             return
         doc = xml.dom.minidom.parseString(notification.payload)
         chunk = doc.getElementsByTagName("msg")[0].firstChild.data
-        chunk = base64.b64decode(message)
+        chunk = base64.b64decode(chunk)
+        self.log_message("<<", chunk)
         self._parser.append(chunk)
         doc.unlink()
