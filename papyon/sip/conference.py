@@ -78,8 +78,13 @@ class Conference(gobject.GObject):
         self.conference = gst.element_factory_make("fsrtpconference")
         self._pipeline.add(self.conference)
 
+        if self._ice.draft is 19:
+            compatibility_mode = 3
+        else:
+            compatibility_mode = 2
+
         params = {"stun-ip" : "64.14.48.28", "stun-port" : 3478,
-                "compatibility-mode" : 2}
+                "compatibility-mode" : compatibility_mode}
         self.session = self.conference.new_session(farsight.MEDIA_TYPE_AUDIO)
         self.session.set_codec_preferences(self.build_codecs())
         self.participant = self.conference.new_participant("")
@@ -99,16 +104,21 @@ class Conference(gobject.GObject):
         return codecs
 
     def convert_candidate(self, fscandidate):
-        candidate = ICECandidate(draft=6)
+        candidate = ICECandidate(draft=self._ice.draft)
         candidate.ip = fscandidate.ip
         candidate.port = fscandidate.port
         candidate.foundation = fscandidate.foundation
         candidate.component_id = fscandidate.component_id
         candidate.transport = protos[fscandidate.proto]
-        candidate.priority = float(fscandidate.priority) / 1000
+        if candidate.draft is 6:
+            candidate.priority = float(fscandidate.priority) / 1000
+        elif candidate.draft is 19:
+            candidate.priority = int(fscandidate.priority)
         candidate.username = fscandidate.username
         candidate.password = fscandidate.password
         candidate.type = types[fscandidate.type]
+        candidate.base_ip = fscandidate.base_ip
+        candidate.base_port = fscandidate.base_port
         return candidate
 
     def convert_fs_candidates(self, candidates):
@@ -143,7 +153,10 @@ class Conference(gobject.GObject):
                     break
                 except:
                     fscandidate.password += "="
-            fscandidate.priority = int(candidate.priority * 1000)
+            if candidate.draft is 6:
+                fscandidate.priority = int(candidate.priority * 1000)
+            elif candidate.draft is 19:
+                fscandidate.priority = int(candidate.priority)
             fscandidates.append(fscandidate)
         return fscandidates
 
