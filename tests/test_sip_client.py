@@ -59,7 +59,6 @@ class SIPClient(papyon.Client):
         self.conference = Conference()
         self.ttl = SIPTransport("vp.sip.messenger.msn.com", 443)
         self.sso = SingleSignOn(account, password)
-        self.connection = SIPConnection(self.ttl, self.sso, account, password)
         self._event_handler = ClientEvents(self, self.conference)
         gobject.idle_add(self.login, account, password)
 
@@ -88,7 +87,7 @@ class ClientEvents(papyon.event.ClientEventInterface,
             #gobject.timeout_add(2000, self._client.invite)
 
     def on_invite_conference(self, call):
-        print "INVITED : call-id = %s" % call.get_call_id()
+        print "INVITED : call-id = %s" % call.id
         self.conference.setup(call)
 
     def on_client_error(self, error_type, error):
