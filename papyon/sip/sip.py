@@ -277,12 +277,18 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self._incoming = False
         else:
             self._incoming = True
+        if connection.tunneled:
+            draft = 19
+        else:
+            draft = 6
         self._answered = False
         self._early = False
         self._state = None
-        self._ice = ICESession(["audio"], draft=6)
+        self._contact = None
+        self._ice = ICESession(["audio"], draft=draft)
         self._ice.connect("candidates-prepared", self.on_candidates_prepared)
         self._ice.connect("candidates-ready", self.on_candidates_ready)
+        self._invite = None
         self._invite_src = None
         self._response_src = None
         self._end_src = None
@@ -342,11 +348,12 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self.send(response)
 
     def ring(self):
-        if not self._ice.candidates_prepared:
+        if self._invite is None or not self._ice.candidates_prepared:
             return
         self.answer(180)
         self._dispatch("on_call_incoming")
         self._resonse_src = gobject.timeout_add(10000, self.on_response_timeout)
+        self.accept()
 
     def accept(self):
         if self._answered:
@@ -412,6 +419,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self._state = "INCOMING"
             self._ice.parse_sdp(invite.body)
             self._response_src = gobject.timeout_add(10000, self.on_response_timeout)
+            self.ring()
         elif self._state == "CONFIRMED":
             self._state = "REINVITED"
             self.reaccept()
@@ -447,8 +455,8 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
 
     def on_invite_response(self, response):
         if self._state == "REINVITING":
-            self.on_reinvite_response(response)
-        elif self._state != "INVITING":
+            return self.on_reinvite_response(response)
+        elif self._state != "CALLING":
             return
 
         self._remote = response.get_header("To")
@@ -476,7 +484,9 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self.send_ack(response)
             gobject.source_remove(self._invite_src)
 
-        if response.status is 200:
+        if response.status in (100, 488):
+            pass
+        elif response.status is 200:
             self._state = "CONFIRMED"
             self._dispatch("on_call_connected")
         else:
