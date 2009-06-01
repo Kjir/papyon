@@ -41,6 +41,7 @@ class SIPCallManager(gobject.GObject):
         self._protocol.connect("buddy-notification-received",
                 self.on_notification_received)
         self._connections = {}
+        self._disconnecting = []
 
     def create_connection(self, tunneled, host=None):
         account = self._client.profile.account
@@ -53,8 +54,18 @@ class SIPCallManager(gobject.GObject):
             sso = self._client._sso
             connection = SIPConnection(transport, sso, account, password)
         connection.connect("invite-received", self.on_invite_received)
+        connection.connect("disconnecting", self.on_connection_disconnecting)
+        connection.connect("disconnected", self.on_connection_disconnected)
         self._connections[host] = connection
         return connection
+
+    def remove_connection(self, connection):
+        host = None
+        for k, v in self._connections.iteritems():
+            if v == connection:
+                host = k
+        if host is not None:
+            del self._connections[host]
 
     def get_connection(self, tunneled, host=None):
         connection = self._connections.get(host, None)
@@ -79,3 +90,14 @@ class SIPCallManager(gobject.GObject):
 
     def on_invite_received(self, connection, call):
         self.emit("invite-received", call)
+
+    def on_connection_disconnecting(self, connection):
+        self.remove_connection(connection)
+        if connection not in self._disconnecting:
+            self._disconnecting.append(connection)
+
+    def on_connection_disconnected(self, connection):
+        if connection in self._disconnecting:
+            self._disconnecting.remove(connection)
+        else:
+            self.remove_connection(connection)

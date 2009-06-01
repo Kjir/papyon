@@ -33,7 +33,13 @@ class SIPBaseConnection(gobject.GObject):
     __gsignals__ = {
         'invite-received': (gobject.SIGNAL_RUN_FIRST,
             gobject.TYPE_NONE,
-            ([object]))
+            ([object])),
+        'disconnecting': (gobject.SIGNAL_RUN_FIRST,
+            gobject.TYPE_NONE,
+            ()),
+        'disconnected': (gobject.SIGNAL_RUN_FIRST,
+            gobject.TYPE_NONE,
+            ())
     }
 
     def __init__(self, transport, account):
@@ -54,6 +60,10 @@ class SIPBaseConnection(gobject.GObject):
 
     def add_call(self, call):
         self._calls[call.get_call_id()] = call
+
+    def remove_call(self, call):
+        if call.get_call_id() in self._calls:
+            del self._calls[call.get_call_id()]
 
     def get_call(self, callid):
         return self._calls.get(callid, None)
@@ -85,6 +95,7 @@ class SIPConnection(SIPBaseConnection):
         self._msg_queue = []
         self._registration = SIPRegistration(self, account, password)
         self._registration.connect("registered", self.on_registration_success)
+        self._registration.connect("unregistered", self.on_unregistration_success)
         self.add_call(self._registration)
 
     @property
@@ -96,9 +107,15 @@ class SIPConnection(SIPBaseConnection):
         return False
 
     @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
-    def register(self, callback=None, errcb=None):
+    def register(self, callback, errcb):
         token = self._tokens[LiveService.MESSENGER_SECURE]
         self._registration.register(token)
+
+    @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
+    def unregister(self, callback, errcb):
+        token = self._tokens[LiveService.MESSENGER_SECURE]
+        self._registration.unregister(token)
+        self.emit("disconnecting")
 
     def send(self, message, registration=False):
         if self.registered or registration:
@@ -107,10 +124,18 @@ class SIPConnection(SIPBaseConnection):
             self._msg_queue.append(message)
             self.register(None, None)
 
+    def remove_call(self, call):
+        SIPBaseConnection.remove_call(self, call)
+        if len(self._calls) == 1:
+            self.unregister(None, None)
+
     def on_registration_success(self, registration):
         while len(self._msg_queue) > 0:
             msg = self._msg_queue.pop(0)
             self.send(msg)
+
+    def on_unregistration_success(self, registration):
+        self.emit("disconnected")
 
 
 class SIPTunneledConnection(SIPBaseConnection):
@@ -423,9 +448,9 @@ class SIPRegistration(SIPBaseCall):
         self._state = "REGISTERING"
         self.send(request, True)
 
-    def cancel(self):
-        gobject.remove_source(self._src)
-        auth = "%s:%s" % (self._account, self._password)
+    def unregister(self, token):
+        gobject.source_remove(self._src)
+        auth = "%s:%s" % (self._account, token)
         auth = base64.encodestring(auth).replace("\n", "")
         request = self.build_register_request(0, auth)
         self._state = "UNREGISTERING"
