@@ -205,6 +205,21 @@ class SIPBaseCall(gobject.GObject):
         message.call = self
         self._connection.send(message, registration)
 
+    def parse_email(self, message, name):
+        header = message.get_header(name)
+        if header is not None:
+            return re.search("<sip:([^;>]*)(;|>)", header).group(1)
+
+    def parse_uri(self, message, name):
+        header = message.get_header(name)
+        if header is not None:
+            return re.search("<sip:([^>]*)>", header).group(1)
+
+    def parse_sip(self, message, name)
+        header = message.get_header(name)
+        if header is not None:
+            return re.search("<sip:[^>]*>", header).group(0)
+
     def build_from_header(self, name="0"):
         return '"%s" <sip:%s%s>;tag=%s;epid=%s' % \
             (name, self._account, self.get_mepid(), self.get_tag(),
@@ -235,12 +250,12 @@ class SIPBaseCall(gobject.GObject):
         return response
 
     def on_message_received(self, msg):
-        route = msg.get_header("Record-Route")
+        route = self.parse_sip(msg, "Record-Route")
         if route is not None:
-            self._route = re.search("<sip:[^>]*>", route).group(0)
-        contact = msg.get_header("Contact")
+            self._route = route
+        contact = self.parse_uri(msg, "Contact")
         if contact is not None:
-            self._uri = re.search("<sip:([^>]*)>", contact).group(1)
+            self._uri = contact
 
         if type(msg) is SIPResponse:
             self._remote = msg.get_header("To")
@@ -273,6 +288,10 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self._end_src = None
 
     @property
+    def contact(self):
+        return self._contact
+
+    @property
     def ice(self):
         return self._ice
 
@@ -294,6 +313,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         return request
 
     def invite(self, uri):
+        self._contact = uri
         self._uri = uri
         if not self._ice.candidates_prepared:
             return
@@ -385,6 +405,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
 
     def on_invite_received(self, invite):
         self._invite = invite
+        self._contact = self.parse_email(invite, "From")
         self.answer(100)
 
         if self._state is None:
