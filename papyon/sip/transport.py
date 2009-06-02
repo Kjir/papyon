@@ -20,6 +20,7 @@
 
 from papyon.gnet.constants import *
 from papyon.gnet.io import *
+from papyon.msnp.constants import *
 from papyon.sip.sip import SIPMessageParser
 
 import base64
@@ -140,10 +141,11 @@ class SIPTunneledTransport(SIPBaseTransport):
         data = '<sip e="base64" fid="1" i="%s"><msg>%s</msg></sip>' % \
                 (call_id, data)
         data = data.replace("\r\n", "\n").replace("\n", "\r\n")
-        self._protocol.send_user_notification(data, contact, 12)
+        self._protocol.send_user_notification(data, contact,
+                UserNotificationTypes.TUNNELED_SIP)
 
-    def on_notification_received(self, protocol, notification):
-        if notification.arguments[1] != '12':
+    def on_notification_received(self, protocol, type, notification):
+        if type is not UserNotificationTypes.TUNNELED_SIP:
             return
         doc = xml.dom.minidom.parseString(notification.payload)
         chunk = doc.getElementsByTagName("msg")[0].firstChild.data

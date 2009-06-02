@@ -18,6 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from papyon.msnp.constants import *
 from papyon.sip.sip import *
 from papyon.sip.transport import *
 
@@ -80,8 +81,8 @@ class SIPCallManager(gobject.GObject):
         call.invite(contact)
         return call
 
-    def on_notification_received(self, protocol, notification):
-        if notification.arguments[1] != '2':
+    def on_notification_received(self, protocol, type, notification):
+        if type is not UserNotificationTypes.SIP_INVITE:
             return
         args = notification.payload.split()
         if len(args) == 3 and args[0] == "INVITE":
