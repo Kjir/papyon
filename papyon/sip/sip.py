@@ -94,7 +94,7 @@ class SIPConnection(SIPBaseConnection):
         self._sso = self._client._sso
         self._tokens = {}
         self._msg_queue = []
-        self._registration = SIPRegistration(self, self._client.profile.account)
+        self._registration = SIPRegistration(self, self._client)
         self._registration.connect("registered", self.on_registration_success)
         self._registration.connect("unregistered", self.on_unregistration_success)
         self.add_call(self._registration)
