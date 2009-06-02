@@ -271,7 +271,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             self._send_command("RML", payload=payload)
 
     def send_user_notification(self, message, contact, type):
-        self._send_command("UUN", (contact, type), message)
+        self._send_command("UUN", (contact.account, type), message)
 
     def send_unmanaged_message(self, contact, message):
         content_type = message.content_type[0]

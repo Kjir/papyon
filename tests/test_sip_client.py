@@ -63,7 +63,8 @@ class SIPClient(papyon.Client):
         gobject.idle_add(self.login, account, password)
 
     def invite(self):
-        call = self.call_manager.invite(self.invited)
+        contact = self.address_book.contacts.search_by_account(self.invited)[0]
+        call = self.call_manager.invite(contact)
         self.conference.setup(call)
         return False
 

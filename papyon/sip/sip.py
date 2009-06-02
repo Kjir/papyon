@@ -55,8 +55,7 @@ class SIPBaseConnection(gobject.GObject):
         return self._transport
 
     def create_call(self, callid=None):
-        account = self._client.profile.account
-        call = SIPCall(self, account, callid)
+        call = SIPCall(self, self._client, callid)
         self.add_call(call)
         return call
 
@@ -81,8 +80,7 @@ class SIPBaseConnection(gobject.GObject):
                 call = self.create_call(callid)
                 self.emit("invite-received", call)
             else:
-                account = self._client.profile.account
-                call = SIPCall(self, account, callid)
+                call = SIPCall(self, self._client, callid)
                 response = call.build_response(message, 481)
                 call.send(response) # call/transaction does not exist
                 return
@@ -150,13 +148,14 @@ class SIPTunneledConnection(SIPBaseConnection):
 
 class SIPBaseCall(gobject.GObject):
 
-    def __init__(self, connection, account, id=None):
+    def __init__(self, connection, client, id=None):
         gobject.GObject.__init__(self)
         self._connection = connection
+        self._client = client
         self._ip = "127.0.0.1"
         self._port = 50390
         self._transport_protocol = connection.transport.protocol
-        self._account = account
+        self._account = client.profile.account
         self._id = id
         self._cseq = 0
         self._remote = None
@@ -205,6 +204,13 @@ class SIPBaseCall(gobject.GObject):
         message.call = self
         self._connection.send(message, registration)
 
+    def parse_contact(self, message, name):
+        email = self.parse_email(message, name)
+        contacts = self._client.address_book.contacts.search_by_account(email)
+        if not contacts:
+            return None
+        return contacts[0]
+
     def parse_email(self, message, name):
         header = message.get_header(name)
         if header is not None:
@@ -215,7 +221,7 @@ class SIPBaseCall(gobject.GObject):
         if header is not None:
             return re.search("<sip:([^>]*)>", header).group(1)
 
-    def parse_sip(self, message, name)
+    def parse_sip(self, message, name):
         header = message.get_header(name)
         if header is not None:
             return re.search("<sip:[^>]*>", header).group(0)
@@ -270,8 +276,8 @@ class SIPBaseCall(gobject.GObject):
 
 class SIPCall(SIPBaseCall, EventsDispatcher):
 
-    def __init__(self, connection, account, id=None):
-        SIPBaseCall.__init__(self, connection, account, id)
+    def __init__(self, connection, client, id=None):
+        SIPBaseCall.__init__(self, connection, client, id)
         EventsDispatcher.__init__(self)
         if id is None:
             self._incoming = False
@@ -318,15 +324,15 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         request.set_content(self._ice.build_sdp(), "application/sdp")
         return request
 
-    def invite(self, uri):
-        self._contact = uri
-        self._uri = uri
+    def invite(self, contact):
+        self._contact = contact
         if not self._ice.candidates_prepared:
             return
         self._state = "CALLING"
         self._early = False
-        self._remote = "<sip:%s>" % uri
-        self._invite = self.build_invite_request(uri, self._remote)
+        self._uri = contact.account
+        self._remote = "<sip:%s>" % self._uri
+        self._invite = self.build_invite_request(self._uri, self._remote)
         self.send(self._invite)
         self._invite_src = gobject.timeout_add(10000, self.on_invite_timeout)
 
@@ -412,7 +418,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
 
     def on_invite_received(self, invite):
         self._invite = invite
-        self._contact = self.parse_email(invite, "From")
+        self._contact = self.parse_contact(invite, "From")
         self.answer(100)
 
         if self._state is None:
@@ -428,7 +434,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
 
     def on_candidates_prepared(self, session):
         if self._state is None:
-            self.invite(self._uri)
+            self.invite(self._contact)
         elif self._state == "INCOMING":
             self.ring()
 
@@ -520,8 +526,8 @@ class SIPRegistration(SIPBaseCall):
         'failed': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ([]))
     }
 
-    def __init__(self, connection, account):
-        SIPBaseCall.__init__(self, connection, account)
+    def __init__(self, connection, client):
+        SIPBaseCall.__init__(self, connection, client)
         self._state = "NEW"
 
     @property
