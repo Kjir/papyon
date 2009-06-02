@@ -483,6 +483,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self._dispatch("on_call_rejected", response)
             self.end()
         else:
+            self._dispatch("on_call_error", response)
             self.send_bye()
 
     def on_reinvite_response(self, response):

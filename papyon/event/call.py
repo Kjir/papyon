@@ -52,7 +52,13 @@ class CallEventInterface(BaseEventInterface):
 
     def on_call_rejected(self, response):
         """Called when the callee rejected the call.
-            @param response: response associtated with the rejection
+            @param response: response associated with the rejection
+            @type response: L{SIPResponse<papyon.sip.SIPResponse>}"""
+        pass
+
+    def on_call_error(self, response):
+        """Called when an error is sent by the other party.
+            @param response: response associated with the error
             @type response: L{SIPResponse<papyon.sip.SIPResponse>}"""
         pass
 
