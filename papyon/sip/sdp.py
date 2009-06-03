@@ -172,13 +172,13 @@ class SDPMedia(object):
 class SDPMessage(object):
 
     def __init__(self):
-        self._medias = {}
+        self._medias = []
         self._ip = ""
 
     @property
     def ip(self):
         if self._ip == "":
-            return self._medias["audio"].ip
+            return self._medias[0].ip
         return self._ip
 
     @property
@@ -193,9 +193,9 @@ class SDPMessage(object):
         out.append("b=CT:99980")
         out.append("t=0 0")
 
-        for name, media in self._medias.iteritems():
+        for media in self._medias:
             types = " ".join(media.payload_types)
-            out.append("m=%s %s RTP/AVP %s" % (name, media.port, types))
+            out.append("m=%s %s RTP/AVP %s" % (media.name, media.port, types))
             out.append("c=IN IP4 %s" % media.ip)
             for k, v in media.attributes.iteritems():
                 for value in v:
@@ -221,7 +221,7 @@ class SDPMessage(object):
                 media.ip = self.ip # default IP address
                 media.rtcp = media.port + 1 # default RTCP port
                 media.payload_types = val.split()[3:]
-                self._medias[media.name] = media
+                self._medias.append(media)
             elif key == 'c':
                 if media is None:
                     self._ip = val.split()[2]
