@@ -133,7 +133,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             msn_object = ""
 
         if presence == profile.Presence.OFFLINE:
-            self.signoff()
+            self._client.logout()
         else:
             if msn_object:
                 self._client._msn_object_store.publish(msn_object)
