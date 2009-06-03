@@ -56,26 +56,26 @@ class SIPClient(papyon.Client):
         papyon.Client.__init__(self, server, proxies = get_proxies())
 
         self.invited = invited
-        self.conference = Conference()
         self.ttl = SIPTransport("vp.sip.messenger.msn.com", 443)
         self.sso = SingleSignOn(account, password)
-        self._event_handler = ClientEvents(self, self.conference)
+        self._event_handler = ClientEvents(self)
         gobject.idle_add(self.login, account, password)
 
     def invite(self):
         contact = self.address_book.contacts.search_by_account(self.invited)[0]
-        call = self.call_manager.invite(contact)
-        self.conference.setup(call)
+        call = self.call_manager.create_call(contact)
+        call.media_session.add_stream("audio")
+        #call.media_session.add_stream("video")
+        call.invite()
         return False
 
 
 class ClientEvents(papyon.event.ClientEventInterface,
                    papyon.event.InviteEventInterface):
 
-    def __init__(self, client, conference):
+    def __init__(self, client):
         papyon.event.ClientEventInterface.__init__(self, client)
         papyon.event.InviteEventInterface.__init__(self, client)
-        self.conference = conference
 
     def on_client_state_changed(self, state):
         if state == papyon.event.ClientState.CLOSED:
@@ -85,14 +85,25 @@ class ClientEvents(papyon.event.ClientEventInterface,
             self._client.profile.presence = papyon.Presence.ONLINE
             for contact in self._client.address_book.contacts:
                 print contact
-            #gobject.timeout_add(2000, self._client.invite)
+            gobject.timeout_add(4000, self._client.invite)
 
     def on_invite_conference(self, call):
         print "INVITED : call-id = %s" % call.id
-        self.conference.setup(call)
+        self.call_handler = CallEvents(call)
+        self.session_handler = MediaSessionHandler(call.media_session)
 
     def on_client_error(self, error_type, error):
         print "ERROR :", error_type, " ->", error
+
+
+class CallEvents(papyon.event.CallEventInterface):
+
+    def __init__(self, call):
+        papyon.event.CallEventInterface.__init__(self, call)
+        self._call = call
+
+    def on_call_incoming(self):
+        self._call.accept()
 
 if __name__ == "__main__":
 

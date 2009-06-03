@@ -19,103 +19,32 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.sip.constants import *
-from papyon.sip.sdp import *
-from papyon.util.decorator import rw_property
 
-import gobject
+class ICETransport(object):
 
-class ICESession(gobject.GObject):
+    def __init__(self, tunneled):
+        if tunneled:
+            self.draft = 19
+        else:
+            self.draft = 6
 
-    __gsignals__ = {
-        "candidates-prepared": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
-        "candidates-ready": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
-        "remote-ready": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ())
-    }
-
-    def __init__(self, media_types, draft=0):
-        gobject.GObject.__init__(self)
-        self.draft = draft
-        self._media_types = media_types
-        self._local_codecs = {}
-        self._remote_codecs = {}
-        self._local_candidates = {}
-        self._remote_candidates = {}
-        self._local_active = {}
-        self._remote_active = {}
-
-    @property
-    def candidates_prepared(self):
-        for name in self._media_types:
-            if not self._local_candidates.get(name, None):
-                return False
-        return True
-
-    @property
-    def candidates_ready(self):
-        for name in self._media_types:
-            if self._local_active.get(name, None) is None:
-                return False
-        return True
-
-    def get_remote_codecs(self, name):
-        return self._remote_codecs.get(name, [])
-
-    def get_remote_candidates(self, name):
-        return self._remote_candidates.get(name, [])
-
-    def set_local_codecs(self, name, codecs):
-        self._local_codecs[name] = codecs
-
-    def set_local_candidates(self, name, candidates):
-        self._local_candidates[name] = candidates
-        self.emit("candidates-prepared")
-
-    def set_active_candidates(self, name, local, remote):
-        self._local_active[name] = local
-        self._remote_active[name] = remote
-        if self.candidates_ready:
-            self.emit("candidates-ready")
-
-    def build_sdp(self):
-        sdp = SDPMessage()
-        for type in self._media_types:
-            media = self.build_media(type)
-            sdp.medias[media.name] = media
-        return str(sdp)
-
-    def build_media(self, type):
-        ip, port, rtcp = self.get_default_address(type)
-        media = SDPMedia(type, ip, port, rtcp)
-        media.codecs = self._local_codecs.get(type, [])
-
-        candidates = self.get_active_local_candidates(type)
+    def encode_candidates(self, stream, media):
+        candidates = stream.get_active_local_candidates()
         if candidates:
             if self.draft is 19:
                 media.add_attribute("ice-ufrag", candidates[0].username)
                 media.add_attribute("ice-pwd", candidates[0].password)
             for candidate in candidates:
-                print str(candidate)
                 media.add_attribute("candidate", str(candidate))
 
-        candidates = self.get_active_remote_candidates(type)
+        candidates = stream.get_active_remote_candidates()
         if candidates:
-            list = map(lambda c: c.get_remote_id(), candidates)
+            if self.draft is 6:
+                candidates = candidates[0:1]
+            list = [c.get_remote_id() for c in candidates]
             media.add_attribute("remote-candidate", " ".join(list))
 
-        return media
-
-    def parse_sdp(self, message):
-        sdp = SDPMessage()
-        sdp.parse(message)
-        for media in sdp.medias.values():
-            self.parse_media(media)
-        self.emit("remote-ready")
-
-    def parse_media(self, media):
-        self._remote_codecs[media.name] = media.codecs
-        self._remote_candidates[media.name] = self.parse_candidates(media)
-
-    def parse_candidates(self, media):
+    def decode_candidates(self, media):
         candidates = []
 
         if not media.get_attribute("candidate"):
@@ -141,62 +70,6 @@ class ICESession(gobject.GObject):
                 candidates.append(candidate)
 
         return candidates
-
-    def get_active_local_candidates(self, name):
-        active = self._local_active.get(name, None)
-        candidates = self._local_candidates.get(name, [])
-        if active:
-            return filter(lambda x: (x.foundation == active.foundation), candidates)
-        return candidates
-
-    def get_active_remote_candidates(self, name):
-        candidates = []
-        components = []
-        active = self._remote_active.get(name, None)
-        if active is None:
-            return candidates
-        for candidate in self._remote_candidates.get(name, []):
-            if candidate.foundation == active.foundation:
-                if self.draft is 6:
-                    candidates.append(candidate)
-                    break
-                elif self.draft is 19:
-                    if candidate.component_id in components:
-                        continue
-                    candidates.append(candidate)
-                    components.append(candidate.component_id)
-        return candidates
-
-    def get_default_address(self, name):
-        ip = None
-        port = None
-        rtcp = None
-
-        active = self._local_active.get(name, None)
-        if not active:
-            active = self.search_relay(name)
-
-        for candidate in self._local_candidates.get(name, []):
-            if candidate.foundation == active.foundation and \
-               candidate.component_id is COMPONENTS.RTP:
-                ip = candidate.ip
-                port = candidate.port
-            if candidate.foundation == active.foundation and \
-               candidate.component_id is COMPONENTS.RTCP:
-                rtcp = candidate.port
-
-        return ip, port, rtcp
-
-    def search_relay(self, name):
-        relay = None
-        for candidate in self._local_candidates.get(name, []):
-            if candidate.transport != "UDP":
-                continue
-            if candidate.is_relay():
-                return candidate
-            if not relay or candidate.priority < relay.priority:
-                relay = candidate
-        return relay
 
 
 class ICECandidate(object):

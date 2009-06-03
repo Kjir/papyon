@@ -20,8 +20,9 @@
 
 from papyon.event import EventsDispatcher
 from papyon.sip.constants import *
-from papyon.sip.ice import *
+from papyon.sip.media import *
 from papyon.service.SingleSignOn import *
+from papyon.util.decorator import rw_property
 
 import base64
 import gobject
@@ -54,8 +55,8 @@ class SIPBaseConnection(gobject.GObject):
     def transport(self):
         return self._transport
 
-    def create_call(self, callid=None):
-        call = SIPCall(self, self._client, callid)
+    def create_call(self, contact, callid=None):
+        call = SIPCall(self, self._client, contact, callid)
         self.add_call(call)
         return call
 
@@ -76,11 +77,12 @@ class SIPBaseConnection(gobject.GObject):
         callid = message.get_header("Call-ID")
         call = self.get_call(callid)
         if call is None:
+            from_header = message.get_header("From")
             if isinstance(message, SIPRequest) and message.code == "INVITE":
-                call = self.create_call(callid)
+                call = self.create_call(from_header, callid)
                 self.emit("invite-received", call)
             else:
-                call = SIPCall(self, self._client, callid)
+                call = SIPCall(self, self._client, from_header, callid)
                 response = call.build_response(message, 481)
                 call.send(response) # call/transaction does not exist
                 return
@@ -168,12 +170,6 @@ class SIPBaseCall(gobject.GObject):
             self._id = uuid.uuid4().get_hex()
         return self._id
 
-    def get_conversation_id(self):
-        if self._connection.tunneled:
-            return 0
-        else:
-            return 0
-
     def get_cseq(self, incr=False):
         if incr:
             self._cseq += 1
@@ -204,12 +200,15 @@ class SIPBaseCall(gobject.GObject):
         message.call = self
         self._connection.send(message, registration)
 
-    def parse_contact(self, message, name):
-        email = self.parse_email(message, name)
+    def find_contact(self, email):
         contacts = self._client.address_book.contacts.search_by_account(email)
         if not contacts:
             return None
         return contacts[0]
+
+    def parse_contact(self, message, name):
+        email = self.parse_email(message, name)
+        return self.find_contact(email)
 
     def parse_email(self, message, name):
         header = message.get_header(name)
@@ -259,9 +258,9 @@ class SIPBaseCall(gobject.GObject):
         route = self.parse_sip(msg, "Record-Route")
         if route is not None:
             self._route = route
-        contact = self.parse_uri(msg, "Contact")
-        if contact is not None:
-            self._uri = contact
+        uri = self.parse_uri(msg, "Contact")
+        if uri is not None:
+            self._uri = uri
 
         if type(msg) is SIPResponse:
             self._remote = msg.get_header("To")
@@ -276,25 +275,24 @@ class SIPBaseCall(gobject.GObject):
 
 class SIPCall(SIPBaseCall, EventsDispatcher):
 
-    def __init__(self, connection, client, id=None):
+    def __init__(self, connection, client, contact, id=None):
         SIPBaseCall.__init__(self, connection, client, id)
         EventsDispatcher.__init__(self)
-        if id is None:
-            self._incoming = False
-        else:
-            self._incoming = True
-        if connection.tunneled:
-            draft = 19
-        else:
-            draft = 6
+
+        self._media_session = MediaSession(connection.tunneled)
+        self._media_session.connect("prepared", self.on_session_prepared)
+        self._media_session.connect("ready", self.on_session_ready)
+
+        self._incoming = (id is not None)
         self._answered = False
         self._early = False
         self._state = None
-        self._contact = None
-        self._ice = ICESession(["audio"], draft=draft)
-        self._ice.connect("candidates-prepared", self.on_candidates_prepared)
-        self._ice.connect("candidates-ready", self.on_candidates_ready)
+
+        if type(contact) is str:
+            contact = self.find_contact(contact)
+        self._contact = contact
         self._invite = None
+
         self._invite_src = None
         self._response_src = None
         self._end_src = None
@@ -304,8 +302,15 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         return self._contact
 
     @property
-    def ice(self):
-        return self._ice
+    def conversation_id(self):
+        if self._media_session.has_video:
+            return 1
+        else:
+            return 0
+
+    @property
+    def media_session(self):
+        return self._media_session
 
     def build_invite_contact(self):
         if self._connection.tunneled:
@@ -317,27 +322,25 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         return m
 
     def build_invite_request(self, uri, to):
-        conversation_id = self.get_conversation_id()
         request = self.build_request("INVITE", uri, to, incr=True)
-        request.add_header("Ms-Conversation-ID", "f=%s" % conversation_id)
+        request.add_header("Ms-Conversation-ID", "f=%s" % self.conversation_id)
         request.add_header("Contact", self.build_invite_contact())
-        request.set_content(self._ice.build_sdp(), "application/sdp")
+        request.set_content(self._media_session.build_sdp(), "application/sdp")
         return request
 
-    def invite(self, contact):
-        self._contact = contact
-        if not self._ice.candidates_prepared:
+    def invite(self):
+        if not self._media_session.prepared:
             return
         self._state = "CALLING"
         self._early = False
-        self._uri = contact.account
+        self._uri = self._contact.account
         self._remote = "<sip:%s>" % self._uri
         self._invite = self.build_invite_request(self._uri, self._remote)
         self.send(self._invite)
-        self._invite_src = gobject.timeout_add(10000, self.on_invite_timeout)
+        self._invite_src = gobject.timeout_add(50000, self.on_invite_timeout)
 
     def reinvite(self):
-        if self._incoming or not self._ice.candidates_ready:
+        if self._incoming or not self._media_session.ready:
             return
         self._state = "REINVITING"
         self._invite = self.build_invite_request(self._uri, self._remote)
@@ -350,16 +353,15 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         response = self.build_response(self._invite, status)
         if status == 200:
             response.add_header("Contact", self.build_invite_contact())
-            response.set_content(self._ice.build_sdp(), "application/sdp")
+            response.set_content(self._media_session.build_sdp(), "application/sdp")
         self.send(response)
 
     def ring(self):
-        if self._invite is None or not self._ice.candidates_prepared:
+        if self._invite is None or not self._media_session.prepared:
             return
         self.answer(180)
+        self._response_src = gobject.timeout_add(30000, self.on_response_timeout)
         self._dispatch("on_call_incoming")
-        self._resonse_src = gobject.timeout_add(10000, self.on_response_timeout)
-        self.accept()
 
     def accept(self):
         if self._answered:
@@ -377,7 +379,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self.end()
 
     def reaccept(self):
-        if not self._ice.candidates_ready:
+        if not self._media_session.ready:
             return
         self._state = "CONFIRMED"
         self.answer(200)
@@ -418,12 +420,11 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
 
     def on_invite_received(self, invite):
         self._invite = invite
-        self._contact = self.parse_contact(invite, "From")
         self.answer(100)
 
         if self._state is None:
             self._state = "INCOMING"
-            self._ice.parse_sdp(invite.body)
+            self._media_session.parse_sdp(invite.body, True)
             self._response_src = gobject.timeout_add(10000, self.on_response_timeout)
             self.ring()
         elif self._state == "CONFIRMED":
@@ -432,13 +433,13 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         else:
             self.answer(488) # not acceptable here
 
-    def on_candidates_prepared(self, session):
+    def on_session_prepared(self, session):
         if self._state is None:
-            self.invite(self._contact)
+            self.invite()
         elif self._state == "INCOMING":
             self.ring()
 
-    def on_candidates_ready(self, session):
+    def on_session_ready(self, session):
         if self._state == "REINVITED":
             self.reaccept()
         elif self._state == "CONFIRMED":
@@ -477,7 +478,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         elif response.status is 200:
             self._state = "CONFIRMED"
             self._dispatch("on_call_accepted")
-            self._ice.parse_sdp(response.body)
+            self._media_session.parse_sdp(response.body)
             self.reinvite()
         elif response.status in (408, 480, 486, 487, 504, 603):
             self._dispatch("on_call_rejected", response)
