@@ -17,7 +17,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-__all__ = ["ProtocolConstant", "ClientTypes"]
+__all__ = ["ProtocolConstant", "ClientTypes", "UserNotificationTypes"]
 
 class ProtocolConstant(object):
     VER = (18, 16, 15)
