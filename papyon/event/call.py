@@ -36,7 +36,7 @@ class CallEventInterface(BaseEventInterface):
         """Initializer
             @param call: the call we want to be notified for its events
             @type call: L{SIPCall<papyon.sip.SIPCall>}"""
-        BaseEventInterface.__init__(self, conversation)
+        BaseEventInterface.__init__(self, call)
 
     def on_call_incoming(self):
         """Called once the incoming call is ready."""
