@@ -74,7 +74,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
             "buddy-notification-received" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object,)),
+                (object, object,)),
 
             "mail-received" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
