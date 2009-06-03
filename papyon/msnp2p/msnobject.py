@@ -52,16 +52,13 @@ class MSNObjectSession(P2PSession):
 
 
     def accept(self, data_file):
-        gobject.idle_add(self._start_transfer, data_file)
+        self._respond(200)
+        self._send_p2p_data("\x00" * 4)
+        self._send_p2p_data(data_file)
     
     def reject(self):
         self._respond(603)
 
-    def _start_transfer(self, data_file):
-        self._respond(200)
-        self._send_p2p_data("\x00" * 4)
-        self._send_p2p_data(data_file)
-        return False
 
     def invite(self, context):
         self._session_manager._register_session(self)
