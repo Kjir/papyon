@@ -520,6 +520,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 ss = None
             contact._server_property_changed("signature-sound", ss)
 
+    def _handle_UUN(self,command): # UBN acknowledgment
+        pass
+
     # --------- Contact List -------------------------------------------------
     def _handle_ADL(self, command):
         if command.transaction_id == 0: # incoming ADL from the server
