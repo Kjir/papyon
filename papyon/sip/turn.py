@@ -32,6 +32,7 @@ import md5
 import random
 import struct
 import sys
+import uuid
 
 MESSAGE_TYPES = {
     1: "BINDING-REQUEST",
@@ -190,7 +191,7 @@ class TURNMessage(object):
         self.type = type
         self._attributes = attributes
         self._extra_size = extra_size
-        self._id = self.gen_id()
+        self._id = int(uuid.uuid4())
 
     @property
     def id(self):
@@ -218,10 +219,6 @@ class TURNMessage(object):
         def fset(self, value):
             self._extra_size = value
         return locals()
-
-    def gen_id(self):
-        #FIXME Should be a 128 bits random id
-        return 400000000 + random.randint(0,2000000)
 
     def split_id(self):
         parts = []
