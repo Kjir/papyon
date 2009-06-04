@@ -167,6 +167,7 @@ class SIPBaseCall(gobject.GObject):
         self._remote = None
         self._route = None
         self._uri = None
+        self._timeout_sources = {}
 
     @property
     def id(self):
@@ -328,8 +329,6 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             contact = self.parse_contact(invite)
         self._contact = contact
         self._invite = invite
-
-        self._timeout_sources = {}
 
     @property
     def contact(self):
@@ -788,8 +787,12 @@ class SIPMessageParser(gobject.GObject):
     def append(self, chunk):
         self._buffer += chunk
         finished = False
-        while not finished:
-            finished = self.parse_buffer()
+        try:
+            while not finished:
+                finished = self.parse_buffer()
+        except Exception, err:
+            logger.error("Error while parsing received message: %s", err)
+            self.reset()
 
     def parse_buffer(self):
         if self._state == "start":
