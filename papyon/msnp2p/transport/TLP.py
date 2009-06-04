@@ -102,6 +102,7 @@ class TLPFlag(object):
     ERR = 0x80
     KEY = 0x100
     CRYPT = 0x200
+    UNKNOWN = 0x1000000
 
 
 class MessageChunk(object):
@@ -114,7 +115,7 @@ class MessageChunk(object):
         return str(self.header) + str(self.body)
 
     def is_control_chunk(self):
-        return self.header.flags & 0xFFFFFFCF
+        return self.header.flags & 0xCF
 
     def is_ack_chunk(self):
         return self.header.flags & (TLPFlag.NAK | TLPFlag.ACK)
