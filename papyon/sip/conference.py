@@ -149,7 +149,8 @@ class MediaStreamHandler(MediaStreamEventInterface):
             compatibility_mode = 2
 
         params = {"stun-ip" : "64.14.48.28", "stun-port" : 3478,
-                "compatibility-mode" : compatibility_mode}
+                "compatibility-mode" : compatibility_mode,
+                "controlling-mode": self._stream.controlling}
         media_type = media_types[self._stream.name]
         self.fssession = conference.new_session(media_type)
         self.fssession.set_codec_preferences(build_codecs(self._stream.name))
@@ -292,13 +293,16 @@ def make_video_source(name="videotestsrc"):
     "Make a bin with a video source in it, defaulting to first webcamera "
     bin = gst.Bin("videosrc")
     src = gst.element_factory_make(name, name)
+    src.set_property("is-live", True)
+    src.set_property("pattern", 1)
     bin.add(src)
-    colorspace = gst.element_factory_make("ffmpegcolorspace")
-    bin.add(colorspace)
+    filter = gst.element_factory_make("capsfilter")
+    filter.set_property("caps", gst.Caps("video/x-raw-yuv , width=[300,500] , height=[200,500], framerate=[20/1,30/1]"))
+    bin.add(filter)
+    src.link(filter)
     videoscale = gst.element_factory_make("videoscale")
     bin.add(videoscale)
-    src.link(colorspace)
-    colorspace.link(videoscale)
+    filter.link(videoscale)
     bin.add_pad(gst.GhostPad("src", videoscale.get_pad("src")))
     return bin
 

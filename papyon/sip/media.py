@@ -101,10 +101,11 @@ class MediaStream(gobject.GObject, EventsDispatcher):
             ())
     }
 
-    def __init__(self, name, transport):
+    def __init__(self, name, controlling, transport):
         gobject.GObject.__init__(self)
         EventsDispatcher.__init__(self)
         self._name = name
+        self._controlling = controlling
         self._transport = transport
         self._local_codecs = []
         self._local_codecs_prepared = False
@@ -118,6 +119,10 @@ class MediaStream(gobject.GObject, EventsDispatcher):
     @property
     def name(self):
         return self._name
+
+    @property
+    def controlling(self):
+        return self._controlling
 
     @property
     def prepared(self):
@@ -146,7 +151,7 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         self._local_candidates.append(candidate)
 
     def new_active_candidate_pair(self, local, remote):
-        print "LOCAL", local, " REMOTE", remote
+        print self.name, "LOCAL", local, " REMOTE", remote
         if self.ready:
             return # ignore other candidate pairs
         self._local_candidate_id = local
@@ -154,11 +159,15 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         self.emit("ready")
 
     def local_candidates_prepared(self):
+        if self._local_candidates_prepared:
+            return
         self._local_candidates_prepared = True
         if self.prepared:
             self.emit("prepared")
 
     def set_local_codecs(self, codecs):
+        if self._local_codecs_prepared:
+            return
         self._local_codecs = codecs
         self._local_codecs_prepared = True
         if self.prepared:
@@ -174,7 +183,6 @@ class MediaStream(gobject.GObject, EventsDispatcher):
     def get_active_remote_candidates(self):
         active = self._remote_candidate_id
         candidates = self._remote_candidates
-        print "ACTIVE REMOTE", active, candidates
         if active is None:
             return []
         return filter(lambda x: (x.foundation == active), candidates)
