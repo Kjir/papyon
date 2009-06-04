@@ -55,8 +55,8 @@ class SIPBaseConnection(gobject.GObject):
     def transport(self):
         return self._transport
 
-    def create_call(self, contact, callid=None):
-        call = SIPCall(self, self._client, contact, callid)
+    def create_call(self, contact=None, invite=None, id=None):
+        call = SIPCall(self, self._client, contact, invite, id)
         self.add_call(call)
         return call
 
@@ -77,12 +77,11 @@ class SIPBaseConnection(gobject.GObject):
         callid = message.get_header("Call-ID")
         call = self.get_call(callid)
         if call is None:
-            from_header = message.get_header("From")
             if isinstance(message, SIPRequest) and message.code == "INVITE":
-                call = self.create_call(from_header, callid)
+                call = self.create_call(invite=message, id=callid)
                 self.emit("invite-received", call)
             else:
-                call = SIPCall(self, self._client, from_header, callid)
+                call = SIPCall(self, self._client, invite=message, id=callid)
                 response = call.build_response(message, 481)
                 call.send(response) # call/transaction does not exist
                 return
@@ -206,8 +205,14 @@ class SIPBaseCall(gobject.GObject):
             return None
         return contacts[0]
 
-    def parse_contact(self, message, name):
-        email = self.parse_email(message, name)
+    def parse_contact(self, message):
+        if type(message) is SIPRequest:
+            header = "From"
+        elif type(message) is SIPResponse:
+            header = "To"
+        else:
+            return None
+        email = self.parse_email(message, header)
         return self.find_contact(email)
 
     def parse_email(self, message, name):
@@ -275,7 +280,7 @@ class SIPBaseCall(gobject.GObject):
 
 class SIPCall(SIPBaseCall, EventsDispatcher):
 
-    def __init__(self, connection, client, contact, id=None):
+    def __init__(self, connection, client, contact=None, invite=None, id=None):
         SIPBaseCall.__init__(self, connection, client, id)
         EventsDispatcher.__init__(self)
 
@@ -288,10 +293,10 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self._early = False
         self._state = None
 
-        if type(contact) is str:
-            contact = self.find_contact(contact)
+        if contact is None and invite is not None:
+            contact = self.parse_contact(invite)
         self._contact = contact
-        self._invite = None
+        self._invite = invite
 
         self._invite_src = None
         self._response_src = None
