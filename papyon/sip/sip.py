@@ -284,6 +284,29 @@ class SIPBaseCall(gobject.GObject):
         else:
             logger.warning("Unhandled %s message" % msg.code)
 
+    def start_timeout(self, name, time):
+        self.stop_timeout(name)
+        source = gobject.timeout_add(time * 1000, self.on_timeout, name)
+        self._timeout_sources[name] = source
+
+    def stop_timeout(self, name):
+        source = self._timeout_sources.get(name, None)
+        if source is not None:
+            gobject.source_remove(source)
+            del self._timeout_sources[name]
+
+    def stop_all_timeout(self):
+        for (name, source) in self._timeout_sources.items():
+            if source is not None:
+                gobject.source_remove(source)
+        self._timeout_sources.clear()
+
+    def on_timeout(self, name):
+        self.stop_timeout(name)
+        handler = getattr(self, "on_%s_timeout" % name, None)
+        if handler is not None:
+            handler()
+
 
 class SIPCall(SIPBaseCall, EventsDispatcher):
 
@@ -306,9 +329,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self._contact = contact
         self._invite = invite
 
-        self._invite_src = None
-        self._response_src = None
-        self._end_src = None
+        self._timeout_sources = {}
 
     @property
     def contact(self):
@@ -354,8 +375,8 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self._uri = self._contact.account
         self._remote = "<sip:%s>" % self._uri
         self._invite = self.build_invite_request(self._uri, self._remote)
+        self.start_timeout("invite", 30)
         self.send(self._invite)
-        self._invite_src = gobject.timeout_add(50000, self.on_invite_timeout)
 
     def reinvite(self):
         if self._incoming or not self._media_session.ready:
@@ -364,8 +385,8 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self._invite = self.build_invite_request(self._uri, self._remote)
         self._invite.add_header("Route", self._route)
         self._invite.add_header("Supported", "ms-dialog-route-set-update")
+        self.start_timeout("invite", 10)
         self.send(self._invite)
-        self._invite_src = gobject.timeout_add(10000, self.on_invite_timeout)
 
     def answer(self, status):
         response = self.build_response(self._invite, status)
@@ -377,21 +398,21 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
     def ring(self):
         if self._invite is None or not self._media_session.prepared:
             return
+        self.start_timeout("response", 30)
         self.answer(180)
-        self._response_src = gobject.timeout_add(30000, self.on_response_timeout)
         self._dispatch("on_call_incoming")
 
     def accept(self):
         if self.answered:
             return
-        gobject.source_remove(self._response_src)
+        self.stop_timeout("response")
         self._accepted = True
         self.answer(200)
 
     def reject(self, status=603):
         if self.answered:
             return
-        gobject.source_remove(self._response_src)
+        self.stop_timeout("response")
         self._rejected = True
         self.answer(status)
 
@@ -414,23 +435,18 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         request = self.build_request("CANCEL", self._invite.uri, None)
         request.clone_headers("To", self._invite)
         request.clone_headers("Route", self._invite)
+        self.start_timeout("end", 5)
         self.send(request)
-        self._end_src = gobject.timeout_add(5000, self.on_end_timeout)
 
     def send_bye(self):
         self._state = "DISCONNECTING"
         request = self.build_request("BYE", self._uri, self._remote, incr=True)
         request.add_header("Route", self._route)
+        self.start_timeout("end", 5)
         self.send(request)
-        self._end_src = gobject.timeout_add(5000, self.on_end_timeout)
 
     def end(self):
-        if self._invite_src is not None:
-            gobject.source_remove(self._invite_src)
-        if self._response_src is not None:
-            gobject.source_remove(self._response_src)
-        if self._end_src is not None:
-            gobject.source_remove(self._end_src)
+        self.stop_all_timeout()
         self._state = "DISCONNECTED"
         self._dispatch("on_call_ended")
         self._connection.remove_call(self)
@@ -441,7 +457,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
 
         if self._state is None:
             self._state = "INCOMING"
-            self._response_src = gobject.timeout_add(10000, self.on_response_timeout)
+            self.start_timeout("response", 10)
             try:
                 self._media_session.parse_sdp(invite.body, True)
             except:
@@ -494,7 +510,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self._remote = response.get_header("To")
         if response.status >= 200:
             self.send_ack(response)
-            gobject.source_remove(self._invite_src)
+            self.stop_timeout("invite")
 
         if response.status is 100:
             self._early = True
@@ -522,7 +538,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
     def on_reinvite_response(self, response):
         if response.status >= 200:
             self.send_ack(response)
-            gobject.source_remove(self._invite_src)
+            self.stop_timeout("invite")
 
         if response.status in (100, 488):
             pass
@@ -540,16 +556,13 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
 
     def on_invite_timeout(self):
         self.cancel()
-        return False
 
     def on_response_timeout(self):
         self.reject(408)
         self._dispatch("on_call_missed")
-        return False
 
     def on_end_timeout(self):
         self.end()
-        return False
 
 
 class SIPRegistration(SIPBaseCall):
