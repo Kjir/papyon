@@ -20,6 +20,11 @@
 
 from papyon.sip.constants import *
 from papyon.util.decorator import rw_property
+from papyon.util.odict import odict
+
+import logging
+
+logger = logging.getLogger('SDP')
 
 class SDPCodec(object):
 
@@ -76,7 +81,7 @@ class SDPCodec(object):
 class SDPMedia(object):
 
     def __init__(self, name, ip=None, port=None, rtcp=None):
-        self._attributes = {"encryption": ["rejected"]}
+        self._attributes = odict({"encryption": ["rejected"]})
         self._codecs = []
 
         self.name = name
