@@ -20,18 +20,24 @@
 
 from papyon.sip.constants import *
 
+import logging
+
+logger = logging.getLogger('ICE')
+
 class ICETransport(object):
 
     def __init__(self, tunneled):
-        if tunneled:
-            self.draft = 19
-        else:
-            self.draft = 6
+        self._tunneled = tunneled
 
     def encode_candidates(self, stream, media):
+        if self._tunneled:
+            draft = 19
+        else:
+            draft = 6
+
         candidates = stream.get_active_local_candidates()
         if candidates:
-            if self.draft is 19:
+            if draft is 19:
                 media.add_attribute("ice-ufrag", candidates[0].username)
                 media.add_attribute("ice-pwd", candidates[0].password)
             for candidate in candidates:
@@ -39,7 +45,7 @@ class ICETransport(object):
 
         candidates = stream.get_active_remote_candidates()
         if candidates:
-            if self.draft is 6:
+            if draft is 6:
                 candidates = candidates[0:1]
             list = [c.get_remote_id() for c in candidates]
             media.add_attribute("remote-candidate", " ".join(list))
@@ -47,28 +53,34 @@ class ICETransport(object):
     def decode_candidates(self, media):
         candidates = []
 
-        if not media.get_attribute("candidate"):
-            self.draft = 0
-            candidates.append(ICECandidate(component_id=COMPONENTS.RTP,
-                ip=media.ip, port=media.port, transport="UDP", priority=1,
-                type="host"))
-            candidates.append(ICECandidate(component_id=COMPONENTS.RTCP,
-                ip=media.ip, port=media.rtcp, transport="UDP", priority=1,
-                type="host"))
-        else:
-            ufrag = media.get_attribute("ice-ufrag")
-            pwd = media.get_attribute("ice-pwd")
-            if ufrag and pwd:
-                self.draft = 19
-            else:
-                self.draft = 6
+        ufrag = media.get_attribute("ice-ufrag")
+        pwd = media.get_attribute("ice-pwd")
+        attributes = media.get_attributes("candidate")
 
-            for attribute in media.get_attributes("candidate"):
-                candidate = ICECandidate(draft=self.draft, username=ufrag,
-                                         password=pwd)
+        if ufrag and pwd:
+            draft = 19
+        else:
+            draft = 6
+
+        for attribute in attributes:
+            candidate = ICECandidate(draft=draft, username=ufrag, password=pwd)
+            try:
                 candidate.parse(attribute)
+            except:
+                logger.warning('Invalid ICE candidate "%s"' % attribute)
+            else:
                 candidates.append(candidate)
 
+        return candidates
+
+    def get_default_candidates(self, media):
+        candidates = []
+        candidates.append(ICECandidate(component_id=COMPONENTS.RTP,
+            ip=media.ip, port=media.port, transport="UDP", priority=1,
+            type="host"))
+        candidates.append(ICECandidate(component_id=COMPONENTS.RTCP,
+            ip=media.ip, port=media.rtcp, transport="UDP", priority=1,
+            type="host"))
         return candidates
 
 
@@ -76,7 +88,7 @@ class ICECandidate(object):
 
     REL_EXT = [("typ", "type"), ("raddr", "base_ip"), ("rport", "base_port")]
 
-    def __init__(self, draft=0, foundation=None, component_id=None,
+    def __init__(self, draft=6, foundation=None, component_id=None,
                  transport=None, priority=None, username=None, password=None,
                  type=None, ip=None, port=None, base_ip=None, base_port=None):
         self._extensions = {}
@@ -93,6 +105,9 @@ class ICECandidate(object):
         self.port = port
         self.base_ip = base_ip
         self.base_port = base_port
+
+        if draft not in (6, 19):
+            logger.error("Unsupported ICE draft version (%s)" % draft)
 
     def is_relay(self):
         if self.draft is 6:

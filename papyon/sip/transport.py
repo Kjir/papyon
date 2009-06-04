@@ -25,7 +25,10 @@ from papyon.sip.sip import SIPMessageParser
 
 import base64
 import gobject
+import logging
 import xml.dom.minidom
+
+logger = logging.getLogger('SIP:transport')
 
 class SIPBaseTransport(gobject.GObject):
 
@@ -48,7 +51,7 @@ class SIPBaseTransport(gobject.GObject):
 
     def log_message(self, prefix, message):
         for line in message.splitlines():
-            print prefix, line
+            logger.debug(prefix + " " + line)
 
 
 class SIPTransport(SIPBaseTransport):

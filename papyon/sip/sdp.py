@@ -128,30 +128,32 @@ class SDPMedia(object):
         return locals()
 
     def get_codec(self, payload):
-        if payload < 0:
-            return None
         for codec in self._codecs:
             if codec.payload == payload:
                 return codec
-        return None
+        raise KeyError("No codec with payload %i in media", payload)
 
     def parse_attribute(self, key, value):
-        if key == "rtcp":
-            self.rtcp = int(value)
-        else:
-            if key == "rtpmap":
-                payload = SDPCodec.get_payload_from_rtpmap(value)
-                codec = self.get_codec(payload)
-                if codec:
+        try:
+            if key == "rtcp":
+                self.rtcp = int(value)
+            else:
+                if key == "rtpmap":
+                    payload = SDPCodec.get_payload_from_rtpmap(value)
+                    codec = self.get_codec(payload)
                     codec.parse_rtpmap(value)
-            elif key == "fmtp":
-                payload = SDPCodec.get_payload_from_fmtp(value)
-                codec = self.get_codec(payload)
-                if codec:
+                elif key == "fmtp":
+                    payload = SDPCodec.get_payload_from_fmtp(value)
+                    codec = self.get_codec(payload)
                     codec.parse_fmtp(value)
-            self.add_attribute(key, value)
+                self.add_attribute(key, value)
+        except ValueError:
+            logger.warning("Invalid %s media attribute (%s)" % (key, value))
+        except KeyError:
+            logger.warning("Found %s attribute for invalid payload (%i)" %
+                    (key, payload))
 
-    def add_attribute(self, key, value):
+    def add_attribute(self, key, value=None):
         self._attributes.setdefault(key, []).append(value)
 
     def set_attribute(self, key, value):
@@ -182,7 +184,7 @@ class SDPMessage(object):
 
     @property
     def ip(self):
-        if self._ip == "":
+        if self._ip == "" and len(self._medias) > 1:
             return self._medias[0].ip
         return self._ip
 
@@ -200,9 +202,9 @@ class SDPMessage(object):
 
         for media in self._medias:
             types = " ".join(media.payload_types)
-            out.append("m=%s %s RTP/AVP %s" % (media.name, media.port, types))
+            out.append("m=%s %i RTP/AVP %s" % (media.name, media.port, types))
             out.append("c=IN IP4 %s" % media.ip)
-            for k, v in media.attributes.iteritems():
+            for (k, v) in media.attributes.items():
                 for value in v:
                     out.append("a=%s:%s" % (k, value))
 
@@ -213,27 +215,40 @@ class SDPMessage(object):
 
         for line in message.splitlines():
             line = line.strip()
-            if not line or line[1] != '=':
+            if not line:
                 continue
+            if len(line) < 2 or line[1] != '=':
+                logger.warning('Invalid line "%s" in message ignored', line)
+                continue
+
             key = line[0]
             val = line[2:]
 
-            if key == 'o':
-                self._ip = val.split()[5]
-            elif key == 'm':
-                media = SDPMedia(val.split()[0])
-                media.port = int(val.split()[1])
-                media.ip = self.ip # default IP address
-                media.rtcp = media.port + 1 # default RTCP port
-                media.payload_types = val.split()[3:]
-                self._medias.append(media)
-            elif key == 'c':
-                if media is None:
-                    self._ip = val.split()[2]
-                else:
-                    media.ip = val.split()[2]
-            elif key == 'a':
-                if media is None:
-                    continue
-                subkey, val = val.split(':', 1)
-                media.parse_attribute(subkey, val)
+            try:
+                if key == 'o':
+                    self._ip = val.split()[5]
+                elif key == 'm':
+                    media = SDPMedia(val.split()[0])
+                    media.port = int(val.split()[1])
+                    media.ip = self.ip # default IP address
+                    media.rtcp = media.port + 1 # default RTCP port
+                    media.payload_types = val.split()[3:]
+                    self._medias.append(media)
+                elif key == 'c':
+                    if media is None:
+                        self._ip = val.split()[2]
+                    else:
+                        media.ip = val.split()[2]
+                elif key == 'a':
+                    if media is None:
+                        continue
+                    if ':' in val:
+                        subkey, subval = val.split(':', 1)
+                        media.parse_attribute(subkey, subval)
+                    else:
+                        media.add_attribute(val)
+            except:
+                self._medias = []
+                raise ValueError('Invalid value "%s" for field "%s"' % (val, key))
+
+        return self._medias

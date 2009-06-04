@@ -3,6 +3,9 @@ from papyon.sip.ice import *
 from papyon.sip.sdp import *
 
 import gobject
+import logging
+
+logger = logging.getLogger('Media')
 
 class MediaSession(gobject.GObject, EventsDispatcher):
 
@@ -21,6 +24,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         self._ice_transport = ICETransport(tunneled)
         self._tunneled = tunneled
         self._streams = []
+        self._parsing = False
 
     @property
     def has_video(self):
@@ -31,6 +35,8 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         for stream in self._streams:
             if not stream.prepared:
                 return False
+        if self._parsing:
+            return False
         return True
 
     @property
@@ -44,8 +50,8 @@ class MediaSession(gobject.GObject, EventsDispatcher):
     def tunneled(self):
         return self._tunneled
 
-    def add_stream(self, name):
-        stream = MediaStream(name, self._ice_transport)
+    def add_stream(self, name, controlling):
+        stream = MediaStream(name, controlling, self._ice_transport)
         stream.connect("prepared", self.on_stream_prepared)
         stream.connect("ready", self.on_stream_ready)
         self._streams.append(stream)
@@ -68,18 +74,26 @@ class MediaSession(gobject.GObject, EventsDispatcher):
 
     def parse_sdp(self, message, initial=False):
         sdp = SDPMessage()
+        self._parsing = True
         try:
-            sdp.parse(message)
-        except:
-            return # invalid sdp message
-        for media in sdp.medias:
-            stream = self.get_stream(media.name)
-            if stream is None:
-                if initial:
-                    stream = self.add_stream(media.name)
-                else:
-                    return # invalid media type
-            stream.parse_media(media)
+            if not sdp.parse(message):
+                raise ValueError("SDP message does not contain any media")
+            for media in sdp.medias:
+                stream = self.get_stream(media.name)
+                if stream is None:
+                    if initial:
+                        stream = self.add_stream(media.name, False)
+                    else:
+                        raise ValueError('Invalid media "%s" in SDP message' % media.name)
+                stream.parse_media(media)
+        except Exception, err:
+            logger.error(err)
+            self._parsing = False
+            raise
+        self._parsing = False
+
+        if initial and self.ready:
+            self.emit("prepared")
 
     def on_stream_prepared(self, stream):
         if self.prepared:
@@ -144,6 +158,8 @@ class MediaStream(gobject.GObject, EventsDispatcher):
     def parse_media(self, media):
         self._remote_codecs = media.codecs
         self._remote_candidates = self._transport.decode_candidates(media)
+        if not self._remote_candidates:
+            self._remote_candidates = self._transport.get_default_candidates(media)
         self._dispatch("on_remote_codecs_received", self._remote_codecs)
         self._dispatch("on_remote_candidates_received", self._remote_candidates)
 

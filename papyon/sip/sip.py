@@ -26,9 +26,12 @@ from papyon.util.decorator import rw_property
 
 import base64
 import gobject
+import logging
 import random
 import re
 import uuid
+
+logger = logging.getLogger('SIP')
 
 class SIPBaseConnection(gobject.GObject):
 
@@ -78,9 +81,11 @@ class SIPBaseConnection(gobject.GObject):
         call = self.get_call(callid)
         if call is None:
             if isinstance(message, SIPRequest) and message.code == "INVITE":
+                logger.info("Call invitation received")
                 call = self.create_call(invite=message, id=callid)
                 self.emit("invite-received", call)
             else:
+                logger.info("Message with invalid call-id received")
                 call = SIPCall(self, self._client, invite=message, id=callid)
                 response = call.build_response(message, 481)
                 call.send(response) # call/transaction does not exist
@@ -276,6 +281,8 @@ class SIPBaseCall(gobject.GObject):
         handler = getattr(self, handler_name, None)
         if handler is not None:
             handler(msg)
+        else:
+            logger.warning("Unhandled %s message" % msg.code)
 
 
 class SIPCall(SIPBaseCall, EventsDispatcher):
@@ -289,7 +296,8 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self._media_session.connect("ready", self.on_session_ready)
 
         self._incoming = (id is not None)
-        self._answered = False
+        self._accepted = False
+        self._rejected = False
         self._early = False
         self._state = None
 
@@ -317,6 +325,10 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
     def media_session(self):
         return self._media_session
 
+    @property
+    def answered(self):
+        return self._accepted or self._rejected
+
     def build_invite_contact(self):
         if self._connection.tunneled:
             m = "<sip:%s%s>;proxy=replace;+sip.instance=\"<urn:uuid:%s>\"" % (
@@ -336,6 +348,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
     def invite(self):
         if not self._media_session.prepared:
             return
+        logger.info("Send call invitation to %s", self._contact.account)
         self._state = "CALLING"
         self._early = False
         self._uri = self._contact.account
@@ -369,19 +382,18 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self._dispatch("on_call_incoming")
 
     def accept(self):
-        if self._answered:
+        if self.answered:
             return
         gobject.source_remove(self._response_src)
-        self._answered = True
+        self._accepted = True
         self.answer(200)
 
     def reject(self, status=603):
-        if self._answered:
+        if self.answered:
             return
         gobject.source_remove(self._response_src)
-        self._answered = True
+        self._rejected = True
         self.answer(status)
-        self.end()
 
     def reaccept(self):
         if not self._media_session.ready:
@@ -429,9 +441,14 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
 
         if self._state is None:
             self._state = "INCOMING"
-            self._media_session.parse_sdp(invite.body, True)
             self._response_src = gobject.timeout_add(10000, self.on_response_timeout)
-            self.ring()
+            try:
+                self._media_session.parse_sdp(invite.body, True)
+            except:
+                logger.error("Malformed body in incoming call invitation")
+                self.reject(488)
+            else:
+                self.ring()
         elif self._state == "CONFIRMED":
             self._state = "REINVITED"
             self.reaccept()
@@ -451,10 +468,13 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self.reinvite()
 
     def on_ack_received(self, ack):
-        self._state = "CONFIRMED"
+        if self._rejected:
+            self.end()
+        else:
+            self._state = "CONFIRMED"
 
     def on_cancel_received(self, cancel):
-        if self._incoming and not self._answered:
+        if self._incoming and not self.answered:
             self.reject(487)
         response = self.build_response(cancel, 200)
         self.send(response)
@@ -482,10 +502,17 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self._dispatch("on_call_ringing")
         elif response.status is 200:
             self._state = "CONFIRMED"
-            self._dispatch("on_call_accepted")
-            self._media_session.parse_sdp(response.body)
-            self.reinvite()
+            try:
+                self._media_session.parse_sdp(response.body)
+            except:
+                logger.error("Malformed body in invite response")
+                self.send_bye()
+            else:
+                logger.info("Call invitation has been accepted")
+                self._dispatch("on_call_accepted")
+                self.reinvite()
         elif response.status in (408, 480, 486, 487, 504, 603):
+            logger.info("Call invitation has been rejected (%i)", response.status)
             self._dispatch("on_call_rejected", response)
             self.end()
         else:
