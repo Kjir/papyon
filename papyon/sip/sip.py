@@ -316,8 +316,9 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         EventsDispatcher.__init__(self)
 
         self._media_session = MediaSession(connection.tunneled)
-        self._media_session.connect("prepared", self.on_session_prepared)
-        self._media_session.connect("ready", self.on_session_ready)
+        sp = self._media_session.connect("prepared", self.on_session_prepared)
+        sr = self._media_session.connect("ready", self.on_session_ready)
+        self._signals = [sp, sr]
 
         self._incoming = (id is not None)
         self._accepted = False
@@ -446,6 +447,9 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
 
     def end(self):
         self.stop_all_timeout()
+        for handler_id in self._signals:
+            self._media_session.disconnect(handler_id)
+        self._media_session.close()
         self._state = "DISCONNECTED"
         self._dispatch("on_call_ended")
         self._connection.remove_call(self)

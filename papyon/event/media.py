@@ -56,6 +56,10 @@ class MediaStreamEventInterface(BaseEventInterface):
             @type stream: L{MediaStream<papyon.sip.media.MediaStream>}"""
         BaseEventInterface.__init__(self, stream)
 
+    def on_stream_closed(self):
+        """Called when the stream is closing"""
+        pass
+
     def on_remote_codecs_received(self, codecs):
         """Called when the remote codecs for this stream are received
             @param codecs: the remote codecs

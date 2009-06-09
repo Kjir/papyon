@@ -24,6 +24,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         self._ice_transport = ICETransport(tunneled)
         self._tunneled = tunneled
         self._streams = []
+        self._signals = {}
         self._parsing = False
 
     @property
@@ -50,11 +51,17 @@ class MediaSession(gobject.GObject, EventsDispatcher):
     def tunneled(self):
         return self._tunneled
 
+    def close(self):
+        for stream in self._streams:
+            self.close_stream(stream)
+        del self._streams
+
     def add_stream(self, name, controlling):
         stream = MediaStream(name, controlling, self._ice_transport)
-        stream.connect("prepared", self.on_stream_prepared)
-        stream.connect("ready", self.on_stream_ready)
+        sp = stream.connect("prepared", self.on_stream_prepared)
+        sr = stream.connect("ready", self.on_stream_ready)
         self._streams.append(stream)
+        self._signals[name] = [sp, sr]
         self._dispatch("on_stream_created", stream)
         return stream
 
@@ -64,6 +71,13 @@ class MediaSession(gobject.GObject, EventsDispatcher):
             return None
         else:
             return matching[0]
+
+    def close_stream(self, stream):
+        name = stream.name
+        for handler_id in self._signals[name]:
+            stream.disconnect(handler_id)
+        del self._signals[name]
+        stream.close()
 
     def build_sdp(self):
         sdp = SDPMessage()
@@ -147,6 +161,9 @@ class MediaStream(gobject.GObject, EventsDispatcher):
     def ready(self):
         return (self._local_candidate_id is not None and
                 self._remote_candidate_id is not None)
+
+    def close(self):
+        self._dispatch("on_stream_closed")
 
     def build_media(self):
         ip, port, rtcp = self.get_default_address()

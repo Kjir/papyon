@@ -161,6 +161,9 @@ class MediaStreamHandler(MediaStreamEventInterface):
         source.get_pad("src").link(self.fssession.get_property("sink-pad"))
         pipeline.set_state(gst.STATE_PLAYING)
 
+    def on_stream_closed(self):
+        del self.fsstream
+
     def on_remote_candidates_received(self, candidates):
         candidates = convert_fs_candidates(candidates)
         self.fsstream.set_remote_candidates(candidates)
