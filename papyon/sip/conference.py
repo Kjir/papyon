@@ -256,7 +256,7 @@ def convert_codecs(fscodecs):
         codec.payload = fscodec.id
         codec.encoding = fscodec.encoding_name
         codec.bitrate = fscodec.clock_rate
-        #codec.fmtp = fmtp
+        codec.params = dict(fscodec.optional_params)
         codecs.append(codec)
     return codecs
 
@@ -268,7 +268,8 @@ def convert_fs_codecs(codecs, name):
             codec.payload,
             codec.encoding,
             media_type,
-            codec.bitrate)
+            codec.clockrate)
+        fscodec.optional_params = codec.params.items()
         fscodecs.append(fscodec)
     return fscodecs
 

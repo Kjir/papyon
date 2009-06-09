@@ -28,11 +28,11 @@ logger = logging.getLogger('SDP')
 
 class SDPCodec(object):
 
-    def __init__(self, payload=None, encoding=None, bitrate=None, fmtp=None):
+    def __init__(self, payload=None, encoding=None, clockrate=None, params=None):
         self.payload = payload
         self.encoding = encoding
-        self.bitrate = bitrate
-        self.fmtp = fmtp
+        self.clockrate = clockrate
+        self.params = params or dict()
 
     @staticmethod
     def get_payload_from_rtpmap(rtpmap):
@@ -48,34 +48,50 @@ class SDPCodec(object):
         payload, fmtp = fmtp.split(' ', 1)
         return int(payload)
 
-    def build_rtpmap(self):
-        return "%i %s/%i" % (self.payload, self.encoding, self.bitrate)
+    @property
+    def rtpmap(self):
+        if not self.encoding or not self.clockrate:
+            return str(self.payload)
+        return "%i %s/%i" % (self.payload, self.encoding, self.clockrate)
 
-    def build_fmtp(self):
-        return "%i %s" % (self.payload, self.fmtp)
+    @property
+    def params_list(self):
+        if not self.params:
+            return ""
+        params = []
+        for (key, value) in self.params.items():
+            if key == "events":
+                params.append("0-16")
+            else:
+                params.append("%s=%s" % (key, value))
+        return " ".join(params)
+
+    @property
+    def fmtp(self):
+        return "%i %s" % (self.payload, self.params_list)
 
     def parse_rtpmap(self, rtpmap):
         payload, codec = rtpmap.split()
         self.payload = int(payload)
         self.encoding = codec.split('/')[0]
-        self.bitrate = int(codec.split('/')[1])
+        self.clockrate = int(codec.split('/')[1])
 
     def parse_fmtp(self, fmtp):
-        payload, fmtp = fmtp.split(' ', 1)
-        self.fmtp = fmtp
+        params = fmtp.split()
+        for param in params[1:]:
+            if '=' in param:
+                key, value = param.split('=')
+            else:
+                key = "events"
+                value = "0-15"
+        self.params[key] = value
 
     def __eq__(self, other):
-        return (self.payload == other.payload and
-                self.encoding == other.encoding and
-                self.bitrate == other.bitrate and
+        return (self.rtpmap == other.rtpmap and
                 self.fmtp == other.fmtp)
 
     def __repr__(self):
-        if self.fmtp:
-            fmtp = " %s" % self.fmtp
-        else:
-            fmtp = ""
-        return "<Codec: %s%s>" % (self.build_rtpmap(), fmtp)
+        return "<Codec: %s params={%s}>" % (self.rtpmap, self.params_list)
 
 
 class SDPMedia(object):
@@ -110,9 +126,9 @@ class SDPMedia(object):
             self.delete_attributes("rtpmap")
             self.delete_attributes("fmtp")
             for codec in value:
-                self.add_attribute("rtpmap", codec.build_rtpmap())
-                if codec.fmtp:
-                    self.add_attribute("fmtp", codec.build_fmtp())
+                self.add_attribute("rtpmap", codec.rtpmap)
+                if codec.params:
+                    self.add_attribute("fmtp", codec.fmtp)
                 caps = XCAPS[self.name].get(codec.payload, None)
                 if caps is not None:
                     self.add_attribute("x-caps", caps)
