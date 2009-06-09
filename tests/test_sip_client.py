@@ -100,10 +100,9 @@ class CallEvents(papyon.event.CallEventInterface):
 
     def __init__(self, call):
         papyon.event.CallEventInterface.__init__(self, call)
-        self._call = call
 
     def on_call_incoming(self):
-        self._call.accept()
+        self._client.accept()
 
 if __name__ == "__main__":
 
