@@ -200,7 +200,7 @@ class SDPMessage(object):
 
     @property
     def ip(self):
-        if self._ip == "" and len(self._medias) > 1:
+        if self._ip == "" and len(self._medias) > 0:
             return self._medias[0].ip
         return self._ip
 
