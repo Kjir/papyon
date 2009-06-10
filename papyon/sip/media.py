@@ -175,11 +175,17 @@ class MediaStream(gobject.GObject, EventsDispatcher):
 
     def parse_media(self, media):
         self._remote_codecs = media.codecs
-        self._remote_candidates = self._transport.decode_candidates(media)
+        candidates = self._transport.decode_candidates(media)
+        self._remote_candidates.extend(candidates)
         if not self._remote_candidates:
             self._remote_candidates = self._transport.get_default_candidates(media)
-        self._dispatch("on_remote_codecs_received", self._remote_codecs)
-        self._dispatch("on_remote_candidates_received", self._remote_candidates)
+
+        if media.get_attribute("remote-candidates") or\
+           media.get_attribute("remote-candidate"):
+            self._remote_candidate_id = candidates[0].foundation
+        else:
+            self._dispatch("on_remote_codecs_received", self._remote_codecs)
+            self._dispatch("on_remote_candidates_received", self._remote_candidates)
 
     def new_local_candidate(self, candidate):
         self._local_candidates.append(candidate)
@@ -200,9 +206,9 @@ class MediaStream(gobject.GObject, EventsDispatcher):
             self.emit("prepared")
 
     def set_local_codecs(self, codecs):
+        self._local_codecs = codecs
         if self._local_codecs_prepared:
             return
-        self._local_codecs = codecs
         self._local_codecs_prepared = True
         if self.prepared:
             self.emit("prepared")

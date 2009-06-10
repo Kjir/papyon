@@ -306,7 +306,7 @@ def make_video_source(name="videotestsrc"):
     bin = gst.Bin("videosrc")
     src = gst.element_factory_make(name, name)
     src.set_property("is-live", True)
-    src.set_property("pattern", 1)
+    src.set_property("pattern", 0)
     bin.add(src)
     filter = gst.element_factory_make("capsfilter")
     filter.set_property("caps", gst.Caps("video/x-raw-yuv , width=[300,500] , height=[200,500], framerate=[20/1,30/1]"))

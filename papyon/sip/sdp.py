@@ -50,8 +50,6 @@ class SDPCodec(object):
 
     @property
     def rtpmap(self):
-        if not self.encoding or not self.clockrate:
-            return str(self.payload)
         return "%i %s/%i" % (self.payload, self.encoding, self.clockrate)
 
     @property
