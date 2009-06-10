@@ -80,7 +80,6 @@ class SIPCallManager(gobject.GObject):
                     contact.client_capabilities.supports_tunneled_sip)
         connection = self.get_connection(tunneled, self.server)
         call = connection.create_call(contact=contact)
-        self.emit("invite-received", call)
         return call
 
     def on_notification_received(self, protocol, type, notification):

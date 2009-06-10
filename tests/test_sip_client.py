@@ -64,8 +64,10 @@ class SIPClient(papyon.Client):
     def invite(self):
         contact = self.address_book.contacts.search_by_account(self.invited)[0]
         call = self.call_manager.create_call(contact)
-        call.media_session.add_stream("audio")
-        #call.media_session.add_stream("video")
+        self.call_handler = CallEvents(call)
+        self.session_handler = MediaSessionHandler(call.media_session)
+        call.media_session.add_stream("audio", True)
+        call.media_session.add_stream("video", True)
         call.invite()
         return False
 
@@ -85,7 +87,7 @@ class ClientEvents(papyon.event.ClientEventInterface,
             self._client.profile.presence = papyon.Presence.ONLINE
             for contact in self._client.address_book.contacts:
                 print contact
-            gobject.timeout_add(4000, self._client.invite)
+            gobject.timeout_add(2000, self._client.invite)
 
     def on_invite_conference(self, call):
         print "INVITED : call-id = %s" % call.id
