@@ -421,12 +421,17 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             return
         self._state = "CONFIRMED"
         self.answer(200)
-        self._dispatch("on_call_connected")
 
     def send_ack(self, response):
         request = self.build_request("ACK", self._uri, self._remote)
         request.add_header("Route", self._route)
         self.send(request)
+
+    def end(self):
+        if self._state in ("CALLING", "REINVITING"):
+            self.cancel()
+        else:
+            self.send_bye()
 
     def cancel(self):
         if self._state not in ("CALLING", "REINVITING"):
@@ -445,7 +450,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self.start_timeout("end", 5)
         self.send(request)
 
-    def end(self):
+    def dispose(self):
         self.stop_all_timeout()
         for handler_id in self._signals:
             self._media_session.disconnect(handler_id)
@@ -460,7 +465,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
 
         if self._state is None:
             self._state = "INCOMING"
-            self.start_timeout("response", 10)
+            self.start_timeout("response", 30)
             try:
                 self._media_session.parse_sdp(invite.body, True)
             except:
@@ -469,26 +474,15 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             else:
                 self.ring()
         elif self._state == "CONFIRMED":
+            self._media_session.parse_sdp(invite.body)
             self._state = "REINVITED"
             self.reaccept()
         else:
             self.answer(488) # not acceptable here
 
-    def on_session_prepared(self, session):
-        if self._state is None:
-            self.invite()
-        elif self._state == "INCOMING":
-            self.ring()
-
-    def on_session_ready(self, session):
-        if self._state == "REINVITED":
-            self.reaccept()
-        elif self._state == "CONFIRMED":
-            self.reinvite()
-
     def on_ack_received(self, ack):
         if self._rejected:
-            self.end()
+            self.dispose()
         else:
             self._state = "CONFIRMED"
 
@@ -497,12 +491,12 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self.reject(487)
         response = self.build_response(cancel, 200)
         self.send(response)
-        self.end()
+        self.dispose()
 
     def on_bye_received(self, bye):
         response = self.build_response(bye, 200)
         self.send(response)
-        self.end()
+        self.dispose()
 
     def on_invite_response(self, response):
         if self._state == "REINVITING":
@@ -533,7 +527,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         elif response.status in (408, 480, 486, 487, 504, 603):
             logger.info("Call invitation has been rejected (%i)", response.status)
             self._dispatch("on_call_rejected", response)
-            self.end()
+            self.dispose()
         else:
             self._dispatch("on_call_error", response)
             self.send_bye()
@@ -543,19 +537,30 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self.send_ack(response)
             self.stop_timeout("invite")
 
-        if response.status in (100, 488):
+        if response.status in (100, 180):
             pass
-        elif response.status is 200:
+        elif response.status in (200, 488):
             self._state = "CONFIRMED"
-            self._dispatch("on_call_connected")
         else:
             self.send_bye()
 
     def on_cancel_response(self, response):
-        self.end()
+        self.dispose()
 
     def on_bye_response(self, response):
-        self.end()
+        self.dispose()
+
+    def on_session_prepared(self, session):
+        if self._state is None:
+            self.invite()
+        elif self._state == "INCOMING":
+            self.ring()
+
+    def on_session_ready(self, session):
+        if self._state == "REINVITED":
+            self.reaccept()
+        elif self._state == "CONFIRMED":
+            self.reinvite()
 
     def on_invite_timeout(self):
         self.cancel()
@@ -565,7 +570,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self._dispatch("on_call_missed")
 
     def on_end_timeout(self):
-        self.end()
+        self.dispose()
 
 
 class SIPRegistration(SIPBaseCall):
