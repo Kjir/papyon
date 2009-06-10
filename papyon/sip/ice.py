@@ -143,7 +143,11 @@ class ICECandidate(object):
             (self.foundation, self.component_id, self.transport,
                 self.priority, self.ip, self.port) = parts[0:6]
             for i in range(6, len(parts), 2):
-                self._extensions[parts[i]] = parts[i + 1]
+                key, val = parts[i:i + 2]
+                for (name, attr) in self.REL_EXT:
+                    if key == name:
+                        setattr(self, attr, val)
+                self._extensions[key] = val
         elif self.draft is 6:
             (self.username, self.component_id, self.password, self.transport,
                 self.priority, self.ip, self.port) = parts[0:7]
