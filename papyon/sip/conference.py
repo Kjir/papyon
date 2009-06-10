@@ -31,6 +31,7 @@ import base64
 import farsight
 import gobject
 import gst
+import sys
 
 codecs_definitions = {
     "audio" : [
@@ -92,6 +93,7 @@ class MediaSessionHandler(MediaSessionEventInterface):
         self._participant = self._conference.new_participant("")
         self._pipeline.add(self._conference)
         self._pipeline.set_state(gst.STATE_PLAYING)
+        self._notifier = create_notifier(self._pipeline)
 
     def on_stream_created(self, stream):
         handler = MediaStreamHandler(stream)
@@ -181,6 +183,13 @@ class MediaStreamHandler(MediaStreamEventInterface):
 
 # Farsight utility functions
 
+def create_notifier(pipeline):
+    filename = "/home/lfrb/Development/papyon/papyon/sip/gstelements.conf"
+    notifier = farsight.ElementAddedNotifier()
+    notifier.add(pipeline)
+    notifier.set_properties_from_file(filename)
+    return notifier
+
 def convert_candidate(fscandidate, tunneled):
     if tunneled:
         draft = 19
@@ -255,7 +264,7 @@ def convert_codecs(fscodecs):
         codec = SDPCodec()
         codec.payload = fscodec.id
         codec.encoding = fscodec.encoding_name
-        codec.bitrate = fscodec.clock_rate
+        codec.clockrate = fscodec.clock_rate
         codec.params = dict(fscodec.optional_params)
         codecs.append(codec)
     return codecs
