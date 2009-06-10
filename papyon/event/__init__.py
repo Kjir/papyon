@@ -75,3 +75,4 @@ from invite import *
 from mailbox import *
 from call import *
 from media import *
+from webcam import *
