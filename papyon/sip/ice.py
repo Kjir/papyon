@@ -48,7 +48,8 @@ class ICETransport(object):
             if draft is 6:
                 candidates = candidates[0:1]
             list = [c.get_remote_id() for c in candidates]
-            media.add_attribute("remote-candidate", " ".join(list))
+            name = (len(list) > 1 and "remote-candidates") or "remote-candidate"
+            media.add_attribute(name, " ".join(list))
 
     def decode_candidates(self, media):
         candidates = []
