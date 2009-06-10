@@ -78,6 +78,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
             stream.disconnect(handler_id)
         del self._signals[name]
         stream.close()
+        self._dispatch("on_stream_removed", stream)
 
     def build_sdp(self):
         sdp = SDPMessage()

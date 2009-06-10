@@ -45,6 +45,12 @@ class MediaSessionEventInterface(BaseEventInterface):
             @type stream: L{MediaStream<papyon.sip.media.MediaStream>}"""
         pass
 
+    def on_stream_removed(self, stream):
+        """Called when a new stream is removed from the session
+            @param stream: the new media stream
+            @type stream: L{MediaStream<papyon.sip.media.MediaStream>}"""
+        pass
+
 
 class MediaStreamEventInterface(BaseEventInterface):
     """interfaces allowing the user to get notified about events
