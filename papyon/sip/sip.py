@@ -412,7 +412,9 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
     def reject(self, status=603):
         if self.answered:
             return
+        self._state = "DISCONNECTING"
         self.stop_timeout("response")
+        self.start_timeout("end")
         self._rejected = True
         self.answer(status)
 
@@ -428,7 +430,9 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self.send(request)
 
     def end(self):
-        if self._state in ("CALLING", "REINVITING"):
+        if self._state in ("INCOMING"):
+            self.reject()
+        elif self._state in ("CALLING", "REINVITING"):
             self.cancel()
         else:
             self.send_bye()
