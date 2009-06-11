@@ -52,6 +52,12 @@ codecs_definitions = {
     ]
 }
 
+valid_codecs = {
+    "audio" : ["x-msrta", "SIREN", "G7221", "G723", "PCMA", "PCMU", "RED",
+        "telephone-event"],
+    "video" : ["x-rtvc1", "H263"]
+}
+
 types = {
     0 : None,
     farsight.CANDIDATE_TYPE_HOST  : "host",
@@ -114,6 +120,8 @@ class MediaSessionHandler(MediaSessionEventInterface):
                     codecs = s["session"].get_property("codecs")
                     name = media_names[s["session"].get_property("media-type")]
                     stream = self._client.get_stream(name)
+                    codecs = filter(lambda c: c.encoding_name in
+                            valid_codecs[name], codecs)
                     stream.set_local_codecs(convert_codecs(codecs))
             if s.has_name("farsight-new-local-candidate"):
                 ret = gst.BUS_DROP
@@ -167,14 +175,17 @@ class MediaStreamHandler(MediaStreamEventInterface):
         del self.fsstream
 
     def on_remote_candidates_received(self, candidates):
+        print "SET CANDIDATES"
         candidates = convert_fs_candidates(candidates)
         self.fsstream.set_remote_candidates(candidates)
 
     def on_remote_codecs_received(self, codecs):
+        print "SET CODECS"
         codecs = convert_fs_codecs(codecs, self._client.name)
         self.fsstream.set_remote_codecs(codecs)
 
     def on_src_pad_added(self, stream, pad, codec, pipeline):
+        print "********************SRC PAD ADDED"
         sink = make_sink(self._client.name)
         pipeline.add(sink)
         sink.set_state(gst.STATE_PLAYING)
