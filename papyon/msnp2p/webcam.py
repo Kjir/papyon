@@ -77,11 +77,11 @@ class WebcamSession(P2PSession, EventsDispatcher):
     @property
     def remote_candidates(self):
         return self._remote_candidates
-  
+
     @property
     def codecs(self):
         return [Codec.ML20]
-  
+
     def invite(self):
         context = "{B8BE70DE-E2CA-4400-AE03-88FF85B9F4E8}"
         context = context.decode('ascii').encode('utf-16_le')
@@ -124,12 +124,12 @@ class WebcamSession(P2PSession, EventsDispatcher):
         footer='\x00\x00\x00\x04'
         self._send_p2p_data(syn)
         self._sent_syn = True
-        
+
     def send_binary_ack(self):
         ack='\x80\xea\x00\x00\x08\x00\x08\x00\x00\x00a\x00c\x00k\x00\x00\x00'
         footer='\x00\x00\x00\x04'
         self._send_p2p_data(ack)
-        
+
     def send_binary_viewer_data(self):
         data = '\x80\xec\xc7\x03\x08\x00&\x00\x00\x00r\x00e\x00c\x00e\x00i\x00v\x00e\x00d\x00V\x00i\x00e\x00w\x00e\x00r\x00D\x00a\x00t\x00a\x00\x00\x00'
         footer='\x00\x00\x00\x04'
@@ -144,7 +144,7 @@ class WebcamSession(P2PSession, EventsDispatcher):
         s += "<version>2.0</version><rid>%s</rid><session>%u</session><ctypes>0</ctypes><cpu>2010</cpu>" % \
             (self._local_candidates[0][2],
              self._session_id)
-        
+
         s += "<tcp>"
         s += "<tcpport>%(port)u</tcpport>\t\t\t\t\t\t\t\t  <tcplocalport>%(port)u</tcplocalport>\t\t\t\t\t\t\t\t  <tcpexternalport>%(port)u</tcpexternalport>" \
             % { "port" : self._local_candidates[0][1] }
@@ -152,7 +152,7 @@ class WebcamSession(P2PSession, EventsDispatcher):
             s += "<tcpipaddress%u>%s</tcpipaddress%u>" % (i + 1, candidate[0], i + 1)
         s += "</tcp>"
         s += "<codec></codec><channelmode>2</channelmode>"
-        
+
         if self._producer:
             s += "</producer>"
         else:
