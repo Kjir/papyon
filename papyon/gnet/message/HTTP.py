@@ -19,33 +19,11 @@
 #
 
 """HTTP Messages structures."""
-from UserDict import DictMixin
 import cgi
-
 from papyon.gnet.constants import *
+from papyon.util.odict import odict
 
 __all__ = ['HTTPMessage', 'HTTPResponse', 'HTTPRequest']
-
-class odict(DictMixin):
-    def __init__(self, dict=None):
-        self._keys = []
-        self.data = dict or {}
-
-    def __getitem__(self, key):
-        return self.data[key]
-
-    def __delitem__(self, key):
-        del self.data[key]
-        self._keys.remove(key)
-
-    def __setitem__(self, key, item):
-        self.data[key] = item
-        if key not in self._keys:
-            self._keys.append(key)
-
-    def keys(self):
-        return self._keys[:]
-
 
 class HTTPMessage(object):
     """HTTP style message abstraction
@@ -94,7 +72,7 @@ class HTTPMessage(object):
 
     def __str__(self):
         result = []
-        for name in self.headers:
+        for name in self.headers.keys():
             result.append(": ".join((name, str(self.headers[name]))))
         #if "Content-Length" not in self.headers:
         #    result.append("Content-Length: %d" % len(body))
