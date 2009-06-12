@@ -37,7 +37,7 @@ class CommandPrinter(object):
     
     def _print_default_header(self):
         command = self.command
-        
+
         result = command.name
         if command.transaction_id is not None:
             result += ' ' + str(command.transaction_id)
@@ -53,7 +53,11 @@ class CommandPrinter(object):
         result = self._print_default_header()
         
         if command.payload is not None:
-            result += "\n" + repr(Message(None, str(command.payload)))
+            payload = repr(Message(None, str(command.payload)))
+            length = len(payload)
+            if length > 0:
+                result += ' ' + str(length) + '\r\n'
+                result += payload
         return result
 
     def _print_UUM(self):
@@ -103,16 +107,16 @@ class CommandPrinter(object):
 class Command(object):
     """Abstraction of MSN commands, this class enables parsing and construction
     of commands.
-    
+
         @ivar name: the 3 uppercase letters name of the command
         @type name: string
-        
+
         @ivar transaction_id: the transaction id of the command or None
         @type transaction_id: integer
-        
+
         @ivar arguments: the arguments of the command
         @type arguments: tuple()
-        
+
         @ivar payload: the payload of the command
         @type payload: string or None"""
 
@@ -131,7 +135,7 @@ class Command(object):
     INCOMING_PAYLOAD = (
             'GCF', 'MSG', 'UBN', 'UBM', 'UBX', 'IPG',
             'NOT', 'ADL', 'RML', 'FQY',
-            
+
             '241', '509')
 
     def __init__(self):
@@ -150,13 +154,13 @@ class Command(object):
 
             @param name: the command name (3 letters) (e.g. MSG NLN ...)
             @type name: string
-            
+
             @param transaction_id: the transaction ID
             @type transaction_id: integer
-            
+
             @param arguments: the command arguments
-            @type arguments: string, ... 
-            
+            @type arguments: string, ...
+
             @param payload: is the data to send with the command
             @type payload: string
         """
@@ -167,7 +171,7 @@ class Command(object):
 
     def parse(self, buf):
         """Fills the Command object according parsing a string.
-            
+
             @param buf: the data to parse
             @type buf: string"""
         self._reset()
@@ -180,7 +184,7 @@ class Command(object):
 
     def is_error(self):
         """Tells if the current command is an error code
-            
+
             @rtype: bool"""
         try:
             int(self.name)
@@ -191,7 +195,7 @@ class Command(object):
 
     def is_payload(self):
         """Tells if the current comment is a payload command
-        
+
             @rtype: bool"""
         return self.payload is not None
 
