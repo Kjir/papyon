@@ -58,8 +58,8 @@ class MediaSession(gobject.GObject, EventsDispatcher):
             self.close_stream(stream)
         del self._streams
 
-    def add_stream(self, name, created):
-        stream = MediaStream(name, created, self._transport, self._media_class)
+    def add_stream(self, name, direction, created=False):
+        stream = MediaStream(name, direction, created, self._transport)
         sp = stream.connect("prepared", self.on_stream_prepared)
         sr = stream.connect("ready", self.on_stream_ready)
         self._streams.append(stream)
@@ -85,7 +85,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
     def build_body(self, *args):
         msg = self._msg_class(*args)
         for stream in self._streams:
-            media = msg.create_media_description(self._name)
+            media = msg.create_media_description(stream.name)
             stream.build_media(media)
         return str(msg)
 
@@ -99,7 +99,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
                 stream = self.get_stream(media.name)
                 if stream is None:
                     if initial:
-                        stream = self.add_stream(media.name, False)
+                        stream = self.add_stream(media.name, media.direction)
                     else:
                         raise ValueError('Invalid media "%s" in session message' % media.name)
                 stream.parse_media(media)
@@ -134,12 +134,12 @@ class MediaStream(gobject.GObject, EventsDispatcher):
             ())
     }
 
-    def __init__(self, name, created, transport):
+    def __init__(self, name, direction, created, transport):
         gobject.GObject.__init__(self)
         EventsDispatcher.__init__(self)
         self._name = name
         self._created = created
-        self._direction = 0
+        self._direction = direction
         self._transport = transport
         self._local_codecs = []
         self._local_codecs_prepared = False
@@ -182,7 +182,6 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         return media
 
     def parse_media(self, media):
-        self._direction = media.direction
         self._remote_codecs = media.codecs
         candidates = self._transport.decode_candidates(media)
         self._remote_candidates.extend(candidates)
