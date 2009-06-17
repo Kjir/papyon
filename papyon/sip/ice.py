@@ -156,7 +156,7 @@ class ICECandidate(object):
         if self.draft is 19:
             self.priority = int(self.priority)
         if self.draft is 6:
-            self.priority = int(self.priority * 1000)
+            self.priority = int(float(self.priority) * 1000)
         self.component_id = int(self.component_id)
         self.port = int(self.port)
         if self.base_port is not None:
