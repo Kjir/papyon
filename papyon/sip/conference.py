@@ -21,6 +21,7 @@
 import sys
 sys.path.insert(0, "")
 from papyon.sip.ice import *
+from papyon.sip.media import *
 from papyon.sip.sdp import *
 from papyon.event.media import *
 
@@ -166,6 +167,7 @@ class MediaStreamHandler(MediaStreamEventInterface):
         media_type = media_types[self._client.name]
         self.fssession = conference.new_session(media_type)
         self.fssession.set_codec_preferences(build_codecs(self._client.name))
+        #FIXME fix direction
         self.fsstream = self.fssession.new_stream(participant,
                 farsight.DIRECTION_BOTH, "nice", params)
         self.fsstream.connect("src-pad-added", self.on_src_pad_added, pipeline)

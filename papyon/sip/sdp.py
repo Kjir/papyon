@@ -107,6 +107,10 @@ class SDPMedia(object):
     def attributes(self):
         return self._attributes
 
+    @property
+    def direction(self):
+        return MediaStreamDirection.BOTH
+
     @rw_property
     def rtcp():
         def fget(self):

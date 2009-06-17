@@ -134,11 +134,12 @@ class MediaStream(gobject.GObject, EventsDispatcher):
             ())
     }
 
-    def __init__(self, name, controlling, transport):
+    def __init__(self, name, created, transport):
         gobject.GObject.__init__(self)
         EventsDispatcher.__init__(self)
         self._name = name
-        self._controlling = controlling
+        self._created = created
+        self._direction = 0
         self._transport = transport
         self._local_codecs = []
         self._local_codecs_prepared = False
@@ -155,7 +156,11 @@ class MediaStream(gobject.GObject, EventsDispatcher):
 
     @property
     def controlling(self):
-        return self._controlling
+        return self._created
+
+    @property
+    def direction(self):
+        return self._direction
 
     @property
     def prepared(self):
@@ -177,6 +182,7 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         return media
 
     def parse_media(self, media):
+        self._direction = media.direction
         self._remote_codecs = media.codecs
         candidates = self._transport.decode_candidates(media)
         self._remote_candidates.extend(candidates)
