@@ -96,7 +96,11 @@ class MediaSessionHandler(MediaSessionEventInterface):
         bus = self._pipeline.get_bus()
         bus.add_signal_watch()
         bus.connect("message", self.on_bus_message)
-        self._conference = gst.element_factory_make("fsrtpconference")
+        if self._client.type is MediaSessionType.WEBCAM:
+            name = "fsmsnconference"
+        else:
+            name = "fsrtpconference"
+        self._conference = gst.element_factory_make(name)
         self._participant = self._conference.new_participant("")
         self._pipeline.add(self._conference)
         self._pipeline.set_state(gst.STATE_PLAYING)
