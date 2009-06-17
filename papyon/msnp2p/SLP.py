@@ -323,7 +323,7 @@ class SLPSessionCloseBody(SLPMessageBody):
                 session_id, s_channel_state, capabilities_flags)
         
         if context is not None:
-            self.add_header("Context",  base64.b64encode(repr(context)));
+            self.add_header("Context",  base64.b64encode(context));
 
     @property
     def context(self):
