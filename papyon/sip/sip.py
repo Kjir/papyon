@@ -327,6 +327,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self._incoming = (id is not None)
         self._accepted = False
         self._rejected = False
+        self._answer_sent = False
         self._early = False
         self._state = None
 
@@ -352,7 +353,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
 
     @property
     def answered(self):
-        return self._accepted or self._rejected
+        return (self._accepted or self._rejected) and self._answer_sent
 
     def build_invite_contact(self):
         if self._connection.tunneled:
@@ -367,7 +368,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         request = self.build_request("INVITE", uri, to, incr=True)
         request.add_header("Ms-Conversation-ID", "f=%s" % self.conversation_id)
         request.add_header("Contact", self.build_invite_contact())
-        request.set_content(self._media_session.build_sdp(), "application/sdp")
+        request.set_content(self._media_session.build_body(), "application/sdp")
         return request
 
     def invite(self):
@@ -396,11 +397,11 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         response = self.build_response(self._invite, status)
         if status == 200:
             response.add_header("Contact", self.build_invite_contact())
-            response.set_content(self._media_session.build_sdp(), "application/sdp")
+            response.set_content(self._media_session.build_body(), "application/sdp")
         self.send(response)
 
     def ring(self):
-        if self._invite is None or not self._media_session.prepared:
+        if self._invite is None :
             return
         self.start_timeout("response", 30)
         self.answer(180)
@@ -409,8 +410,11 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
     def accept(self):
         if self.answered:
             return
-        self.stop_timeout("response")
         self._accepted = True
+        if not self._media_session.prepared:
+            return
+        self.stop_timeout("response")
+        self._answer_sent = True
         self.answer(200)
 
     def reject(self, status=603):
@@ -418,8 +422,9 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             return
         self._state = "DISCONNECTING"
         self.stop_timeout("response")
-        self.start_timeout("end")
+        self.start_timeout("end", 5)
         self._rejected = True
+        self._answer_sent = True
         self.answer(status)
 
     def reaccept(self):
@@ -495,7 +500,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self._state = "CONFIRMED"
 
     def on_cancel_received(self, cancel):
-        if self._incoming and not self.answered:
+        if self._incoming:
             self.reject(487)
         response = self.build_response(cancel, 200)
         self.send(response)
@@ -561,8 +566,8 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
     def on_session_prepared(self, session):
         if self._state is None:
             self.invite()
-        elif self._state == "INCOMING":
-            self.ring()
+        elif self._state == "INCOMING" and self._accepted:
+            self.accept()
 
     def on_session_ready(self, session):
         if self._state == "REINVITED":
