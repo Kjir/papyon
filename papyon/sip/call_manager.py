@@ -89,7 +89,7 @@ class SIPCallManager(gobject.GObject):
         if len(args) == 3 and args[0] == "INVITE":
             # Register to the server so we can take the call
             connection = self.get_connection(False, args[1])
-            connection.register(None, None)
+            connection.register()
 
     def on_invite_received(self, connection, call):
         self.emit("invite-received", call)

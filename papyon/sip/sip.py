@@ -76,6 +76,7 @@ class SIPBaseConnection(gobject.GObject):
         return self._calls.get(callid, None)
 
     def send(self, message, registration=False):
+        message.sent = True
         self._transport.send(message)
 
     def on_message_received(self, parser, message):
@@ -86,7 +87,7 @@ class SIPBaseConnection(gobject.GObject):
                 logger.info("Call invitation received")
                 call = self.create_call(invite=message, id=callid)
                 self.emit("invite-received", call)
-            else:
+            elif self.registered:
                 logger.info("Message with invalid call-id received")
                 call = SIPCall(self, self._client, invite=message, id=callid)
                 response = call.build_response(message, 481)
@@ -99,7 +100,6 @@ class SIPConnection(SIPBaseConnection):
 
     def __init__(self, client, transport):
         SIPBaseConnection.__init__(self, client, transport)
-        self._sso = self._client._sso
         self._tokens = {}
         self._msg_queue = []
         self._registration = SIPRegistration(self, self._client)
@@ -115,39 +115,42 @@ class SIPConnection(SIPBaseConnection):
     def tunneled(self):
         return False
 
-    @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
-    def register(self, callback, errcb):
-        token = self._tokens[LiveService.MESSENGER_SECURE]
-        self._registration.register(token)
+    def register(self):
+        self._registration.register()
 
-    @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
-    def unregister(self, callback, errcb):
-        token = self._tokens[LiveService.MESSENGER_SECURE]
-        self._registration.unregister(token)
+    def unregister(self):
         self.emit("disconnecting")
+        self._msg_queue = []
+        self._registration.unregister()
 
     def send(self, message, registration=False):
         if self.registered or registration:
+            message.sent = True
             self._transport.send(message)
         else:
             self._msg_queue.append(message)
-            self.register(None, None)
+            self.register()
 
     def remove_call(self, call):
         SIPBaseConnection.remove_call(self, call)
         if len(self._calls) == 1:
-            self.unregister(None, None)
+            self.unregister()
 
     def on_registration_success(self, registration):
         while len(self._msg_queue) > 0:
             msg = self._msg_queue.pop(0)
-            self.send(msg)
+            if not msg.cancelled:
+                self.send(msg)
 
     def on_unregistration_success(self, registration):
         self.emit("disconnected")
 
 
 class SIPTunneledConnection(SIPBaseConnection):
+
+    @property
+    def registered(self):
+        return True
 
     @property
     def tunneled(self):
@@ -287,6 +290,10 @@ class SIPBaseCall(gobject.GObject):
         else:
             logger.warning("Unhandled %s message" % msg.code)
 
+    @property
+    def timeouts(self):
+        return self._timeout_sources.keys()
+
     def start_timeout(self, name, time):
         self.stop_timeout(name)
         source = gobject.timeout_add(time * 1000, self.on_timeout, name)
@@ -414,6 +421,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         if not self._media_session.prepared:
             return
         self.stop_timeout("response")
+        self.start_timeout("ack", 5)
         self._answer_sent = True
         self.answer(200)
 
@@ -422,7 +430,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             return
         self._state = "DISCONNECTING"
         self.stop_timeout("response")
-        self.start_timeout("end", 5)
+        self.start_timeout("ack", 5)
         self._rejected = True
         self._answer_sent = True
         self.answer(status)
@@ -449,22 +457,38 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
     def cancel(self):
         if self._state not in ("CALLING", "REINVITING"):
             return
+
+        if self._state == "CALLING":
+            if self._invite is None:
+                self.force_dispose()
+                return
+            elif not self._invite.sent:
+                self._invite.cancelled = True
+                self.force_dispose()
+                return
+
         self._state = "DISCONNECTING"
         request = self.build_request("CANCEL", self._invite.uri, None)
         request.clone_headers("To", self._invite)
         request.clone_headers("Route", self._invite)
-        self.start_timeout("end", 5)
+        self.start_timeout("cancel", 5)
         self.send(request)
 
     def send_bye(self):
         self._state = "DISCONNECTING"
         request = self.build_request("BYE", self._uri, self._remote, incr=True)
         request.add_header("Route", self._route)
-        self.start_timeout("end", 5)
+        self.start_timeout("bye", 5)
         self.send(request)
 
-    def dispose(self):
+    def force_dispose(self):
+        self._state = "DISCONNECTING"
         self.stop_all_timeout()
+        self.dispose()
+
+    def dispose(self):
+        if self.timeouts:
+            return # we have to wait some responses
         for handler_id in self._signals:
             self._media_session.disconnect(handler_id)
         self._media_session.close()
@@ -494,6 +518,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self.answer(488) # not acceptable here
 
     def on_ack_received(self, ack):
+        self.stop_timeout("ack")
         if self._rejected:
             self.dispose()
         else:
@@ -514,7 +539,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
     def on_invite_response(self, response):
         if self._state == "REINVITING":
             return self.on_reinvite_response(response)
-        elif self._state != "CALLING":
+        elif self._incoming:
             return
 
         self._remote = response.get_header("To")
@@ -558,9 +583,11 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self.send_bye()
 
     def on_cancel_response(self, response):
+        self.stop_timeout("cancel")
         self.dispose()
 
     def on_bye_response(self, response):
+        self.stop_timeout("bye")
         self.dispose()
 
     def on_session_prepared(self, session):
@@ -582,6 +609,15 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self.reject(408)
         self._dispatch("on_call_missed")
 
+    def on_ack_timeout(self):
+        self.dispose()
+
+    def on_cancel_timeout(self):
+        self.dispose()
+
+    def on_bye_timeout(self):
+        self.dispose()
+
     def on_end_timeout(self):
         self.dispose()
 
@@ -597,6 +633,10 @@ class SIPRegistration(SIPBaseCall):
     def __init__(self, connection, client):
         SIPBaseCall.__init__(self, connection, client)
         self._state = "NEW"
+        self._sso = client._sso
+        self._src = None
+        self._request = None
+        self._pending_unregister = False
 
     @property
     def registered(self):
@@ -614,19 +654,43 @@ class SIPRegistration(SIPBaseCall):
         request.add_header("Authorization", "Basic %s" % auth)
         return request
 
-    def register(self, ticket):
-        auth = "msmsgs:RPS_%s" % ticket
-        auth = base64.b64encode(auth).replace("\n", "")
-        request = self.build_register_request(900, auth)
+    def register(self):
+        if self._state in ("REGISTERING", "REGISTERED", "CANCELLED"):
+            return
         self._state = "REGISTERING"
-        self.send(request, True)
+        self._sso.RequestMultipleSecurityTokens((self.register_cb,), None,
+                LiveService.MESSENGER_SECURE)
 
-    def unregister(self, token):
+    def register_cb(self, tokens):
+        if self._state != "REGISTERING":
+            return
+        auth = "msmsgs:RPS_%s" % tokens[LiveService.MESSENGER_SECURE]
+        auth = base64.b64encode(auth).replace("\n", "")
+        self._request = self.build_register_request(900, auth)
+        self.send(self._request, True)
+
+    def unregister(self):
+        if self._state in ("NEW", "UNREGISTERING", "UNREGISTERED", "CANCELLED"):
+            return
+        elif self._state == "REGISTERING":
+            if self._request is None:
+                self._state = "CANCELLED"
+                self.emit("unregistered")
+            else:
+                self._pending_unregister = True
+            return
+
+        self._state = "UNREGISTERING"
+        self._pending_unregister = False
         gobject.source_remove(self._src)
-        auth = "%s:%s" % (self._account, token)
+        self._src = None
+        self._sso.RequestMultipleSecurityTokens((self.unregister_cb,), None,
+                LiveService.MESSENGER_SECURE)
+
+    def unregister_cb(self, tokens):
+        auth = "%s:%s" % (self._account, tokens[LiveService.MESSENGER_SECURE])
         auth = base64.encodestring(auth).replace("\n", "")
         request = self.build_register_request(0, auth)
-        self._state = "UNREGISTERING"
         self.send(request, True)
 
     def on_expire(self):
@@ -644,6 +708,8 @@ class SIPRegistration(SIPBaseCall):
             self.emit("registered")
             timeout = int(response.get_header("Expires", 30))
             self._src = gobject.timeout_add(timeout * 1000, self.on_expire)
+            if self._pending_unregister:
+                self.unregister()
         else:
             self._state = "UNREGISTERED"
             self.emit("failed")
@@ -656,6 +722,8 @@ class SIPMessage(object):
         self._call = None
         self._headers = {}
         self.set_content("")
+        self.sent = False
+        self.cancelled = False
 
     @rw_property
     def body():
