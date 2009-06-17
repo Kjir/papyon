@@ -250,7 +250,7 @@ class MSNObjectStore(object):
                 self._outgoing_session_transfer_completed)
         self._outgoing_sessions[session] = \
                 (handle_id, callback, errback, msn_object)
-        session.invite(msn_object)
+        session.invite(repr(msn_object))
 
     def publish(self, msn_object):
         if msn_object._data is None:
