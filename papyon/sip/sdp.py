@@ -94,14 +94,14 @@ class SDPCodec(object):
 
 class SDPMedia(object):
 
-    def __init__(self, name, ip=None, port=None, rtcp=None):
+    def __init__(self, name):
         self._attributes = odict({"encryption": ["rejected"]})
         self._codecs = []
 
         self.name = name
-        self.ip = ip
-        self.port = port
-        self.rtcp = rtcp
+        self.ip = ""
+        self.port = 0
+        self.rtcp = 0
 
     @property
     def attributes(self):
@@ -205,6 +205,11 @@ class SDPMessage(object):
     @property
     def medias(self):
         return self._medias
+
+    def create_media_description(self, name):
+        media = SDPMedia(name)
+        self._medias.append(media)
+        return media
 
     def __str__(self):
         out = []
