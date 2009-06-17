@@ -93,6 +93,11 @@ class WebcamSession(P2PSession, EventsDispatcher):
         if self._xml_needed:
             self._send_xml()
 
+    def _on_invite_received(self, message):
+        if self._producer:
+            self._media_session.add_stream("video",
+                    MediaStreamDirection.SENDING, False)
+
     def _on_session_accepted(self):
         self._dispatch("on_call_accepted")
 
