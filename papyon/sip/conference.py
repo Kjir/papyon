@@ -104,7 +104,7 @@ class MediaSessionHandler(MediaSessionEventInterface):
     def on_stream_created(self, stream):
         handler = MediaStreamHandler(stream)
         handler.setup(self._conference, self._pipeline, self._participant,
-                self._client.tunneled)
+                self._client.type)
         self._handlers.append(handler)
 
     def on_bus_message(self, bus, msg):
@@ -126,7 +126,8 @@ class MediaSessionHandler(MediaSessionEventInterface):
             if s.has_name("farsight-new-local-candidate"):
                 ret = gst.BUS_DROP
                 name = media_names[s["stream"].get_property("session").get_property("media-type")]
-                candidate = convert_candidate(s["candidate"], self._client.tunneled)
+                candidate = convert_candidate(s["candidate"],
+                        self._client.type)
                 stream = self._client.get_stream(name)
                 stream.new_local_candidate(candidate)
             if s.has_name("farsight-local-candidates-prepared"):
@@ -151,15 +152,17 @@ class MediaStreamHandler(MediaStreamEventInterface):
     def __init__(self, stream):
         MediaStreamEventInterface.__init__(self, stream)
 
-    def setup(self, conference, pipeline, participant, tunneled):
-        if tunneled:
-            compatibility_mode = 3
+    def setup(self, conference, pipeline, participant, type):
+        if type in (MediaSessionType.SIP, MediaSessionType.TUNNELED_SIP):
+            if type is MediaSessionType.TUNNELED_SIP:
+                compatibility_mode = 3
+            else:
+                compatibility_mode = 2
+            params = {"stun-ip" : "64.14.48.28", "stun-port" : 3478,
+                    "compatibility-mode" : compatibility_mode,
+                    "controlling-mode": self._client.controlling}
         else:
-            compatibility_mode = 2
-
-        params = {"stun-ip" : "64.14.48.28", "stun-port" : 3478,
-                "compatibility-mode" : compatibility_mode,
-                "controlling-mode": self._client.controlling}
+            params = {}
         media_type = media_types[self._client.name]
         self.fssession = conference.new_session(media_type)
         self.fssession.set_codec_preferences(build_codecs(self._client.name))
@@ -201,12 +204,12 @@ def create_notifier(pipeline):
     notifier.set_properties_from_file(filename)
     return notifier
 
-def convert_candidate(fscandidate, tunneled):
-    if tunneled:
-        draft = 19
-    else:
-        draft = 6
-    candidate = ICECandidate(draft=draft)
+def convert_candidate(fscandidate, type):
+    candidate = ICECandidate()
+    if type == MediaSessionType.SIP:
+        candidate.draft = 6
+    elif type == MediaSessionType.TUNNELED_SIP:
+        candidate.draft = 19
     candidate.ip = fscandidate.ip
     candidate.port = fscandidate.port
     candidate.foundation = fscandidate.foundation

@@ -116,3 +116,13 @@ USER_AGENT = "papyon/0.1"
 class COMPONENTS:
     RTP = 1
     RTCP = 2
+
+class MediaSessionType(object):
+    SIP = 1
+    TUNNELED_SIP = 2
+    WEBCAM = 3
+
+class MediaStreamDirection(object):
+    SENDING = 1
+    RECEIVING = 2
+    BOTH = 3

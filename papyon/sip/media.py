@@ -18,11 +18,13 @@ class MediaSession(gobject.GObject, EventsDispatcher):
             ())
     }
 
-    def __init__(self, tunneled):
+    def __init__(self, type, transport_class, msg_class):
         gobject.GObject.__init__(self)
         EventsDispatcher.__init__(self)
-        self._ice_transport = ICETransport(tunneled)
-        self._tunneled = tunneled
+        self._type = type
+        self._transport = transport_class(type)
+        self._msg_class = msg_class
+
         self._streams = []
         self._signals = {}
         self._parsing = False
@@ -48,16 +50,16 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         return True
 
     @property
-    def tunneled(self):
-        return self._tunneled
+    def type(self):
+        return self._type
 
     def close(self):
         for stream in self._streams:
             self.close_stream(stream)
         del self._streams
 
-    def add_stream(self, name, controlling):
-        stream = MediaStream(name, controlling, self._ice_transport)
+    def add_stream(self, name, created):
+        stream = MediaStream(name, created, self._transport, self._media_class)
         sp = stream.connect("prepared", self.on_stream_prepared)
         sr = stream.connect("ready", self.on_stream_ready)
         self._streams.append(stream)
@@ -80,26 +82,26 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         stream.close()
         self._dispatch("on_stream_removed", stream)
 
-    def build_sdp(self):
-        sdp = SDPMessage()
+    def build_body(self, *args):
+        msg = self._msg_class(*args)
         for stream in self._streams:
-            media = stream.build_media()
-            sdp.medias.append(media)
-        return str(sdp)
+            media = msg.create_media_description(self._name)
+            stream.build_media(media)
+        return str(msg)
 
-    def parse_sdp(self, message, initial=False):
-        sdp = SDPMessage()
+    def parse_body(self, body, initial=False):
+        msg = self._msg_class()
         self._parsing = True
         try:
-            if not sdp.parse(message):
-                raise ValueError("SDP message does not contain any media")
-            for media in sdp.medias:
+            if not msg.parse(body):
+                raise ValueError("Session message does not contain any information")
+            for media in msg.medias:
                 stream = self.get_stream(media.name)
                 if stream is None:
                     if initial:
                         stream = self.add_stream(media.name, False)
                     else:
-                        raise ValueError('Invalid media "%s" in SDP message' % media.name)
+                        raise ValueError('Invalid media "%s" in session message' % media.name)
                 stream.parse_media(media)
         except Exception, err:
             logger.error(err)
@@ -109,6 +111,8 @@ class MediaSession(gobject.GObject, EventsDispatcher):
 
         if initial and self.ready:
             self.emit("prepared")
+
+        return msg
 
     def on_stream_prepared(self, stream):
         if self.prepared:
@@ -166,9 +170,8 @@ class MediaStream(gobject.GObject, EventsDispatcher):
     def close(self):
         self._dispatch("on_stream_closed")
 
-    def build_media(self):
-        ip, port, rtcp = self.get_default_address()
-        media = SDPMedia(self._name, ip, port, rtcp)
+    def build_media(self, media):
+        media.ip, media.port, media.rtcp = self.get_default_address()
         media.codecs = self._local_codecs
         self._transport.encode_candidates(self, media)
         return media

@@ -26,18 +26,16 @@ logger = logging.getLogger('ICE')
 
 class ICETransport(object):
 
-    def __init__(self, tunneled):
-        self._tunneled = tunneled
+    def __init__(self, session_type):
+        if session_type is MediaSessionType.TUNNELED_SIP:
+            self.draft = 19
+        else:
+            self.draft = 6
 
     def encode_candidates(self, stream, media):
-        if self._tunneled:
-            draft = 19
-        else:
-            draft = 6
-
         candidates = stream.get_active_local_candidates()
         if candidates:
-            if draft is 19:
+            if self.draft is 19:
                 media.add_attribute("ice-ufrag", candidates[0].username)
                 media.add_attribute("ice-pwd", candidates[0].password)
             for candidate in candidates:
@@ -45,7 +43,7 @@ class ICETransport(object):
 
         candidates = stream.get_active_remote_candidates()
         if candidates:
-            if draft is 6:
+            if self.draft is 6:
                 candidates = candidates[0:1]
             list = [c.get_remote_id() for c in candidates]
             name = (len(list) > 1 and "remote-candidates") or "remote-candidate"

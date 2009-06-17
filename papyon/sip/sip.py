@@ -20,7 +20,9 @@
 
 from papyon.event import EventsDispatcher
 from papyon.sip.constants import *
+from papyon.sip.ice import ICETransport
 from papyon.sip.media import *
+from papyon.sip.sdp import SDPMessage, SDPMedia
 from papyon.service.SingleSignOn import *
 from papyon.util.decorator import rw_property
 
@@ -315,7 +317,9 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         SIPBaseCall.__init__(self, connection, client, id)
         EventsDispatcher.__init__(self)
 
-        self._media_session = MediaSession(connection.tunneled)
+        session_type = connection.tunneled and MediaSessionType.TUNNELED_SIP \
+                or MediaSessionType.SIP
+        self._media_session = MediaSession(session_type, ICETransport, SDPMessage)
         sp = self._media_session.connect("prepared", self.on_session_prepared)
         sr = self._media_session.connect("ready", self.on_session_ready)
         self._signals = [sp, sr]
@@ -471,14 +475,14 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self._state = "INCOMING"
             self.start_timeout("response", 30)
             try:
-                self._media_session.parse_sdp(invite.body, True)
+                self._media_session.parse_body(invite.body, True)
             except:
                 logger.error("Malformed body in incoming call invitation")
                 self.reject(488)
             else:
                 self.ring()
         elif self._state == "CONFIRMED":
-            self._media_session.parse_sdp(invite.body)
+            self._media_session.parse_body(invite.body)
             self._state = "REINVITED"
             self.reaccept()
         else:
@@ -520,7 +524,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         elif response.status is 200:
             self._state = "CONFIRMED"
             try:
-                self._media_session.parse_sdp(response.body)
+                self._media_session.parse_body(response.body)
             except:
                 logger.error("Malformed body in invite response")
                 self.send_bye()
