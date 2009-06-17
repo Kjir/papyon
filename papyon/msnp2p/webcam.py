@@ -53,7 +53,7 @@ class WebcamSession(P2PSession, EventsDispatcher):
         self._producer = producer
         self._answered = False
         self._sent_syn = False
-        self._session_id = 0
+        self._session_id = self._generate_id(9999)
         self._xml_needed = False
         self._media_session = MediaSession(MediaSessionType.WEBCAM,
                 WebcamTransport, WebcamSessionMessage)
@@ -68,6 +68,9 @@ class WebcamSession(P2PSession, EventsDispatcher):
         context = "{B8BE70DE-E2CA-4400-AE03-88FF85B9F4E8}"
         context = context.decode('ascii').encode('utf-16_le')
         self._invite(context)
+
+    def ring(self):
+        pass
 
     def accept(self):
         self._answered = True
@@ -112,14 +115,13 @@ class WebcamSession(P2PSession, EventsDispatcher):
             self.send_binary_syn() #Send 603 first ?
         if data == 'syn':
             self.send_binary_ack()
-        elif data == 'ack':
-            if self._producer:
-                self._send_xml()
+        elif data == 'ack' and self._producer:
+            self._send_xml()
         elif '<producer>' in data or '<viewer>' in data:
             self._handle_xml(data)
 
     def send_data(self, data):
-        message_bytes = body.encode("utf-16-le") + "\x00\x00"
+        message_bytes = data.encode("utf-16-le") + "\x00\x00"
         id = (self._generate_id() << 8) | 0x80
         header = struct.pack("<LHL", id, 8, len(message_bytes))
         self._send_p2p_data(header + message_bytes)
@@ -168,7 +170,7 @@ class WebcamTransport(object):
         candidates = []
         for ip in media.ips:
             for port in media.ports:
-                candidate = MediaCandidate()
+                candidate = ICECandidate()
                 candidate.foundation = str(media.rid)
                 candidate.component_id = 0
                 candidate.username = str(media.sid)
@@ -197,22 +199,21 @@ class WebcamSessionMessage(object):
     def medias(self):
         return self._medias
 
-    def create_media_description(self, name):
-        media = WebcamMedia(self._id, self._producer)
+    def create_media_description(self, name="video"):
+        media = WebcamMediaDescription(self._id, self._producer)
         self._medias.append(media)
         return media
 
     def parse(self, body):
         tree = ElementTree.fromstring(body)
-        media = WebcamMedia(self._id, self._producer)
+        self._id = int(tree.find("session").text)
+        media = self.create_media_description()
         for node in tree.findall("tcp/*"):
             if node.tag == "tcpport":
                 media.ports.append(int(node.text))
             elif node.tag.startswith("tcpipaddress"):
                 media.ips.append(node.text)
         media.rid = tree.find("rid").text
-        self._id = int(tree.find("session").text)
-        self._medias.append(media)
         return self._medias
 
     def __str__(self):
@@ -222,12 +223,12 @@ class WebcamSessionMessage(object):
             "<version>2.0</version>" \
             "<rid>%s</rid>" \
             "<session>%u</session>" \
-            "<ctypes>0</ctypes>" \
+            "<ctypes>32</ctypes>" \
             "<cpu>2010</cpu>" % (tag, media.rid, self._id)
         body += "<tcp>" \
             "<tcpport>%(port)u</tcpport>" \
             "<tcplocalport>%(port)u</tcplocalport>" \
-            "<tcpexternalport>%(port)u</tcpexternalport>" % \
+            "<tcpexternalport>0</tcpexternalport>" % \
             {"port":  media.ports[0]}
         for i, addr in enumerate(media.ips):
             body += "<tcpipaddress%u>%s</tcpipaddress%u>" % (i + 1, addr, i + 1)
@@ -236,7 +237,7 @@ class WebcamSessionMessage(object):
         body += "</%s>\r\n\r\n" % tag
         return body
 
-class WebcamMedia(object):
+class WebcamMediaDescription(object):
 
     def __init__(self, sid, producer):
         self._ips = []
