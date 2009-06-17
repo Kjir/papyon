@@ -116,8 +116,9 @@ class ICECandidate(object):
 
     def __str__(self):
         if self.draft is 6:
+            priority = float(self.priority) / 1000
             return "%s %i %s %s %.3f %s %i" % (self.username, self.component_id,
-                self.password, self.transport, self.priority, self.ip, self.port)
+                self.password, self.transport, priority, self.ip, self.port)
         elif self.draft is 19:
             ext = []
             for (name, attr) in self.REL_EXT:
@@ -154,8 +155,8 @@ class ICECandidate(object):
 
         if self.draft is 19:
             self.priority = int(self.priority)
-        elif self.draft is 6:
-            self.priority = float(self.priority)
+        if self.draft is 6:
+            self.priority = int(self.priority * 1000)
         self.component_id = int(self.component_id)
         self.port = int(self.port)
         if self.base_port is not None:

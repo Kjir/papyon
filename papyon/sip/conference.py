@@ -217,10 +217,7 @@ def convert_candidate(fscandidate, type):
     candidate.foundation = fscandidate.foundation
     candidate.component_id = fscandidate.component_id
     candidate.transport = protos[fscandidate.proto]
-    if candidate.draft is 6:
-        candidate.priority = float(fscandidate.priority) / 1000
-    elif candidate.draft is 19:
-        candidate.priority = int(fscandidate.priority)
+    candidate.priority = int(fscandidate.priority)
     candidate.username = fscandidate.username
     candidate.password = fscandidate.password
     candidate.type = types[fscandidate.type]
