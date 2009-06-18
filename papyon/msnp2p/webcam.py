@@ -164,7 +164,8 @@ class WebcamTransport(object):
         for candidate in candidates:
             media.ips.append(candidate.ip)
             media.ports.append(candidate.port)
-        media.rid = candidates[0].foundation
+        media.rid = int(candidates[0].foundation)
+        media.sid = int(candidates[0].username)
 
     def decode_candidates(self, media):
         candidates = []
@@ -223,8 +224,8 @@ class WebcamSessionMessage(object):
             "<version>2.0</version>" \
             "<rid>%s</rid>" \
             "<session>%u</session>" \
-            "<ctypes>32</ctypes>" \
-            "<cpu>2010</cpu>" % (tag, media.rid, self._id)
+            "<ctypes>0</ctypes>" \
+            "<cpu>2010</cpu>" % (tag, media.rid, media.sid)
         body += "<tcp>" \
             "<tcpport>%(port)u</tcpport>" \
             "<tcplocalport>%(port)u</tcplocalport>" \
