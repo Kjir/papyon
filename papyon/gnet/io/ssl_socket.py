@@ -77,7 +77,9 @@ class SSLSocketClient(GIOChannelClient):
         elif self._status == IoStatus.OPEN:
             if cond & (gobject.IO_IN | gobject.IO_PRI):
                 try:
-                    buf = self._transport.recv(4048)
+                    buf = ""
+                    while True:
+                        buf += self._transport.recv(2048)
                 except (OpenSSL.WantX509LookupError,
                         OpenSSL.WantReadError, OpenSSL.WantWriteError):
                     return True
