@@ -480,7 +480,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             return
         type = int(command.arguments[1])
         self.emit("buddy-notification-received", type, command)
-        
+
     def _handle_UBX(self,command): # contact infos
         if not command.payload:
             return
