@@ -29,15 +29,15 @@ __all__ = ['SSLSocketClient']
 
 class SSLSocketClient(GIOChannelClient):
     """Asynchronous Socket client class.
-        
+
         @sort: __init__, open, send, close
         @undocumented: do_*, _watch_*, __io_*, _connect_done_handler
 
         @since: 0.1"""
-    
+
     def __init__(self, host, port, domain=AF_INET, type=SOCK_STREAM):
         GIOChannelClient.__init__(self, host, port, domain, type)
-    
+
     def _pre_open(self, sock=None):
         if sock is None:
             sock = socket.socket(self._domain, self._type)
@@ -48,7 +48,7 @@ class SSLSocketClient(GIOChannelClient):
         context = OpenSSL.Context(OpenSSL.SSLv23_METHOD)
         ssl_sock = OpenSSL.Connection(context, sock)
         GIOChannelClient._pre_open(self, ssl_sock)
-    
+
     def _post_open(self):
         GIOChannelClient._post_open(self)
         if self._transport.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) == 0:
@@ -58,7 +58,7 @@ class SSLSocketClient(GIOChannelClient):
             self.emit("error", IoError.CONNECTION_FAILED)
             self._status = IoStatus.CLOSED
         return False
-    
+
     def _io_channel_handler(self, chan, cond):
         if self._status == IoStatus.CLOSED:
             return False

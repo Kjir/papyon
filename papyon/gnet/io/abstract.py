@@ -27,12 +27,12 @@ __all__ = ['AbstractClient']
 class AbstractClient(gobject.GObject):
     """Abstract client base class.
     All network client classes implements this interface.
-        
+
         @sort: __init__, open, send, close
         @undocumented: do_*, _configure, _pre_open, _post_open
-        
+
         @since: 0.1"""
-    
+
     __gproperties__ = {
             "host": (gobject.TYPE_STRING,
                 "Remote Host",
@@ -45,14 +45,14 @@ class AbstractClient(gobject.GObject):
                 "The remote port to connect to.",
                 -1, 65535, -1,
                 gobject.PARAM_READWRITE),
-            
+
             "status": (gobject.TYPE_INT,
                 "Connection Status",
                 "The status of this connection.",
                 0, 3, IoStatus.CLOSED,
                 gobject.PARAM_READABLE),
             }
-        
+
     __gsignals__ = {
             "error": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
@@ -66,16 +66,16 @@ class AbstractClient(gobject.GObject):
                 gobject.TYPE_NONE,
                 (object, gobject.TYPE_ULONG)),
             }
-    
+
     def __init__(self, host, port, domain=AF_INET, type=SOCK_STREAM):
         """Initializer
 
             @param host: the hostname to connect to.
             @type host: string
-            
+
             @param port: a port number to connect to
             @type port: integer > 0 and < 65536
-            
+
             @param domain: the communication domain.
             @type domain: integer
             @see socket module
@@ -123,18 +123,18 @@ class AbstractClient(gobject.GObject):
 
     def send(self, buffer, callback=None, *args):
         """Send data to the server.
-        
+
             @param buffer: data buffer.
             @type buffer: string
-            
+
             @param callback: a callback method that would be called when the
                 data is atually sent to the server.
             @type callback: callback
-            
+
             @param args: callback arguments to be passed to the callback.
         """
         raise NotImplementedError
-    
+
     # properties
     def __get_host(self):
         return self._host

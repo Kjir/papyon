@@ -60,9 +60,9 @@ class GIOChannelClient(AbstractClient):
 
         @sort: __init__, open, send, close
         @undocumented: do_*, _configure, _pre_open, _post_open
-        
+
         @since: 0.1"""
-    
+
     def __init__(self, host, port, domain=AF_INET, type=SOCK_STREAM):
         AbstractClient.__init__(self, host, port, domain, type)
 
@@ -72,7 +72,7 @@ class GIOChannelClient(AbstractClient):
         channel.set_flags(channel.get_flags() | gobject.IO_FLAG_NONBLOCK)
         channel.set_encoding(None)
         channel.set_buffered(False)
-        
+
         self._transport = io_object
         self._channel = channel
 
@@ -92,7 +92,7 @@ class GIOChannelClient(AbstractClient):
     def __open(self, resolve_response, host, port):
         if resolve_response.status != 0:
             self.emit("error", IoError.CONNECTION_FAILED)
-            self._transport.close()        
+            self._transport.close()
             return
         else:
             host = resolve_response.answer[0][1]
@@ -120,7 +120,7 @@ class GIOChannelClient(AbstractClient):
         if handler is None:
             handler = self._io_channel_handler
         self._source_id = self._channel.add_watch(cond, handler)
-    
+
     def _watch_add_cond(self, cond):
         if self._source_condition & cond == cond:
             return
@@ -132,14 +132,14 @@ class GIOChannelClient(AbstractClient):
             return
         self._source_condition ^= cond
         self._watch_set_cond(self._source_condition)
-    
+
     # public API
     def open(self):
         if not self._configure():
             return
         self._pre_open()
         self._open(self._host, self._port)
-    
+
     def close(self):
         if self._status in (IoStatus.CLOSING, IoStatus.CLOSED):
             return
@@ -150,7 +150,7 @@ class GIOChannelClient(AbstractClient):
             self._transport.shutdown(socket.SHUT_RDWR)
         except:
             pass
-        self._transport.close()        
+        self._transport.close()
         self._status = IoStatus.CLOSED
 
     def send(self, buffer, callback=None, *args):

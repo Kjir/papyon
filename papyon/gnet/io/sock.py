@@ -29,16 +29,16 @@ __all__ = ['SocketClient']
 
 class SocketClient(GIOChannelClient):
     """Asynchronous Socket client class.
-        
+
         @sort: __init__, open, send, close
         @undocumented: do_*, _watch_*, __io_*, _connect_done_handler
 
         @since: 0.1"""
-    
+
     def __init__(self, host, port, domain=AF_INET, type=SOCK_STREAM):
         GIOChannelClient.__init__(self, host, port, domain, type)
 
-    
+
     def _pre_open(self, sock=None):
         if sock is None:
             sock = socket.socket(self._domain, self._type)
@@ -47,7 +47,7 @@ class SocketClient(GIOChannelClient):
             except AttributeError:
                 pass
         GIOChannelClient._pre_open(self, sock)
-    
+
     def _post_open(self):
         GIOChannelClient._post_open(self)
         opts = self._transport.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
@@ -59,11 +59,11 @@ class SocketClient(GIOChannelClient):
             self.emit("error", IoError.CONNECTION_FAILED)
             self._status = IoStatus.CLOSED
         return False
-    
+
     def _io_channel_handler(self, chan, cond):
         if self._status == IoStatus.CLOSED:
             return False
-        
+
         if cond & (gobject.IO_IN | gobject.IO_PRI):
             buf = ""
             try:
@@ -80,7 +80,7 @@ class SocketClient(GIOChannelClient):
             self.close()
             return False
 
-        if cond & gobject.IO_OUT:            
+        if cond & gobject.IO_OUT:
             if len(self._outgoing_queue) > 0: # send next item
                 item = self._outgoing_queue[0]
                 item.sent(self._channel.write(item.read()))

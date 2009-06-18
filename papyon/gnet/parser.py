@@ -29,7 +29,7 @@ __all__ = ['AbstractParser', 'DelimiterParser']
 
 class AbstractParser(gobject.GObject):
     """Base class for all stateful parsers.
-    
+
         @since: 0.1"""
     __gsignals__ = {
             "received": (gobject.SIGNAL_RUN_FIRST,
@@ -38,7 +38,7 @@ class AbstractParser(gobject.GObject):
             }
     def __init__(self, transport, connect_signals=True):
         """Initializer
-        
+
             @param transport: the transport used to receive data
             @type transport: an object derived from
                 L{io.AbstractClient}"""
@@ -66,19 +66,19 @@ class AbstractParser(gobject.GObject):
 class DelimiterParser(AbstractParser):
     """Receiver class that emit received signal when a chunk of data is
     received.
-    
+
     A chunk is defined by a delimiter which is either a string or an integer.
 
     @since: 0.1"""
 
     def __init__(self, transport):
         """Initializer
-        
+
             @param transport: the transport used to receive data
             @type transport: L{io.AbstractClient}"""
         AbstractParser.__init__(self, transport)
         self._chunk_delimiter = "\n"
-        
+
     def _reset_state(self):
         self._recv_cache = ""
 
@@ -126,7 +126,7 @@ gobject.type_register(DelimiterParser)
 
 class HTTPParser(AbstractParser):
     """Receiver class that emit received signal when an HTTP response is
-    received.    
+    received.
 
     @since: 0.1"""
 
@@ -145,7 +145,7 @@ class HTTPParser(AbstractParser):
         self._receive_buffer = ""
         self._content_length = None
         self._parser.delimiter = "\r\n"
-    
+
     def _on_status_change(self, transport, param):
         status = transport.get_property("status")
         if status == IoStatus.OPEN:

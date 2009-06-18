@@ -28,7 +28,7 @@ __all__ = ['SSLTCPClient']
 
 class SSLTCPClient(SSLSocketClient, ProxyfiableClient):
     """Asynchronous TCP client class.
-        
+
         @sort: __init__, open, send, close
         @undocumented: do_*, _watch_*, __io_*, _connect_done_handler
 
@@ -39,7 +39,7 @@ class SSLTCPClient(SSLSocketClient, ProxyfiableClient):
 
             @param host: the hostname to connect to.
             @type host: string
-            
+
             @param port: the port number to connect to.
             @type port: integer > 0 and < 65536"""
         SSLSocketClient.__init__(self, host, port, AF_INET, SOCK_STREAM)
