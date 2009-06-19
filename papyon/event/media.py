@@ -39,8 +39,14 @@ class MediaSessionEventInterface(BaseEventInterface):
             @type session: L{MediaSession<papyon.sip.media.MediaSession>}"""
         BaseEventInterface.__init__(self, session)
 
-    def on_stream_created(self, stream):
+    def on_stream_added(self, stream):
         """Called when a new stream is added to the session
+            @param stream: the media stream added
+            @type stream: L{MediaStream<papyon.sip.media.MediaStream>}"""
+        pass
+
+    def on_stream_created(self, stream):
+        """Called when a stream is created upon a peer request
             @param stream: the new media stream
             @type stream: L{MediaStream<papyon.sip.media.MediaStream>}"""
         pass
