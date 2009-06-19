@@ -123,6 +123,12 @@ class WebcamSession(P2PSession, EventsDispatcher):
             self._send_xml()
         elif '<producer>' in data or '<viewer>' in data:
             self._handle_xml(data)
+        elif data.startswith('ReflData'):
+            refldata = data.split(':')[1]
+            str = ""
+            for i in range(0, len(refldata), 2):
+                str += chr(int(refldata[i:i+2], 16))
+            print "Got ReflData :", str
 
     def send_data(self, data):
         message_bytes = data.encode("utf-16-le") + "\x00\x00"
