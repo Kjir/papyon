@@ -54,17 +54,21 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         return self._type
 
     def close(self):
-        for stream in self._streams:
-            self.close_stream(stream)
-        del self._streams
+        for stream in self._streams[:]:
+            self.remove_stream(stream)
 
-    def add_stream(self, name, direction, created=False):
+    def create_stream(self, name, direction, created=False):
         stream = MediaStream(name, direction, created, self._transport)
+        if not created:
+            self._dispatch("on_stream_created", stream)
+        return stream
+
+    def add_stream(self, stream):
         sp = stream.connect("prepared", self.on_stream_prepared)
         sr = stream.connect("ready", self.on_stream_ready)
         self._streams.append(stream)
-        self._signals[name] = [sp, sr]
-        self._dispatch("on_stream_created", stream)
+        self._signals[stream.name] = [sp, sr]
+        self._dispatch("on_stream_added", stream)
         return stream
 
     def get_stream(self, name):
@@ -74,12 +78,13 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         else:
             return matching[0]
 
-    def close_stream(self, stream):
+    def remove_stream(self, stream):
         name = stream.name
         for handler_id in self._signals[name]:
             stream.disconnect(handler_id)
         del self._signals[name]
         stream.close()
+        self._streams.remove(stream)
         self._dispatch("on_stream_removed", stream)
 
     def build_body(self, *args):
@@ -99,7 +104,8 @@ class MediaSession(gobject.GObject, EventsDispatcher):
                 stream = self.get_stream(media.name)
                 if stream is None:
                     if initial:
-                        stream = self.add_stream(media.name, media.direction)
+                        stream = self.create_stream(media.name, media.direction)
+                        self.add_stream(stream)
                     else:
                         raise ValueError('Invalid media "%s" in session message' % media.name)
                 stream.parse_media(media)
