@@ -101,6 +101,10 @@ class WebcamSession(P2PSession, EventsDispatcher):
             self._media_session.add_stream("video",
                     MediaStreamDirection.SENDING, False)
 
+    def _on_bye_received(self, message):
+        self._dispatch("on_call_ended")
+        self._dispose()
+
     def _on_session_accepted(self):
         self._dispatch("on_call_accepted")
 
