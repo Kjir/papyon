@@ -87,11 +87,12 @@ class SIPBaseConnection(gobject.GObject):
                 logger.info("Call invitation received")
                 call = self.create_call(invite=message, id=callid)
                 self.emit("invite-received", call)
-            elif self.registered:
+            else:
                 logger.info("Message with invalid call-id received")
-                call = SIPCall(self, self._client, invite=message, id=callid)
-                response = call.build_response(message, 481)
-                call.send(response) # call/transaction does not exist
+                if self.registered:
+                    call = SIPCall(self, self._client, invite=message, id=callid)
+                    response = call.build_response(message, 481)
+                    call.send(response) # call/transaction does not exist
                 return
         call.on_message_received(message)
 
