@@ -60,8 +60,8 @@ class SIPBaseConnection(gobject.GObject):
     def transport(self):
         return self._transport
 
-    def create_call(self, contact=None, invite=None, id=None):
-        call = SIPCall(self, self._client, contact, invite, id)
+    def create_call(self, peer=None, invite=None, id=None):
+        call = SIPCall(self, self._client, peer, invite, id)
         self.add_call(call)
         return call
 
@@ -320,7 +320,7 @@ class SIPBaseCall(gobject.GObject):
 
 class SIPCall(SIPBaseCall, EventsDispatcher):
 
-    def __init__(self, connection, client, contact=None, invite=None, id=None):
+    def __init__(self, connection, client, peer=None, invite=None, id=None):
         SIPBaseCall.__init__(self, connection, client, id)
         EventsDispatcher.__init__(self)
 
@@ -338,14 +338,14 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self._early = False
         self._state = None
 
-        if contact is None and invite is not None:
-            contact = self.parse_contact(invite)
-        self._contact = contact
+        if peer is None and invite is not None:
+            peer = self.parse_contact(invite)
+        self._peer = peer
         self._invite = invite
 
     @property
-    def contact(self):
-        return self._contact
+    def peer(self):
+        return self._peer
 
     @property
     def conversation_id(self):
@@ -381,10 +381,10 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
     def invite(self):
         if not self._media_session.prepared:
             return
-        logger.info("Send call invitation to %s", self._contact.account)
+        logger.info("Send call invitation to %s", self._peer.account)
         self._state = "CALLING"
         self._early = False
-        self._uri = self._contact.account
+        self._uri = self._peer.account
         self._remote = "<sip:%s>" % self._uri
         self._invite = self.build_invite_request(self._uri, self._remote)
         self.start_timeout("invite", 30)
