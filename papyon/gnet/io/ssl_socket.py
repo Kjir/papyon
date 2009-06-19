@@ -79,14 +79,14 @@ class SSLSocketClient(GIOChannelClient):
                 try:
                     buf = ""
                     while True:
-                        buf += self._transport.recv(2048)
+                        buf = self._transport.recv(2048)
+                        self.emit("received", buf, len(buf))
                 except (OpenSSL.WantX509LookupError,
                         OpenSSL.WantReadError, OpenSSL.WantWriteError):
                     return True
                 except (OpenSSL.ZeroReturnError, OpenSSL.SysCallError):
                     self.close()
                     return False
-                self.emit("received", buf, len(buf))
 
             if cond & (gobject.IO_ERR | gobject.IO_HUP):
                 self.close()
