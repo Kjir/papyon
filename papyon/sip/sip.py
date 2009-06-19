@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.event import EventsDispatcher
+from papyon.profile import Presence
 from papyon.sip.constants import *
 from papyon.sip.ice import ICETransport
 from papyon.sip.media import *
@@ -452,6 +453,8 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self.reject()
         elif self._state in ("CALLING", "REINVITING"):
             self.cancel()
+        elif self._peer.presence == Presence.OFFLINE:
+            self.force_dispose()
         else:
             self.send_bye()
 
@@ -476,6 +479,9 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self.send(request)
 
     def send_bye(self):
+        if self._state == "DISCONNECTING":
+            return
+
         self._state = "DISCONNECTING"
         request = self.build_request("BYE", self._uri, self._remote, incr=True)
         request.add_header("Route", self._route)
