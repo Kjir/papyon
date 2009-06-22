@@ -106,8 +106,12 @@ class TLPFlag(object):
 
 
 class MessageChunk(object):
-    def __init__(self, header, body):
+    def __init__(self, header=None, body=None):
+        if header is None:
+            header = TLPHeader()
         self.header = header
+        if body is None:
+            body = ""
         self.body = body
         self.application_id = 0
 
@@ -120,6 +124,9 @@ class MessageChunk(object):
     def is_ack_chunk(self):
         return self.header.flags & (TLPFlag.NAK | TLPFlag.ACK)
 
+    def is_nonce_chunk(self):
+        return self.header.flags & TLPFlag.KEY
+
     def require_ack(self):
         if self.is_ack_chunk():
             return False
@@ -129,6 +136,39 @@ class MessageChunk(object):
         if current_size == self.header.blob_size:
             return True
         return False
+
+    def get_nonce(self):
+        """Get the nonce from the chunk. The chunk needs to have the KEY flag
+           for that nonce to make sense (use is_nonce_chunk to check that)"""
+
+        if not self.is_nonce_chunk():
+            return "00000000-0000-0000-0000-000000000000"
+
+        bytes = ""
+        bytes += struct.pack(">L", self.header.dw1)
+        bytes += struct.pack(">H", self.header.dw2 & 0xFFFF)
+        bytes += struct.pack(">H", self.header.dw2 >> 16)
+        bytes += struct.pack("<Q", self.header.qw1)
+
+        nonce = [("%X" % ord(byte)).zfill(2) for byte in bytes]
+        for idx in (4, 7, 10, 13):
+            nonce.insert(idx, '-')
+        return "".join(nonce)
+
+    def set_nonce(self, nonce):
+        """Set the chunk headers from a nonce and make it a nonce chunk by
+           adding the KEY flag."""
+
+        nonce = filter(lambda c: c not in '{-}', nonce)
+        bytes = ""
+        for i in range(0, len(nonce), 2):
+            bytes += chr(int(nonce[i:i+2], 16))
+
+        self.header.dw1 = struct.unpack(">L", bytes[0:4])[0]
+        self.header.dw2 = struct.unpack(">H", bytes[4:6])[0]
+        self.header.dw2 += struct.unpack(">H", bytes[6:8])[0] << 16
+        self.header.qw1 = struct.unpack("<Q", bytes[8:16])[0]
+        self.header.flags |= TLPFlag.KEY
 
     @staticmethod
     def parse(data):
