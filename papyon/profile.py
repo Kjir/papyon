@@ -312,10 +312,14 @@ class Profile(gobject.GObject):
                 "The current media that the user wants to display",
                 gobject.PARAM_READABLE),
 
-            "profile": (gobject.TYPE_STRING,
+            "signature-sound": (gobject.TYPE_PYOBJECT,
+                "Signature sound",
+                "The sound played by others' client when the user connects",
+                gobject.PARAM_READABLE),
+
+            "profile": (gobject.TYPE_PYOBJECT,
                 "Profile",
                 "the text/x-msmsgsprofile sent by the server",
-                "",
                 gobject.PARAM_READABLE),
 
             "presence": (gobject.TYPE_STRING,
@@ -376,7 +380,7 @@ class Profile(gobject.GObject):
     @property
     def profile(self):
         """The user profile retrieved from the MSN servers
-            @rtype: utf-8 encoded string"""
+            @rtype: dict of fields"""
         return self._profile
 
     @property

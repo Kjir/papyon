@@ -488,8 +488,14 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         message = Message(None, command.payload)
         content_type = message.content_type
         if content_type[0] == 'text/x-msmsgsprofile':
-            self._client.profile._server_property_changed("profile",
-                    command.payload)
+            profile = {}
+            lines = command.payload.split("\r\n")
+            for line in lines:
+                line = line.strip()
+                if line:
+                    name, value = line.split(":", 1)
+                    profile[name] = value.strip()
+            self._client.profile._server_property_changed("profile", profile)
 
             if self._protocol_version < 15:
                 #self._send_command('SYN', ('0', '0'))
@@ -574,15 +580,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 message_url="/cgi-bin/HoTMaiL", 
                 post_url='https://loginnet.passport.com/ppsecure/md5auth.srf?',
                 post_id='2'):
-        
-        profile = {}
-        lines = self._client.profile.profile.split("\r\n")
-        for line in lines:
-            line = line.strip()
-            if line:
-                name, value = line.split(":", 1)
-                profile[name] = value.strip()
-                
+
+        profile = self._client.profile.profile
         account = self._client.profile.account
         password = str(self._client.profile.password)
         sl = str(int(time.time()) - int(profile['LoginTime']))
