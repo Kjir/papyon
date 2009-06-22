@@ -98,8 +98,9 @@ class WebcamSession(P2PSession, EventsDispatcher):
 
     def _on_invite_received(self, message):
         if self._producer:
-            self._media_session.add_stream("video",
+            stream = self.media_session.create_stream("video",
                     MediaStreamDirection.SENDING, False)
+            self.media_session.add_stream(stream)
 
     def _on_bye_received(self, message):
         self._dispatch("on_call_ended")
@@ -112,6 +113,7 @@ class WebcamSession(P2PSession, EventsDispatcher):
         self._dispatch("on_call_rejected", message)
 
     def _on_data_blob_received(self, blob):
+        blob.data.seek(0, 0)
         data = blob.data.read()
         data = unicode(data[10:], "utf-16-le").rstrip("\x00")
 
@@ -147,7 +149,7 @@ class WebcamSession(P2PSession, EventsDispatcher):
         self.send_data('receivedViewerData')
 
     def _send_xml(self):
-        if not self._media_session.prepared:
+        if not self.media_session.prepared:
             self._xml_needed = True
             return
         self._xml_needed = False
@@ -163,6 +165,7 @@ class WebcamSession(P2PSession, EventsDispatcher):
             self.send_binary_viewer_data()
         else:
             self._send_xml()
+        self.media_session.process_pending_streams()
 
 class WebcamTransport(object):
 
@@ -185,6 +188,7 @@ class WebcamTransport(object):
                 candidate.foundation = str(media.rid)
                 candidate.component_id = 0
                 candidate.username = str(media.sid)
+                candidate.password = ""
                 candidate.ip = ip
                 candidate.port = port
                 candidate.transport = "TCP"
@@ -269,7 +273,7 @@ class WebcamMediaDescription(object):
     @rw_property
     def codecs():
         def fget(self):
-            return [SDPCodec(4294967295, "mimic", 0)]
+            return []
         def fset(self, value):
             pass
         return locals()
