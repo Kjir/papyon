@@ -18,10 +18,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import sys
-sys.path.insert(0, "")
+from papyon.media import *
 from papyon.sip.ice import *
-from papyon.sip.media import *
 from papyon.sip.sdp import *
 from papyon.event.media import *
 

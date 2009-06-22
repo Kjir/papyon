@@ -21,8 +21,8 @@
 """Media event interfaces
 
 The interfaces defined in this module allow receiving notification events
-from a L{MediaSession<papyon.sip.media.MediaSession>} object and a
-L{MediaStream<papyon.sip.media.MediaStream> object."""
+from a L{MediaSession<papyon.media.MediaSession>} object and a
+L{MediaStream<papyon.media.MediaStream> object."""
 
 from papyon.event import BaseEventInterface
 
@@ -31,41 +31,41 @@ __all__ = ["MediaSessionEventInterface", "MediaStreamEventInterface"]
 
 class MediaSessionEventInterface(BaseEventInterface):
     """interfaces allowing the user to get notified about events
-    from a L{MediaSession<papyon.sip.media.MediaSession>}  object."""
+    from a L{MediaSession<papyon.media.MediaSession>}  object."""
 
     def __init__(self, session):
         """Initializer
             @param session: the media session we want to be notified for its events
-            @type session: L{MediaSession<papyon.sip.media.MediaSession>}"""
+            @type session: L{MediaSession<papyon.media.MediaSession>}"""
         BaseEventInterface.__init__(self, session)
 
     def on_stream_added(self, stream):
         """Called when a new stream is added to the session
             @param stream: the media stream added
-            @type stream: L{MediaStream<papyon.sip.media.MediaStream>}"""
+            @type stream: L{MediaStream<papyon.media.MediaStream>}"""
         pass
 
     def on_stream_created(self, stream):
         """Called when a stream is created upon a peer request
             @param stream: the new media stream
-            @type stream: L{MediaStream<papyon.sip.media.MediaStream>}"""
+            @type stream: L{MediaStream<papyon.media.MediaStream>}"""
         pass
 
     def on_stream_removed(self, stream):
         """Called when a new stream is removed from the session
             @param stream: the new media stream
-            @type stream: L{MediaStream<papyon.sip.media.MediaStream>}"""
+            @type stream: L{MediaStream<papyon.media.MediaStream>}"""
         pass
 
 
 class MediaStreamEventInterface(BaseEventInterface):
     """interfaces allowing the user to get notified about events
-    from a L{MediaSession<papyon.sip.media.MediaSession>}  object."""
+    from a L{MediaSession<papyon.media.MediaSession>}  object."""
 
     def __init__(self, stream):
         """Initializer
             @param stream: the media stream we want to be notified for its events
-            @type stream: L{MediaStream<papyon.sip.media.MediaStream>}"""
+            @type stream: L{MediaStream<papyon.media.MediaStream>}"""
         BaseEventInterface.__init__(self, stream)
 
     def on_stream_closed(self):

@@ -19,11 +19,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.event import EventsDispatcher
+from papyon.media import MediaSession, MediaSessionType
 from papyon.profile import Presence
 from papyon.sip.constants import *
 from papyon.sip.ice import ICETransport
-from papyon.sip.media import *
-from papyon.sip.sdp import SDPMessage, SDPMedia
+from papyon.sip.sdp import SDPMessage
 from papyon.sip.turn import TURNClient
 from papyon.service.SingleSignOn import *
 from papyon.util.decorator import rw_property

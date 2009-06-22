@@ -35,9 +35,9 @@ import gobject
 import base64
 import random
 
+from papyon.media import MediaSession
 from papyon.sip.constants import *
 from papyon.sip.ice import *
-from papyon.sip.media import *
 from papyon.sip.sdp import *
 
 __all__ = ['WebcamSession']
