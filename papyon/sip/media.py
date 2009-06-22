@@ -88,6 +88,25 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         self._streams.remove(stream)
         self._dispatch("on_stream_removed", stream)
 
+    def add_pending_stream(self, stream):
+        logger.debug("Add %s stream to pending list" % stream.name)
+        self._pending_streams.append(stream)
+
+    def process_pending_streams(self):
+        logger.debug("Process all streams in pending list")
+        for stream in self._pending_streams:
+            self.add_stream(stream)
+        self.clear_pending_streams()
+        if self.prepared:
+            self.emit("prepared")
+
+    def clear_pending_streams(self):
+        self._pending_streams = []
+
+    def set_relay_info(self, relays):
+        for i in range(0, len(self._pending_streams)):
+            self._pending_streams[i].relay = relays[i]
+
     def build_body(self, *args):
         msg = self._msg_class(*args)
         for stream in self._streams:
@@ -105,7 +124,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
                 if stream is None:
                     if initial:
                         stream = self.create_stream(media.name, media.direction)
-                        self._pending_streams.append(stream)
+                        self.add_pending_stream(stream)
                     else:
                         raise ValueError('Invalid media "%s" in session message' % media.name)
                 stream.parse_media(media)
@@ -113,14 +132,6 @@ class MediaSession(gobject.GObject, EventsDispatcher):
             logger.error(err)
             raise
         return msg
-
-    def process_pending_streams(self):
-        for stream in self._pending_streams:
-            self.add_stream(stream)
-        self.clear_pending_streams()
-
-    def clear_pending_streams(self):
-        self._pending_streams = []
 
     def on_stream_prepared(self, stream):
         if self.prepared:
@@ -158,6 +169,7 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         self._remote_codecs = []
         self._remote_candidate_id = None
         self._remote_candidates = []
+        self.relay = None
 
     @property
     def name(self):

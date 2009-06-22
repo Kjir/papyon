@@ -81,12 +81,19 @@ ATTRIBUTE_TYPES = {
     32804: "REFRESH-INTERVAL"
 }
 
-class TURNClient(object):
+class TURNClient(gobject.GObject):
 
     host = "relay.voice.messenger.msn.com"
     port = 443
 
+    __gsignals__ = {
+        'requests-answered': (gobject.SIGNAL_RUN_FIRST,
+            gobject.TYPE_NONE,
+            (object,))
+    }
+
     def __init__(self, sso, account):
+        gobject.GObject.__init__(self)
         self._transport = SSLTCPClient(self.host, self.port)
         self._transport.connect("notify::status", self.on_status_changed)
         self._transport.connect("received", self.on_message_received)
@@ -182,7 +189,7 @@ class TURNClient(object):
 
         if not self._requests:
             self._transport.close()
-            print self._relays
+            self.emit("requests-answered", self._relays)
 
 
 class TURNMessage(object):
@@ -303,7 +310,8 @@ class TURNRelay(object):
         self.port = None
 
     def __repr__(self):
-        return "<TURN Relay: %s %i>" % (self.ip, self.port)
+        return "<TURN Relay: %s %i username=\"%s\" password=\"%s\">" % (self.ip,
+                self.port, self.username, self.password)
 
 
 if __name__ == "__main__":
