@@ -507,21 +507,24 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self._invite = invite
         self.answer(100)
 
+        try:
+            initial = self._state is None
+            self._media_session.parse_body(invite.body, initial)
+        except:
+            logger.error("Malformed body in incoming call invitation")
+            self.reject(488)
+            return
+
         if self._state is None:
             self._state = "INCOMING"
             self.start_timeout("response", 30)
-            try:
-                self._media_session.parse_body(invite.body, True)
-            except:
-                logger.error("Malformed body in incoming call invitation")
-                self.reject(488)
-            else:
-                self.ring()
+            self._media_session.process_pending_streams()
+            self.ring()
         elif self._state == "CONFIRMED":
-            self._media_session.parse_body(invite.body)
             self._state = "REINVITED"
             self.reaccept()
         else:
+            self._media_session.clear_pending_streams()
             self.answer(488) # not acceptable here
 
     def on_ack_received(self, ack):
@@ -604,6 +607,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self.accept()
 
     def on_session_ready(self, session):
+        print "SESSION READY"
         if self._state == "REINVITED":
             self.reaccept()
         elif self._state == "CONFIRMED":

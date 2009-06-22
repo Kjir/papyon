@@ -26,8 +26,8 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         self._msg_class = msg_class
 
         self._streams = []
+        self._pending_streams = []
         self._signals = {}
-        self._parsing = False
 
     @property
     def has_video(self):
@@ -35,11 +35,11 @@ class MediaSession(gobject.GObject, EventsDispatcher):
 
     @property
     def prepared(self):
+        if self._pending_streams:
+            return False
         for stream in self._streams:
             if not stream.prepared:
                 return False
-        if self._parsing:
-            return False
         return True
 
     @property
@@ -69,6 +69,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         self._streams.append(stream)
         self._signals[stream.name] = [sp, sr]
         self._dispatch("on_stream_added", stream)
+        stream.process()
         return stream
 
     def get_stream(self, name):
@@ -96,7 +97,6 @@ class MediaSession(gobject.GObject, EventsDispatcher):
 
     def parse_body(self, body, initial=False):
         msg = self._msg_class()
-        self._parsing = True
         try:
             if not msg.parse(body):
                 raise ValueError("Session message does not contain any information")
@@ -105,20 +105,22 @@ class MediaSession(gobject.GObject, EventsDispatcher):
                 if stream is None:
                     if initial:
                         stream = self.create_stream(media.name, media.direction)
-                        self.add_stream(stream)
+                        self._pending_streams.append(stream)
                     else:
                         raise ValueError('Invalid media "%s" in session message' % media.name)
                 stream.parse_media(media)
         except Exception, err:
             logger.error(err)
-            self._parsing = False
             raise
-        self._parsing = False
-
-        if initial and self.ready:
-            self.emit("prepared")
-
         return msg
+
+    def process_pending_streams(self):
+        for stream in self._pending_streams:
+            self.add_stream(stream)
+        self.clear_pending_streams()
+
+    def clear_pending_streams(self):
+        self._pending_streams = []
 
     def on_stream_prepared(self, stream):
         if self.prepared:
@@ -144,6 +146,7 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         gobject.GObject.__init__(self)
         EventsDispatcher.__init__(self)
         self._name = name
+        self._active = False
         self._created = created
         self._direction = direction
         self._transport = transport
@@ -197,8 +200,14 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         if media.get_attribute("remote-candidates") or\
            media.get_attribute("remote-candidate"):
             self._remote_candidate_id = candidates[0].foundation
-        else:
+        elif self._active:
+            self.process()
+
+    def process(self):
+        self._active = True
+        if self._remote_codecs:
             self._dispatch("on_remote_codecs_received", self._remote_codecs)
+        if self._remote_candidates:
             self._dispatch("on_remote_candidates_received", self._remote_candidates)
 
     def new_local_candidate(self, candidate):
