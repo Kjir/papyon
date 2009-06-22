@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.sip.constants import *
+from papyon.util.encoding import *
 
 import logging
 
@@ -158,6 +159,8 @@ class ICECandidate(object):
         if self.draft is 6:
             self.priority = int(float(self.priority) * 1000)
         self.component_id = int(self.component_id)
+        self.username = fix_b64_padding(self.username)
+        self.password = fix_b64_padding(self.password)
         self.port = int(self.port)
         if self.base_port is not None:
             self.base_port = int(self.base_port)

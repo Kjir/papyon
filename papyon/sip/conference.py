@@ -28,7 +28,6 @@ from papyon.event.media import *
 import pygst
 pygst.require('0.10')
 
-import base64
 import farsight
 import gobject
 import gst
@@ -171,9 +170,8 @@ class MediaStreamHandler(MediaStreamEventInterface):
         media_type = media_types[self._client.name]
         self.fssession = conference.new_session(media_type)
         self.fssession.set_codec_preferences(build_codecs(self._client.name))
-        #FIXME fix direction
         self.fsstream = self.fssession.new_stream(participant,
-                farsight.DIRECTION_BOTH, "nice", params)
+                self._client.direction, "nice", params)
         self.fsstream.connect("src-pad-added", self.on_src_pad_added, pipeline)
         source = make_source(self._client.name)
         pipeline.add(source)
@@ -184,17 +182,14 @@ class MediaStreamHandler(MediaStreamEventInterface):
         del self.fsstream
 
     def on_remote_candidates_received(self, candidates):
-        print "SET CANDIDATES"
         candidates = convert_fs_candidates(candidates)
         self.fsstream.set_remote_candidates(candidates)
 
     def on_remote_codecs_received(self, codecs):
-        print "SET CODECS"
         codecs = convert_fs_codecs(codecs, self._client.name)
         self.fsstream.set_remote_codecs(codecs)
 
     def on_src_pad_added(self, stream, pad, codec, pipeline):
-        print "********************SRC PAD ADDED"
         sink = make_sink(self._client.name)
         pipeline.add(sink)
         sink.set_state(gst.STATE_PLAYING)
@@ -247,24 +242,8 @@ def convert_fs_candidates(candidates):
         fscandidate.proto = proto
         fscandidate.type = type
         fscandidate.username = candidate.username
-        #FIXME
-        while True:
-            try:
-                base64.b64decode(fscandidate.username)
-                break
-            except:
-                fscandidate.username += "="
         fscandidate.password = candidate.password
-        while True:
-            try:
-                base64.b64decode(fscandidate.password)
-                break
-            except:
-                fscandidate.password += "="
-        if candidate.draft is 6:
-            fscandidate.priority = int(candidate.priority * 1000)
-        elif candidate.draft is 19:
-            fscandidate.priority = int(candidate.priority)
+        fscandidate.priority = int(candidate.priority)
         fscandidates.append(fscandidate)
     return fscandidates
 
