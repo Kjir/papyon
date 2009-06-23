@@ -393,10 +393,7 @@ class Profile(gobject.GObject):
 
         self.client_id = ClientCapabilities(10)
         self.client_id.supports_sip_invite = True
-        self.client_id.supports_tunneled_sip = True
-        #FIXME: this should only be advertised when a webcam is plugged
-        self.client_id.has_webcam = True
-        self.client_id.supports_rtc_video = True
+        #self.client_id.supports_tunneled_sip = True
 
         self._msn_object = None
 
