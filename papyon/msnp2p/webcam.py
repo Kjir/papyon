@@ -154,6 +154,7 @@ class WebcamSession(P2PSession, EventsDispatcher):
             return
         self._xml_needed = False
         body = self.media_session.build_body(self._session_id, self._producer)
+        print "XML SENT", body
         self.send_data(body)
 
     def _handle_xml(self, data):
