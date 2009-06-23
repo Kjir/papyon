@@ -234,21 +234,21 @@ class SLPNullBody(SLPMessageBody):
     def __init__(self):
         SLPMessageBody.__init__(self, SLPContentType.NULL)
 SLPMessageBody.register_content(SLPContentType.NULL, SLPNullBody)
-    
+
 
 class SLPSessionRequestBody(SLPMessageBody):
     def __init__(self, euf_guid=None, app_id=None, context=None,
             session_id=None, s_channel_state=0, capabilities_flags=1):
         SLPMessageBody.__init__(self,SLPContentType.SESSION_REQUEST,
                                     session_id, s_channel_state, capabilities_flags)
-        
+
         if euf_guid is not None:
             self.add_header("EUF-GUID", euf_guid)
         if app_id is not None:
             self.add_header("AppID", app_id)
         if context is not None:
             self.add_header("Context",  base64.b64encode(context))
-            
+
     @property
     def euf_guid(self):
         try:

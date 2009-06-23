@@ -220,11 +220,11 @@ gobject.type_register(BaseTransport)
 
 
 class DirectConnection(BaseTransport):
-    """Implements a direct connection to the net using TCP/1863""" 
+    """Implements a direct connection to the net using TCP/1863"""
 
     def __init__(self, server, server_type=ServerType.NOTIFICATION, proxies={}):
         BaseTransport.__init__(self, server, server_type, proxies)
-        
+
         transport = gnet.io.TCPClient(server[0], server[1])
         transport.connect("notify::status", self.__on_status_change)
         transport.connect("error", self.__on_error)
@@ -239,7 +239,7 @@ class DirectConnection(BaseTransport):
         self.__resetting = False
         self.__error = False
         self.__png_timeout = None
-        
+
     __init__.__doc__ = BaseTransport.__init__.__doc__
 
     ### public commands

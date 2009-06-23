@@ -54,7 +54,7 @@ class ClientEvents(papyon.event.ClientEventInterface):
 
             self._client.profile.presence_msn_object = papyon.Presence.ONLINE, None
             self._client.profile.personal_message_current_media = "yo!", None
-            
+
             gobject.timeout_add(5000, self._client.request_display_picture)
 
     def on_client_error(self, error_type, error):

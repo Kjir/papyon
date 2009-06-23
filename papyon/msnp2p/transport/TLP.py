@@ -74,7 +74,7 @@ class TLPHeader(object):
                 self.dw1,
                 self.dw2,
                 self.qw1)
-    
+
     @staticmethod
     def parse(header_data):
         header = struct.unpack("<LLQQLLLLQ", header_data[:48])

@@ -38,7 +38,7 @@ class BaseP2PTransport(gobject.GObject):
                 gobject.TYPE_NONE,
                 (object,)),
             }
-    
+
     def __init__(self, transport_manager, name):
         gobject.GObject.__init__(self)
         self._transport_manager = weakref.proxy(transport_manager)
@@ -150,5 +150,4 @@ class BaseP2PTransport(gobject.GObject):
 
         self.send(ack_blob)
 
-gobject.type_register(BaseP2PTransport) 
-
+gobject.type_register(BaseP2PTransport)
