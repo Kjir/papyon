@@ -640,7 +640,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
     def request_turn_relays(self, streams_count):
         turn_client = TURNClient(self._client._sso, self._account)
         turn_client.connect("requests-answered", self.on_turn_relays_discovered)
-        turn_client.request_shared_secret(None, None, streams_count)
+        turn_client.request_shared_secret(None, None, streams_count * 2)
 
     def on_turn_relays_discovered(self, turn_client, relays):
         logger.debug("Discovered %i TURN relays" % len(relays))

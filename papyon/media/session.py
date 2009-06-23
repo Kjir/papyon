@@ -125,8 +125,10 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         self._pending_streams = []
 
     def set_relay_info(self, relays):
-        for i in range(0, len(self._pending_streams)):
-            self._pending_streams[i].relay = relays[i]
+        idx = 0
+        for stream in self._pending_streams:
+            stream.relays = relays[idx:idx+2]
+            idx += 2
 
     def build_body(self, *args):
         msg = self._msg_class(*args)

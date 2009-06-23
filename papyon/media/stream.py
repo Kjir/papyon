@@ -55,7 +55,7 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         self._remote_codecs = []
         self._remote_candidate_id = None
         self._remote_candidates = []
-        self.relay = None
+        self.relays = []
 
     @property
     def name(self):
