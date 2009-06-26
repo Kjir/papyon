@@ -47,6 +47,9 @@ class P2PSession(gobject.GObject):
                 ()),
             "completed" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
+                (object,)),
+            "progressed" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
                 (object,))
     }
 
@@ -222,6 +225,10 @@ class P2PSession(gobject.GObject):
             self._on_data_preparation_blob_received(blob)
         else:
             self._on_data_blob_received(blob)
+
+    def _on_data_chunk_transferred(self, chunk):
+        if chunk.has_progressed():
+            self.emit("progressed", len(chunk.body))
 
     def _on_data_preparation_blob_received(self, blob):
         pass

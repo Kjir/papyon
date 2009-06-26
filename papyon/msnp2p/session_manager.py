@@ -53,6 +53,8 @@ class P2PSessionManager(gobject.GObject):
                 lambda tr, blob: self._on_blob_received(blob))
         self._transport_manager.connect("blob-sent",
                 lambda tr, blob: self._on_blob_sent(blob))
+        self._transport_manager.connect("chunk-transferred",
+                lambda tr, chunk: self._on_chunk_transferred(chunk))
 
     def register_handler(self, handler_class):
         self._handlers.append(handler_class)
@@ -62,6 +64,15 @@ class P2PSessionManager(gobject.GObject):
 
     def _unregister_session(self, session):
         del self._sessions[session.id]
+
+    def _on_chunk_transferred(self, chunk):
+        session_id = chunk.header.session_id
+        if session_id == 0:
+            return
+        session = self._get_session(session_id)
+        if session is None:
+            return
+        session._on_data_chunk_transferred(chunk)
 
     def _blob_to_session(self, blob):
         # Check to see if it's a signaling message

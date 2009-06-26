@@ -38,9 +38,13 @@ class P2PTransportManager(gobject.GObject):
 
             "blob-sent" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object,))
+                (object,)),
+
+            "chunk-transferred" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
     }
-    
+
     def __init__(self, client):
         gobject.GObject.__init__(self)
 
@@ -77,6 +81,7 @@ class P2PTransportManager(gobject.GObject):
         return self._default_transport(self, peer)
 
     def _on_chunk_received(self, transport, chunk):
+        self.emit("chunk-transferred", chunk)
         session_id = chunk.header.session_id
         blob_id = chunk.header.blob_id
 
@@ -111,7 +116,7 @@ class P2PTransportManager(gobject.GObject):
                 del self._data_blobs[session_id]
 
     def _on_chunk_sent(self, transport, chunk):
-        pass
+        self.emit("chunk-transferred", chunk)
 
     def _on_blob_sent(self, transport, blob):
         self.emit("blob-sent", blob)

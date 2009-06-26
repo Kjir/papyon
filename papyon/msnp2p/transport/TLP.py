@@ -127,6 +127,9 @@ class MessageChunk(object):
     def is_nonce_chunk(self):
         return self.header.flags & TLPFlag.KEY
 
+    def has_progressed(self):
+        return self.header.flags & TLPFlag.EACH
+
     def require_ack(self):
         if self.is_ack_chunk():
             return False
