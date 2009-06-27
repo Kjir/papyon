@@ -38,7 +38,7 @@ import gobject
 import xml.sax.saxutils as xml
 import urllib
 import base64
-import sha
+import hashlib
 import logging
 
 __all__ = ['MSNObjectType', 'MSNObject', 'MSNObjectStore', 'WebcamHandler']
@@ -168,7 +168,7 @@ class MSNObject(object):
         return result
 
     def __compute_data_hash(self, data):
-        digest = sha.new()
+        digest = hashlib.sha1()
         data.seek(0, 0)
         read_data = data.read(1024)
         while len(read_data) > 0:
@@ -182,7 +182,7 @@ class MSNObject(object):
             (self._creator.account, str(self._size), str(self._type),\
                  str(self._location), base64.b64encode(self._friendly), \
                  base64.b64encode(self._data_sha))
-        return sha.new(input).hexdigest()
+        return hashlib.sha1(input).hexdigest()
 
     def __str__(self):
         return self.__repr__()
