@@ -143,7 +143,7 @@ class BaseP2PTransport(gobject.GObject):
         if received_chunk.header.flags & TLPFlag.RAK:
             flags |= TLPFlag.RAK
 
-        ack_blob = ControlBlob(0, flags, 
+        ack_blob = ControlBlob(received_chunk.header.session_id, flags,
                 dw1 = received_chunk.header.blob_id,
                 dw2 = received_chunk.header.dw1,
                 qw1 = received_chunk.header.blob_size)
