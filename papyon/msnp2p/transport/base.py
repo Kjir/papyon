@@ -82,6 +82,7 @@ class BaseP2PTransport(gobject.GObject):
     def _reset(self):
         self._control_blob_queue = []
         self._data_blob_queue = []
+        self._pending_blob = {} # blob_id : (blob, callback, errback)
         self._pending_ack = {} # blob_id : [blob_offset1, blob_offset2 ...]
 
     def _add_pending_ack(self, blob_id, chunk_id=0):
@@ -103,6 +104,11 @@ class BaseP2PTransport(gobject.GObject):
 
         if chunk.header.flags & TLPFlag.ACK:
             self._del_pending_ack(chunk.header.dw1, chunk.header.dw2)
+            if chunk.header.dw1 in self._pending_blob:
+                blob, callback, errback = self._pending_blob[chunk.header.dw1]
+                del self._pending_blob[blob.id]
+                if callback:
+                    callback[0](*callback[1:])
 
         #FIXME: handle all the other flags
 
@@ -126,9 +132,10 @@ class BaseP2PTransport(gobject.GObject):
         blob, callback, errback = queue[0]
         chunk = blob.get_chunk(self.max_chunk_size)
         if blob.is_complete():
-            # FIXME: we should keep it in the queue until we receive the ACK
             queue.pop(0)
-            if callback:
+            if blob.is_data_blob():
+                self._pending_blob[blob.id] = (blob, callback, errback)
+            elif callback:
                 callback[0](*callback[1:])
 
         if chunk.require_ack() :

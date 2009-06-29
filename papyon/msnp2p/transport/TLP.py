@@ -235,6 +235,9 @@ class MessageBlob(object):
     def is_complete(self):
         return self.transferred == self.total_size
 
+    def is_data_blob(self):
+        return not self.is_control_blob()
+
     def is_control_blob(self):
         return False
 
