@@ -133,8 +133,6 @@ class MessageChunk(object):
     def require_ack(self):
         if self.is_ack_chunk():
             return False
-        #if self.header.flags & TLPFlag.EACH:
-        #    return True
         current_size = self.header.chunk_size + self.header.blob_offset
         if current_size == self.header.blob_size:
             return True
@@ -182,7 +180,7 @@ class MessageChunk(object):
 
 class MessageBlob(object):
     def __init__(self, application_id, data, total_size=None,
-            session_id=None, blob_id=None):
+            session_id=None, blob_id=None, is_file=False):
         if data is not None:
             if isinstance(data, str):
                 if len(data) > 0:
@@ -206,6 +204,7 @@ class MessageBlob(object):
             session_id = _generate_id()
         self.session_id = session_id
         self.id = blob_id or _generate_id()
+        self.is_file = is_file
 
     def __del__(self):
         #if self.data is not None:
@@ -258,6 +257,8 @@ class MessageBlob(object):
         header.dw1 = _chunk_id()
         if self.session_id != 0 and self.total_size != 4 and data != '\x00' * 4:
             header.flags = TLPFlag.EACH
+            if self.is_file:
+                header.flags |= TLPFlag.FILE
 
         chunk = MessageChunk(header, data)
         chunk.application_id = self.application_id
