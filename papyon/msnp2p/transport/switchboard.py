@@ -65,17 +65,13 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
         headers = {'P2P-Dest': self.peer.account}
         content_type = 'application/x-msnmsgrp2p'
         body = str(chunk) + struct.pack('>L', chunk.application_id)
-        self._send_message(content_type, body, headers, MessageAcknowledgement.MSNC)
+        self._send_message(content_type, body, headers,
+                MessageAcknowledgement.MSNC, self._on_chunk_sent, (chunk,))
 
     def _on_message_received(self, message):
         chunk = MessageChunk.parse(message.body[:-4])
         chunk.application_id = struct.unpack('>L', message.body[-4:])[0]
         self._on_chunk_received(chunk)
-
-    def _on_message_sent(self, message):
-        chunk = MessageChunk.parse(message.body[:-4])
-        chunk.application_id = struct.unpack('>L', message.body[-4:])[0]
-        self._on_chunk_sent(chunk)
 
     def _on_contact_joined(self, contact):
         pass
