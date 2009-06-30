@@ -9,8 +9,8 @@ import papyon
 NAME = "papyon"
 VERSION = papyon.__version__
 DESCRIPTION = "Python msn client library"
-AUTHOR = "Ali Sabil"
-AUTHOR_EMAIL = "ali.sabil@gmail.com"
+AUTHOR = "Youness Alaoui"
+AUTHOR_EMAIL = "kakaroto@users.sourceforge.net"
 URL = papyon.__url__
 LICENSE = papyon.__license__
 

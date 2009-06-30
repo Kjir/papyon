@@ -20,15 +20,15 @@
 
 papyon is a library, written in Python, for accessing the MSN
 instant messaging service.
-    
+
     @group High Level Interface: client, profile, conversation, event
     @group Low Level Interface: msnp, msnp2p, service
     @group Network Layer: gnet
 """
 
-__version__ = "0.3.3"
-__author__ = "Ali Sabil <ali.sabil@gmail.com>"
-__url__ = "http://telepathy.freedesktop.org/wiki/Pymsn"
+__version__ = "0.4.0"
+__author__ = "Youness <kakaroto@users.sourceforge.net>"
+__url__ = "http://telepathy.freedesktop.org/wiki/Papyon"
 __license__ = "GNU GPL"
 
 from client import *
