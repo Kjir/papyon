@@ -28,10 +28,8 @@ import unittest
 sys.path.insert(0, "")
 
 import papyon
-from papyon.sip.conference import *
-from papyon.sip.sip import *
-from papyon.sip.transport import *
-from papyon.service.SingleSignOn import *
+from papyon.media.conference import *
+from papyon.media.constants import *
 from papyon.transport import HTTPPollConnection
 
 def get_proxies():
@@ -51,23 +49,25 @@ def get_proxies():
 
 class SIPClient(papyon.Client):
 
-    def __init__(self, account, password, invited):
+    def __init__(self, account, password, peer):
         server = ('messenger.hotmail.com', 1863)
         papyon.Client.__init__(self, server, proxies = get_proxies())
 
-        self.invited = invited
-        self.ttl = SIPTransport("vp.sip.messenger.msn.com", 443)
-        self.sso = SingleSignOn(account, password)
+        self.peer = peer
         self._event_handler = ClientEvents(self)
         gobject.idle_add(self.login, account, password)
 
     def invite(self):
-        contact = self.address_book.contacts.search_by_account(self.invited)[0]
+        contact = self.address_book.contacts.search_by_account(self.peer)[0]
         call = self.call_manager.create_call(contact)
         self.call_handler = CallEvents(call)
         self.session_handler = MediaSessionHandler(call.media_session)
-        call.media_session.add_stream("audio", True)
-        call.media_session.add_stream("video", True)
+        stream = call.media_session.create_stream("audio",
+                MediaStreamDirection.BOTH, True)
+        call.media_session.add_stream(stream)
+        stream = call.media_session.create_stream("video",
+                MediaStreamDirection.BOTH, True)
+        call.media_session.add_stream(stream)
         call.invite()
         return False
 

@@ -39,11 +39,11 @@ class MediaSession(gobject.GObject, EventsDispatcher):
             ())
     }
 
-    def __init__(self, type, transport_class, msg_class):
+    def __init__(self, type, encoder_class, msg_class):
         gobject.GObject.__init__(self)
         EventsDispatcher.__init__(self)
         self._type = type
-        self._transport = transport_class(type)
+        self._encoder = encoder_class(type)
         self._msg_class = msg_class
 
         self._streams = []
@@ -79,7 +79,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
             self.remove_stream(stream)
 
     def create_stream(self, name, direction, created=False):
-        stream = MediaStream(name, direction, created, self._transport)
+        stream = MediaStream(name, direction, created, self._encoder)
         if not created:
             self._dispatch("on_stream_created", stream)
         return stream

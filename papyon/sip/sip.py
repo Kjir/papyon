@@ -19,10 +19,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.event import EventsDispatcher
-from papyon.media import MediaSession, MediaSessionType
+from papyon.media import MediaCall, MediaSessionType
 from papyon.profile import Presence
 from papyon.sip.constants import *
-from papyon.sip.ice import ICETransport
+from papyon.sip.ice import ICECandidateEncoder
 from papyon.sip.sdp import SDPMessage
 from papyon.sip.turn import TURNClient
 from papyon.service.SingleSignOn import *
@@ -321,18 +321,14 @@ class SIPBaseCall(gobject.GObject):
             handler()
 
 
-class SIPCall(SIPBaseCall, EventsDispatcher):
+class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
 
     def __init__(self, connection, client, peer=None, invite=None, id=None):
-        SIPBaseCall.__init__(self, connection, client, id)
-        EventsDispatcher.__init__(self)
-
         session_type = connection.tunneled and MediaSessionType.TUNNELED_SIP \
                 or MediaSessionType.SIP
-        self._media_session = MediaSession(session_type, ICETransport, SDPMessage)
-        sp = self._media_session.connect("prepared", self.on_session_prepared)
-        sr = self._media_session.connect("ready", self.on_session_ready)
-        self._signals = [sp, sr]
+        SIPBaseCall.__init__(self, connection, client, id)
+        MediaCall.__init__(self, session_type, ICECandidateEncoder, SDPMessage)
+        EventsDispatcher.__init__(self)
 
         self._incoming = (id is not None)
         self._accepted = False
@@ -353,14 +349,10 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
 
     @property
     def conversation_id(self):
-        if self._media_session.has_video:
+        if self.media_session.has_video:
             return 1
         else:
             return 0
-
-    @property
-    def media_session(self):
-        return self._media_session
 
     @property
     def answered(self):
@@ -379,7 +371,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         request = self.build_request("INVITE", uri, to, incr=True)
         request.add_header("Ms-Conversation-ID", "f=%s" % self.conversation_id)
         request.add_header("Contact", self.build_invite_contact())
-        request.set_content(self._media_session.build_body(), "application/sdp")
+        request.set_content(self.media_session.build_body(), "application/sdp")
         return request
 
     def invite(self):
@@ -387,7 +379,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self._relay_requested = True
             self.request_turn_relays(len(self.media_session._pending_streams))
             return
-        if not self._media_session.prepared:
+        if not self.media_session.prepared:
             return
         logger.info("Send call invitation to %s", self._peer.account)
         self._state = "CALLING"
@@ -399,7 +391,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self.send(self._invite)
 
     def reinvite(self):
-        if self._incoming or not self._media_session.ready:
+        if self._incoming or not self.media_session.ready:
             return
         self._state = "REINVITING"
         self._invite = self.build_invite_request(self._uri, self._remote)
@@ -412,7 +404,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         response = self.build_response(self._invite, status)
         if status == 200:
             response.add_header("Contact", self.build_invite_contact())
-            response.set_content(self._media_session.build_body(), "application/sdp")
+            response.set_content(self.media_session.build_body(), "application/sdp")
         self.send(response)
 
     def ring(self):
@@ -426,7 +418,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         if self.answered:
             return
         self._accepted = True
-        if not self._media_session.prepared:
+        if not self.media_session.prepared:
             return
         self.stop_timeout("response")
         self.start_timeout("ack", 5)
@@ -444,7 +436,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self.answer(status)
 
     def reaccept(self):
-        if not self._media_session.ready:
+        if not self.media_session.ready:
             return
         self._state = "CONFIRMED"
         self.answer(200)
@@ -502,9 +494,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
     def dispose(self):
         if self.timeouts:
             return # we have to wait some responses
-        for handler_id in self._signals:
-            self._media_session.disconnect(handler_id)
-        self._media_session.close()
+        MediaCall.dispose(self)
         self._state = "DISCONNECTED"
         self._dispatch("on_call_ended")
         self._connection.remove_call(self)
@@ -515,7 +505,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
 
         try:
             initial = self._state is None
-            msg = self._media_session.parse_body(invite.body, initial)
+            msg = self.media_session.parse_body(invite.body, initial)
         except:
             logger.error("Malformed body in incoming call invitation")
             self.reject(488)
@@ -530,7 +520,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
             self._state = "REINVITED"
             self.reaccept()
         else:
-            self._media_session.clear_pending_streams()
+            self.media_session.clear_pending_streams()
             self.answer(488) # not acceptable here
 
     def on_ack_received(self, ack):
@@ -570,7 +560,7 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         elif response.status is 200:
             self._state = "CONFIRMED"
             try:
-                self._media_session.parse_body(response.body)
+                self.media_session.parse_body(response.body)
             except:
                 logger.error("Malformed body in invite response")
                 self.send_bye()
@@ -606,13 +596,13 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
         self.stop_timeout("bye")
         self.dispose()
 
-    def on_session_prepared(self, session):
+    def on_media_session_prepared(self, session):
         if self._state is None:
             self.invite()
         elif self._state == "INCOMING" and self._accepted:
             self.accept()
 
-    def on_session_ready(self, session):
+    def on_media_session_ready(self, session):
         if self._state == "REINVITED":
             self.reaccept()
         elif self._state == "CONFIRMED":
@@ -645,8 +635,8 @@ class SIPCall(SIPBaseCall, EventsDispatcher):
     def on_turn_relays_discovered(self, turn_client, relays):
         logger.debug("Discovered %i TURN relays" % len(relays))
         if relays:
-            self._media_session.set_relay_info(relays)
-        self._media_session.process_pending_streams()
+            self.media_session.set_relay_info(relays)
+        self.media_session.process_pending_streams()
 
 
 class SIPRegistration(SIPBaseCall):

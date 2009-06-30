@@ -18,10 +18,18 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from call import *
-from candidate import *
-from codec import *
-from constants import *
-from message import *
-from session import *
-from stream import *
+__all__ = ['MediaCodec']
+
+class MediaCodec(object):
+
+    def __init__(self, payload=None, encoding=None, clockrate=None, params=None):
+        self.payload = payload
+        self.encoding = encoding
+        self.clockrate = clockrate
+        self.params = params or dict()
+
+    def __eq__(self, other):
+        return (self.payload == other.payload and
+                self.encoding == other.encoding and
+                self.clockrate == other.clockrate and
+                self.params == other.params)

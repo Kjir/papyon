@@ -29,25 +29,27 @@ from papyon.util.decorator import rw_property
 import papyon.util.element_tree as ElementTree
 import struct
 
-import papyon.util.guid as guid
-
 import gobject
+import logging
 import base64
 import random
 
-from papyon.media import MediaSession
-from papyon.sip.constants import *
-from papyon.sip.ice import *
-from papyon.sip.sdp import *
+from papyon.media import MediaCall, MediaCandidate, MediaCandidateEncoder, \
+                         MediaSessionMessage, MediaDescription
+from papyon.media.constants import MediaStreamDirection, MediaSessionType
 
 __all__ = ['WebcamSession']
 
-class WebcamSession(P2PSession, EventsDispatcher):
+logger = logging.getLogger("msnp2p:webcam")
+
+class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
 
     def __init__(self, producer, session_manager, peer,
-            euf_guid,  message = None):
+            euf_guid,  message=None):
         P2PSession.__init__(self, session_manager, peer, euf_guid,
                 ApplicationID.WEBCAM, message)
+        MediaCall.__init__(self, MediaSessionType.WEBCAM,
+                WebcamCandidateEncoder, WebcamSessionMessage)
         EventsDispatcher.__init__(self)
 
         self._producer = producer
@@ -55,22 +57,12 @@ class WebcamSession(P2PSession, EventsDispatcher):
         self._sent_syn = False
         self._session_id = self._generate_id(9999)
         self._xml_needed = False
-        self._media_session = MediaSession(MediaSessionType.WEBCAM,
-                WebcamTransport, WebcamSessionMessage)
-        self._media_session.connect("prepared", self._on_media_session_prepared)
-
-    @property
-    def media_session(self):
-        return self._media_session
 
     def invite(self):
         self._answered = True
         context = "{B8BE70DE-E2CA-4400-AE03-88FF85B9F4E8}"
         context = context.decode('ascii').encode('utf-16_le')
         self._invite(context)
-
-    def ring(self):
-        pass
 
     def accept(self):
         self._answered = True
@@ -92,7 +84,7 @@ class WebcamSession(P2PSession, EventsDispatcher):
             self._close(context)
         self._dispatch("on_call_ended")
 
-    def _on_media_session_prepared(self, session):
+    def on_media_session_prepared(self, session):
         if self._xml_needed:
             self._send_xml()
 
@@ -152,26 +144,26 @@ class WebcamSession(P2PSession, EventsDispatcher):
         if not self.media_session.prepared:
             self._xml_needed = True
             return
+        logger.info("Send XML for session %i", self._session_id)
         self._xml_needed = False
         body = self.media_session.build_body(self._session_id, self._producer)
-        print "XML SENT", body
         self.send_data(body)
 
     def _handle_xml(self, data):
-        print "Received xml %s" % data
         initial = not self._producer
         msg = self.media_session.parse_body(data, initial)
         self._session_id = msg.id
+        logger.info("Received XML data for session %i", self._session_id)
         if self._producer:
             self.send_binary_viewer_data()
         else:
             self._send_xml()
         self.media_session.process_pending_streams()
 
-class WebcamTransport(object):
+class WebcamCandidateEncoder(MediaCandidateEncoder):
 
     def __init__(self, session_type):
-        pass
+        MediaCandidateEncoder.__init__(self, session_type)
 
     def encode_candidates(self, stream, media):
         candidates = stream.get_active_local_candidates()
@@ -185,7 +177,7 @@ class WebcamTransport(object):
         candidates = []
         for ip in media.ips:
             for port in media.ports:
-                candidate = ICECandidate()
+                candidate = MediaCandidate()
                 candidate.foundation = str(media.rid)
                 candidate.component_id = 0
                 candidate.username = str(media.sid)
@@ -196,12 +188,12 @@ class WebcamTransport(object):
                 candidates.append(candidate)
         return candidates
 
-class WebcamSessionMessage(object):
+class WebcamSessionMessage(MediaSessionMessage):
 
     def __init__(self, id=0, producer=False):
+        MediaSessionMessage.__init__(self)
         self._id = id
         self._producer = producer
-        self._medias = []
 
     @property
     def id(self):
@@ -210,10 +202,6 @@ class WebcamSessionMessage(object):
     @property
     def producer(self):
         return self._producer
-
-    @property
-    def medias(self):
-        return self._medias
 
     def create_media_description(self, name="video"):
         media = WebcamMediaDescription(self._id, self._producer)
@@ -253,31 +241,16 @@ class WebcamSessionMessage(object):
         body += "</%s>\r\n\r\n" % tag
         return body
 
-class WebcamMediaDescription(object):
+class WebcamMediaDescription(MediaDescription):
 
     def __init__(self, sid, producer):
+        direction = producer and MediaStreamDirection.SENDING or \
+                MediaStreamDirection.RECEIVING
+        MediaDescription.__init__(self, "video", direction)
         self._ips = []
         self._ports = []
         self._rid = None
         self._sid = sid
-        self._direction = producer and MediaStreamDirection.SENDING or \
-                MediaStreamDirection.RECEIVING
-
-    @property
-    def name(self):
-        return "video"
-
-    @property
-    def direction(self):
-        return self._direction
-
-    @rw_property
-    def codecs():
-        def fget(self):
-            return []
-        def fset(self, value):
-            pass
-        return locals()
 
     @property
     def ips(self):
@@ -302,6 +275,3 @@ class WebcamMediaDescription(object):
         def fset(self, value):
             self._sid = value
         return locals()
-
-    def get_attribute(self, name):
-        return False

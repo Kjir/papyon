@@ -21,7 +21,7 @@
 """Call event interfaces
 
 The interfaces defined in this module allow receiving notification events
-from a L{SIPCall<papyon.sip.SIPCall>} object."""
+from a L{MediaCall<papyon.media.MediaCall>} object."""
 
 from papyon.event import BaseEventInterface
 
@@ -30,12 +30,12 @@ __all__ = ["CallEventInterface"]
 
 class CallEventInterface(BaseEventInterface):
     """interfaces allowing the user to get notified about events
-    from a L{SIPCall<papyon.sip.SIPCall>} object."""
+    from a L{MediaCall<papyon.media.MediaCall>} object."""
 
     def __init__(self, call):
         """Initializer
             @param call: the call we want to be notified for its events
-            @type call: L{SIPCall<papyon.sip.SIPCall>}"""
+            @type call: L{MediaCall<papyon.media.MediaCall>}"""
         BaseEventInterface.__init__(self, call)
 
     def on_call_incoming(self):

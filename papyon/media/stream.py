@@ -39,14 +39,14 @@ class MediaStream(gobject.GObject, EventsDispatcher):
             ())
     }
 
-    def __init__(self, name, direction, created, transport):
+    def __init__(self, name, direction, created, encoder):
         gobject.GObject.__init__(self)
         EventsDispatcher.__init__(self)
         self._name = name
         self._active = False
         self._created = created
         self._direction = direction
-        self._transport = transport
+        self._encoder = encoder
         self._local_codecs = []
         self._local_codecs_prepared = False
         self._local_candidate_id = None
@@ -85,18 +85,17 @@ class MediaStream(gobject.GObject, EventsDispatcher):
     def build_media(self, media):
         media.ip, media.port, media.rtcp = self.get_default_address()
         media.codecs = self._local_codecs
-        self._transport.encode_candidates(self, media)
+        self._encoder.encode_candidates(self, media)
         return media
 
     def parse_media(self, media):
         self._remote_codecs = media.codecs
-        candidates = self._transport.decode_candidates(media)
+        candidates = self._encoder.decode_candidates(media)
         self._remote_candidates.extend(candidates)
         if not self._remote_candidates:
-            self._remote_candidates = self._transport.get_default_candidates(media)
+            self._remote_candidates = self._encoder.get_default_candidates(media)
 
-        if media.get_attribute("remote-candidates") or\
-           media.get_attribute("remote-candidate"):
+        if media.has_active_remote():
             self._remote_candidate_id = candidates[0].foundation
         elif self._active:
             self.process()
@@ -112,7 +111,7 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         self._local_candidates.append(candidate)
 
     def new_active_candidate_pair(self, local, remote):
-        print self.name, "LOCAL", local, " REMOTE", remote
+        logger.debug("New active candidate pair (%s, %s)" % (local, remote))
         if self.ready:
             return # ignore other candidate pairs
         self._local_candidate_id = local
@@ -173,7 +172,7 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         for candidate in self._local_candidates:
             if candidate.transport != "UDP":
                 continue
-            if candidate.is_relay():
+            if candidate.relay:
                 return candidate
             if not relay or candidate.priority < relay.priority:
                 relay = candidate

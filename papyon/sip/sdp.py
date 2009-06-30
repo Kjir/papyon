@@ -18,6 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from papyon.media import MediaCodec, MediaDescription, MediaSessionMessage
 from papyon.media.constants import *
 from papyon.util.decorator import rw_property
 from papyon.util.odict import odict
@@ -26,178 +27,10 @@ import logging
 
 logger = logging.getLogger('SDP')
 
-class SDPCodec(object):
-
-    def __init__(self, payload=None, encoding=None, clockrate=None, params=None):
-        self.payload = payload
-        self.encoding = encoding
-        self.clockrate = clockrate
-        self.params = params or dict()
-
-    @staticmethod
-    def get_payload_from_rtpmap(rtpmap):
-        if rtpmap is None:
-            return -1
-        payload, codec = rtpmap.split(' ', 1)
-        return int(payload)
-
-    @staticmethod
-    def get_payload_from_fmtp(fmtp):
-        if fmtp is None:
-            return -1
-        payload, fmtp = fmtp.split(' ', 1)
-        return int(payload)
-
-    @property
-    def rtpmap(self):
-        return "%i %s/%i" % (self.payload, self.encoding, self.clockrate)
-
-    @property
-    def params_list(self):
-        if not self.params:
-            return ""
-        params = []
-        for (key, value) in self.params.items():
-            if key == "events":
-                params.append("0-16")
-            else:
-                params.append("%s=%s" % (key, value))
-        return " ".join(params)
-
-    @property
-    def fmtp(self):
-        return "%i %s" % (self.payload, self.params_list)
-
-    def parse_rtpmap(self, rtpmap):
-        payload, codec = rtpmap.split()
-        self.payload = int(payload)
-        self.encoding = codec.split('/')[0]
-        self.clockrate = int(codec.split('/')[1])
-
-    def parse_fmtp(self, fmtp):
-        params = fmtp.split()
-        for param in params[1:]:
-            if '=' in param:
-                key, value = param.split('=')
-            else:
-                key = "events"
-                value = "0-15"
-        self.params[key] = value
-
-    def __eq__(self, other):
-        return (self.rtpmap == other.rtpmap and
-                self.fmtp == other.fmtp)
-
-    def __repr__(self):
-        return "<Codec: %s params={%s}>" % (self.rtpmap, self.params_list)
-
-
-class SDPMedia(object):
-
-    def __init__(self, name):
-        self._attributes = odict({"encryption": ["rejected"]})
-        self._codecs = []
-
-        self.name = name
-        self.ip = ""
-        self.port = 0
-        self.rtcp = 0
-
-    @property
-    def attributes(self):
-        return self._attributes
-
-    @property
-    def direction(self):
-        return MediaStreamDirection.BOTH
-
-    @rw_property
-    def rtcp():
-        def fget(self):
-            return self.get_attribute("rtcp")
-        def fset(self, value):
-            self.set_attribute("rtcp", value)
-        return locals()
-
-    @rw_property
-    def codecs():
-        def fget(self):
-            return self._codecs
-        def fset(self, value):
-            self._codecs = value
-            self.delete_attributes("rtpmap")
-            self.delete_attributes("fmtp")
-            for codec in value:
-                self.add_attribute("rtpmap", codec.rtpmap)
-                if codec.params:
-                    self.add_attribute("fmtp", codec.fmtp)
-                caps = XCAPS[self.name].get(codec.payload, None)
-                if caps is not None:
-                    self.add_attribute("x-caps", caps)
-        return locals()
-
-    @rw_property
-    def payload_types():
-        def fget(self):
-            return map(lambda x: str(x.payload), self._codecs)
-        def fset(self, value):
-            for payload in value:
-                self._codecs.append(SDPCodec(int(payload)))
-        return locals()
-
-    def get_codec(self, payload):
-        for codec in self._codecs:
-            if codec.payload == payload:
-                return codec
-        raise KeyError("No codec with payload %i in media", payload)
-
-    def parse_attribute(self, key, value):
-        try:
-            if key == "rtcp":
-                self.rtcp = int(value)
-            else:
-                if key == "rtpmap":
-                    payload = SDPCodec.get_payload_from_rtpmap(value)
-                    codec = self.get_codec(payload)
-                    codec.parse_rtpmap(value)
-                elif key == "fmtp":
-                    payload = SDPCodec.get_payload_from_fmtp(value)
-                    codec = self.get_codec(payload)
-                    codec.parse_fmtp(value)
-                self.add_attribute(key, value)
-        except ValueError:
-            logger.warning("Invalid %s media attribute (%s)" % (key, value))
-        except KeyError:
-            logger.warning("Found %s attribute for invalid payload (%i)" %
-                    (key, payload))
-
-    def add_attribute(self, key, value=None):
-        self._attributes.setdefault(key, []).append(value)
-
-    def set_attribute(self, key, value):
-        self._attributes[key] = [value]
-
-    def get_attributes(self, key):
-        return self._attributes.get(key, None)
-
-    def get_attribute(self, key):
-        values = self.get_attributes(key)
-        if values is not None:
-            return values[0]
-        return None
-
-    def delete_attributes(self, key):
-        if key in self._attributes:
-            del self._attributes[key]
-
-    def __repr__(self):
-        return "<SDP Media: %s>" % self.name
-
-
-class SDPMessage(object):
+class SDPMessage(MediaSessionMessage):
 
     def __init__(self):
-        self._medias = []
+        MediaSessionMessage.__init__(self)
         self._ip = ""
 
     @property
@@ -206,12 +39,8 @@ class SDPMessage(object):
             return self._medias[0].ip
         return self._ip
 
-    @property
-    def medias(self):
-        return self._medias
-
     def create_media_description(self, name):
-        media = SDPMedia(name)
+        media = SDPMediaDescription(name)
         self._medias.append(media)
         return media
 
@@ -251,12 +80,11 @@ class SDPMessage(object):
                 if key == 'o':
                     self._ip = val.split()[5]
                 elif key == 'm':
-                    media = SDPMedia(val.split()[0])
+                    media = self.create_media_description(val.split()[0])
                     media.port = int(val.split()[1])
                     media.ip = self.ip # default IP address
                     media.rtcp = media.port + 1 # default RTCP port
                     media.payload_types = val.split()[3:]
-                    self._medias.append(media)
                 elif key == 'c':
                     if media is None:
                         self._ip = val.split()[2]
@@ -275,3 +103,145 @@ class SDPMessage(object):
                 raise ValueError('Invalid value "%s" for field "%s"' % (val, key))
 
         return self._medias
+
+
+class SDPMediaDescription(MediaDescription):
+
+    def __init__(self, name):
+        MediaDescription.__init__(self, name, MediaStreamDirection.BOTH)
+        self._attributes = odict({"encryption": ["rejected"]})
+
+        self.ip = ""
+        self.port = 0
+        self.rtcp = 0
+
+    @property
+    def attributes(self):
+        return self._attributes
+
+    @rw_property
+    def rtcp():
+        def fget(self):
+            return self.get_attribute("rtcp")
+        def fset(self, value):
+            self.set_attribute("rtcp", value)
+        return locals()
+
+    @rw_property
+    def codecs():
+        def fget(self):
+            return self._codecs
+        def fset(self, value):
+            self._codecs = value
+            self.delete_attributes("rtpmap")
+            self.delete_attributes("fmtp")
+            for codec in value:
+                rtpmap = SDPCodecBuilder.build_rtpmap(codec)
+                self.add_attribute("rtpmap", rtpmap)
+                if codec.params:
+                    fmtp = SDPCodecBuilder.build_fmtp(codec)
+                    self.add_attribute("fmtp", fmtp)
+                caps = XCAPS[self.name].get(codec.payload, None)
+                if caps is not None:
+                    self.add_attribute("x-caps", caps)
+        return locals()
+
+    @rw_property
+    def payload_types():
+        def fget(self):
+            return map(lambda x: str(x.payload), self._codecs)
+        def fset(self, value):
+            for payload in value:
+                self._codecs.append(MediaCodec(int(payload)))
+        return locals()
+
+    def has_active_remote(self):
+        return (self.get_attribute("remote-candidates") or
+           self.get_attribute("remote-candidate"))
+
+    def parse_attribute(self, key, value):
+        try:
+            if key == "rtcp":
+                self.rtcp = int(value)
+            else:
+                if key == "rtpmap":
+                    payload, values = SDPCodecParser.parse_rtpmap(value)
+                    codec = self.get_codec(payload)
+                    codec.encoding = values[0]
+                    codec.clockrate = values[1]
+                elif key == "fmtp":
+                    payload, params = SDPCodecParser.parse_fmtp(value)
+                    codec = self.get_codec(payload)
+                    codec.params = params
+                self.add_attribute(key, value)
+        except ValueError:
+            logger.warning("Invalid %s media attribute (%s)" % (key, value))
+        except KeyError:
+            logger.warning("Found %s attribute for invalid payload (%i)" %
+                    (key, payload))
+
+    def add_attribute(self, key, value=None):
+        self._attributes.setdefault(key, []).append(value)
+
+    def set_attribute(self, key, value):
+        self._attributes[key] = [value]
+
+    def get_attributes(self, key):
+        return self._attributes.get(key, None)
+
+    def get_attribute(self, key):
+        values = self.get_attributes(key)
+        if values is not None:
+            return values[0]
+        return None
+
+    def delete_attributes(self, key):
+        if key in self._attributes:
+            del self._attributes[key]
+
+
+class SDPCodecBuilder(object):
+
+    @staticmethod
+    def build_rtpmap(codec):
+        return "%i %s/%i" % (codec.payload, codec.encoding, codec.clockrate)
+
+    @staticmethod
+    def build_params_list(codec):
+        if not codec.params:
+            return ""
+        params = []
+        for (key, value) in codec.params.items():
+            if key == "events":
+                params.append("0-16")
+            else:
+                params.append("%s=%s" % (key, value))
+        return " ".join(params)
+
+    @staticmethod
+    def build_fmtp(codec):
+        return "%i %s" % (codec.payload, SDPCodecBuilder.build_params_list(codec))
+
+
+class SDPCodecParser(object):
+
+    @staticmethod
+    def parse_rtpmap(rtpmap):
+        payload, codec = rtpmap.split()
+        encoding = codec.split('/')[0]
+        clockrate = int(codec.split('/')[1])
+        return (int(payload), (encoding, clockrate))
+
+    @staticmethod
+    def parse_fmtp(fmtp):
+        result = {}
+        params = fmtp.split()
+        payload = int(params[0])
+        for param in params[1:]:
+            if '=' in param:
+                key, value = param.split('=')
+            else:
+                key = "events"
+                value = "0-15"
+            result[key] = value
+        return payload, result

@@ -19,8 +19,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.media import *
-from papyon.sip.ice import *
-from papyon.sip.sdp import *
 from papyon.event.media import *
 
 import pygst
@@ -128,8 +126,7 @@ class MediaSessionHandler(MediaSessionEventInterface):
             if s.has_name("farsight-new-local-candidate"):
                 ret = gst.BUS_DROP
                 name = media_names[s["stream"].get_property("session").get_property("media-type")]
-                candidate = convert_candidate(s["candidate"],
-                        self._client.type)
+                candidate = convert_candidate(s["candidate"])
                 stream = self._client.get_stream(name)
                 stream.new_local_candidate(candidate)
             if s.has_name("farsight-local-candidates-prepared"):
@@ -203,12 +200,8 @@ def create_notifier(pipeline):
     notifier.set_properties_from_file(filename)
     return notifier
 
-def convert_candidate(fscandidate, type):
-    candidate = ICECandidate()
-    if type == MediaSessionType.SIP:
-        candidate.draft = 6
-    elif type == MediaSessionType.TUNNELED_SIP:
-        candidate.draft = 19
+def convert_candidate(fscandidate):
+    candidate = MediaCandidate()
     candidate.ip = fscandidate.ip
     candidate.port = fscandidate.port
     candidate.foundation = fscandidate.foundation
@@ -255,7 +248,7 @@ def build_codecs(type):
 def convert_codecs(fscodecs):
     codecs = []
     for fscodec in fscodecs:
-        codec = SDPCodec()
+        codec = MediaCodec()
         codec.payload = fscodec.id
         codec.encoding = fscodec.encoding_name
         codec.clockrate = fscodec.clock_rate
