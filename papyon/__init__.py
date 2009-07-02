@@ -27,7 +27,7 @@ instant messaging service.
 """
 
 __version__ = "0.4.0"
-__author__ = "Youness <kakaroto@users.sourceforge.net>"
+__author__ = "Youness Alaoui <kakaroto@users.sourceforge.net>"
 __url__ = "http://telepathy.freedesktop.org/wiki/Papyon"
 __license__ = "GNU GPL"
 
