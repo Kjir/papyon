@@ -79,6 +79,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
             self.remove_stream(stream)
 
     def create_stream(self, name, direction, created=False):
+        logger.debug("Create stream %s" % name)
         stream = MediaStream(name, direction, created, self._encoder)
         if not created:
             self._dispatch("on_stream_created", stream)
@@ -152,14 +153,18 @@ class MediaSession(gobject.GObject, EventsDispatcher):
                         raise ValueError('Invalid media "%s" in session message' % media.name)
                 stream.parse_media(media)
         except Exception, err:
+            import traceback
+            traceback.print_exc()
             logger.error(err)
             raise
         return msg
 
     def on_stream_prepared(self, stream):
         if self.prepared:
+            logger.debug("All media streams are prepared")
             self.emit("prepared")
 
     def on_stream_ready(self, stream):
         if self.ready:
+            logger.debug("All media streams are ready")
             self.emit("ready")

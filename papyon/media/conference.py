@@ -27,7 +27,10 @@ pygst.require('0.10')
 import farsight
 import gobject
 import gst
+import logging
 import sys
+
+logger = logging.getLogger("Media:Conference")
 
 codecs_definitions = {
     "audio" : [
@@ -112,8 +115,9 @@ class MediaSessionHandler(MediaSessionEventInterface):
         if msg.type == gst.MESSAGE_ELEMENT:
             s = msg.structure
             if s.has_name("farsight-error"):
-                print "Farsight error :", s["error-msg"]
+                logger.error("Farsight error : %s" % s['error-msg'])
             if s.has_name("farsight-codecs-changed"):
+                logger.debug("Farsight codecs changed")
                 ret = gst.BUS_DROP
                 ready = s["session"].get_property("codecs-ready")
                 if ready:
@@ -124,18 +128,21 @@ class MediaSessionHandler(MediaSessionEventInterface):
                             valid_codecs[name], codecs)
                     stream.set_local_codecs(convert_codecs(codecs))
             if s.has_name("farsight-new-local-candidate"):
+                logger.debug("New local candidate")
                 ret = gst.BUS_DROP
                 name = media_names[s["stream"].get_property("session").get_property("media-type")]
                 candidate = convert_candidate(s["candidate"])
                 stream = self._client.get_stream(name)
                 stream.new_local_candidate(candidate)
             if s.has_name("farsight-local-candidates-prepared"):
+                logger.debug("Local candidates are prepared")
                 ret = gst.BUS_DROP
                 type = s["stream"].get_property("session").get_property("media-type")
                 name = media_names[type]
                 stream = self._client.get_stream(name)
                 stream.local_candidates_prepared()
             if s.has_name("farsight-new-active-candidate-pair"):
+                logger.debug("New active candidate pair")
                 ret = gst.BUS_DROP
                 type = s["stream"].get_property("session").get_property("media-type")
                 name = media_names[type]
