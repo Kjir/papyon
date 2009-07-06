@@ -61,6 +61,9 @@ class ICECandidateEncoder(MediaCandidateEncoder):
         pwd = media.get_attribute("ice-pwd")
         attributes = media.get_attributes("candidate")
 
+        if attributes is None:
+            return candidates
+
         if ufrag and pwd:
             draft = 19
         else:
