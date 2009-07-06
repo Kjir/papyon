@@ -104,7 +104,8 @@ class MediaSessionHandler(MediaSessionEventInterface):
         self._pipeline.set_state(gst.STATE_PLAYING)
         self._notifier = create_notifier(self._pipeline)
 
-    def on_stream_created(self, stream):
+    def on_stream_added(self, stream):
+        logger.debug("Stream \"%s\" added" % stream.name)
         handler = MediaStreamHandler(stream)
         handler.setup(self._conference, self._pipeline, self._participant,
                 self._client.type)
