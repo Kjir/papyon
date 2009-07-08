@@ -185,6 +185,7 @@ class WebcamCandidateEncoder(MediaCandidateEncoder):
                 candidate.ip = ip
                 candidate.port = port
                 candidate.transport = "TCP"
+                candidate.priority = 1
                 candidates.append(candidate)
         return candidates
 
