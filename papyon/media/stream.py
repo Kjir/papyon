@@ -153,8 +153,9 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         rtcp = None
 
         active = self._local_candidate_id
-        if not active:
-            active = self.search_relay().foundation
+        relay = self.search_relay()
+        if not active and relay:
+            active = relay.foundation
 
         for candidate in self._local_candidates:
             if candidate.foundation == active and \
