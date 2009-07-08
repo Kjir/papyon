@@ -296,7 +296,7 @@ def make_audio_source(name="audiotestsrc"):
     return element
 
 def make_audio_sink(async=False):
-    return gst.element_factory_make("alsasink")
+    return gst.element_factory_make("autoaudiosink")
 
 def make_video_source(name="videotestsrc"):
     "Make a bin with a video source in it, defaulting to first webcamera "
