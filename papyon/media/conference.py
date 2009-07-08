@@ -167,6 +167,7 @@ class MediaStreamHandler(MediaStreamEventInterface):
                 compatibility_mode = 3
             else:
                 compatibility_mode = 2
+            #FIXME Add TURN relays
             params = {"stun-ip" : "64.14.48.28", "stun-port" : 3478,
                     "compatibility-mode" : compatibility_mode,
                     "controlling-mode": self._client.controlling}
