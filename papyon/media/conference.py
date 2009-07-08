@@ -110,6 +110,8 @@ class MediaSessionHandler(MediaSessionEventInterface):
         handler.setup(self._conference, self._pipeline, self._participant,
                 self._client.type)
         self._handlers.append(handler)
+        if self._client.type is MediaSessionType.WEBCAM:
+            stream.set_local_codecs([])
 
     def on_bus_message(self, bus, msg):
         ret = gst.BUS_PASS
