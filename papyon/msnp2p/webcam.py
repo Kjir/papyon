@@ -179,7 +179,7 @@ class WebcamCandidateEncoder(MediaCandidateEncoder):
             for port in media.ports:
                 candidate = MediaCandidate()
                 candidate.foundation = str(media.rid)
-                candidate.component_id = 0
+                candidate.component_id = 1
                 candidate.username = str(media.sid)
                 candidate.password = ""
                 candidate.ip = ip
