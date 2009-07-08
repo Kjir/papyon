@@ -81,6 +81,15 @@ media_types = {
 }
 
 
+class Conference(gobject.GObject):
+
+    def __init__(self):
+        gobject.GObject.__init__(self)
+
+    def set_source(self, source):
+        pass
+
+
 class MediaSessionHandler(MediaSessionEventInterface):
 
     def __init__(self, session):
