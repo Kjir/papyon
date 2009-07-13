@@ -275,7 +275,9 @@ class OfflineMessagesBox(gobject.GObject):
             parts = decode_header(name)
             name = ''
             for part in parts:
-                name += part[0].decode(part[1])
+                if part[1] is not None:
+                    part[0] += part[0].decode(part[1])
+                name += part[0]
 
             date = m.find('./RT')
             if date is not None:
