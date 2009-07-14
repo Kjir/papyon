@@ -87,7 +87,12 @@ class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
         else:
             context = '\x74\x03\x00\x81'
             self._close(context)
+        self.dispose()
+
+    def dispose(self):
+        MediaCall.dispose(self)
         self._dispatch("on_call_ended")
+        self._dispose()
 
     def on_media_session_prepared(self, session):
         if self._xml_needed:
@@ -100,8 +105,7 @@ class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
             self.media_session.add_stream(stream)
 
     def _on_bye_received(self, message):
-        self._dispatch("on_call_ended")
-        self._dispose()
+        self.dispose()
 
     def _on_session_accepted(self):
         self._dispatch("on_call_accepted")
