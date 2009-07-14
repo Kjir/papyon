@@ -46,9 +46,14 @@ class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
 
     def __init__(self, producer, session_manager, peer,
             euf_guid,  message=None):
+        if producer:
+            type = MediaSessionType.WEBCAM_SEND
+        else:
+            type = MediaSessionType.WEBCAM_RECV
+
         P2PSession.__init__(self, session_manager, peer, euf_guid,
                 ApplicationID.WEBCAM, message)
-        MediaCall.__init__(self, MediaSessionType.WEBCAM,
+        MediaCall.__init__(self, type,
                 WebcamCandidateEncoder, WebcamSessionMessage)
         EventsDispatcher.__init__(self)
 

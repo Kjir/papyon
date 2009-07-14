@@ -25,7 +25,8 @@ class COMPONENTS:
 class MediaSessionType(object):
     SIP = 1
     TUNNELED_SIP = 2
-    WEBCAM = 3
+    WEBCAM_SEND = 3
+    WEBCAM_RECV = 4
 
 class MediaStreamDirection(object):
     SENDING = 1
