@@ -51,12 +51,6 @@ codecs_definitions = {
     ]
 }
 
-valid_codecs = {
-    "audio" : ["x-msrta", "SIREN", "G7221", "G723", "PCMA", "PCMU", "RED",
-        "telephone-event"],
-    "video" : ["x-rtvc1", "H263"]
-}
-
 types = {
     0 : None,
     farsight.CANDIDATE_TYPE_HOST  : "host",
@@ -136,8 +130,6 @@ class MediaSessionHandler(MediaSessionEventInterface):
                     codecs = s["session"].get_property("codecs")
                     name = media_names[s["session"].get_property("media-type")]
                     stream = self._client.get_stream(name)
-                    codecs = filter(lambda c: c.encoding_name in
-                            valid_codecs[name], codecs)
                     stream.set_local_codecs(convert_codecs(codecs))
             if s.has_name("farsight-new-local-candidate"):
                 logger.debug("New local candidate")

@@ -58,6 +58,17 @@ class MediaDescription(object):
             self._codecs = value
         return locals()
 
+    @property
+    def valid_codecs(self):
+        return filter(lambda c: self.is_valid_codec(c), self.codecs)
+
+    def is_valid_codec(self, codec):
+        return True
+
+    def set_codecs(self, codecs):
+        codecs = filter(lambda c: self.is_valid_codec(c), codecs)
+        self.codecs = codecs
+
     def has_active_remote(self):
         return False
 

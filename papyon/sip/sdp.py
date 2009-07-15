@@ -155,6 +155,9 @@ class SDPMediaDescription(MediaDescription):
                 self._codecs.append(MediaCodec(int(payload)))
         return locals()
 
+    def is_valid_codec(self, codec):
+        return codec.payload in VALID_CODECS[self.name]
+
     def has_active_remote(self):
         return (self.get_attribute("remote-candidates") or
            self.get_attribute("remote-candidate"))

@@ -84,12 +84,12 @@ class MediaStream(gobject.GObject, EventsDispatcher):
 
     def build_media(self, media):
         media.ip, media.port, media.rtcp = self.get_default_address()
-        media.codecs = self._local_codecs
+        media.set_codecs(self._local_codecs)
         self._encoder.encode_candidates(self, media)
         return media
 
     def parse_media(self, media):
-        self._remote_codecs = media.codecs
+        self._remote_codecs = media.valid_codecs
         candidates = self._encoder.decode_candidates(media)
         self._remote_candidates.extend(candidates)
         if not self._remote_candidates:
