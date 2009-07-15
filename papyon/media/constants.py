@@ -45,3 +45,7 @@ VALID_CODECS = {
     "audio" : [114, 111, 112, 115, 116, 4, 8, 0, 97, 101],
     "video" : [121, 34]
 }
+
+EXTRA_PARAMS = {
+    34: {"x-modea-only": "1"}
+}

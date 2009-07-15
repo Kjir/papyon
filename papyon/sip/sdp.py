@@ -152,7 +152,10 @@ class SDPMediaDescription(MediaDescription):
             return map(lambda x: str(x.payload), self._codecs)
         def fset(self, value):
             for payload in value:
-                self._codecs.append(MediaCodec(int(payload)))
+                codec = MediaCodec(int(payload))
+                if codec.payload in EXTRA_PARAMS:
+                    codec.params = EXTRA_PARAMS[codec.payload]
+                self._codecs.append(codec)
         return locals()
 
     def is_valid_codec(self, codec):
