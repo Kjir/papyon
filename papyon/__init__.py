@@ -26,7 +26,7 @@ instant messaging service.
     @group Network Layer: gnet
 """
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __author__ = "Youness Alaoui <kakaroto@users.sourceforge.net>"
 __url__ = "http://telepathy.freedesktop.org/wiki/Papyon"
 __license__ = "GNU GPL"

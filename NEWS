@@ -1,7 +1,9 @@
-papyon-0.4.0
+papyon-0.4.1
 ===============================
 
-  * List of changes between 0.4.0 and 0.3.3
+  * List of changes between 0.4.0 and 0.4.1
+
+  * List of changes between 0.3.3 and 0.4.0
     o Forked pymsn to create papyon
     o Added webcam sessions support
     o Fixed reception of P2P data from WLM 2009 users
