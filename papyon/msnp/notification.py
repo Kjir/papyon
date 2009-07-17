@@ -654,6 +654,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     def _address_book_state_changed_cb(self, address_book, pspec):
         MAX_PAYLOAD_SIZE = 7500
+        if self._state != ProtocolState.SYNCHRONIZING:
+            return
         if address_book.state != AB.AddressBookState.SYNCHRONIZED:
             return
         self._client.profile._server_property_changed("display-name",
