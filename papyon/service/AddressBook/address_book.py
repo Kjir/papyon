@@ -436,7 +436,7 @@ class AddressBook(gobject.GObject):
 
     def rename_group(self, group, new_name):
         def callback():
-            group._name = group_name
+            group._name = new_name
             self.emit('group-renamed', group)
         rg = scenario.GroupRenameScenario(self._ab,
                 (callback,),
