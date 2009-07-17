@@ -643,6 +643,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._state = ProtocolState.CLOSED
 
     def _sso_cb(self, tokens, nonce):
+        if self._state != ProtocolState.AUTHENTICATING:
+            return
+
         clear_token = tokens[SSO.LiveService.MESSENGER_CLEAR]
         blob = clear_token.mbi_crypt(nonce)
 
