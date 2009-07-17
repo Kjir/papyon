@@ -158,7 +158,7 @@ class AB(SOAPService):
                             callback, errback)
 
     def _HandleABAddResponse(self, callback, errback, response, user_data):
-        return None
+        callback[0](*callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def FindAll(self, callback, errback, scenario, deltas_only):
