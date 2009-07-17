@@ -320,7 +320,7 @@ class Client(EventsDispatcher):
             self._sso = SSO.SingleSignOn(self.profile.account,
                                          self.profile.password,
                                          self._proxies)
-            self._address_book = AB.AddressBook(self._sso, self._proxies)
+            self._address_book = AB.AddressBook(self._sso, self, self._proxies)
             self.__connect_addressbook_signals()
             self._oim_box = OIM.OfflineMessagesBox(self._sso, self, self._proxies)
             self.__connect_oim_box_signals()

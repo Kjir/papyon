@@ -187,12 +187,13 @@ class AddressBook(gobject.GObject):
                    gobject.PARAM_READABLE)
         }
 
-    def __init__(self, sso, proxies=None):
+    def __init__(self, sso, client, proxies=None):
         """The address book object."""
         gobject.GObject.__init__(self)
 
         self._ab = ab.AB(sso, proxies)
         self._sharing = sharing.Sharing(sso, proxies)
+        self._client = client
 
         self.__state = AddressBookState.NOT_SYNCHRONIZED
 
@@ -243,7 +244,8 @@ class AddressBook(gobject.GObject):
 
         initial_sync = scenario.InitialSyncScenario(self._ab, self._sharing,
                 (callback,),
-                (self.__common_errback,))
+                (self.__common_errback,),
+                self._client.profile.account)
         initial_sync()
 
     # Public API

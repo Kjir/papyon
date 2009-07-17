@@ -36,7 +36,6 @@ class InitialSyncScenario(BaseScenario):
         self.__membership_response = None
         self.__ab_response = None
 
-        # FIXME : get the real account for 'Me'
         self.__account = account
 
     def execute(self):
@@ -78,7 +77,7 @@ class InitialSyncScenario(BaseScenario):
             self.__ab.ABAdd((self.__ab_add_callback,),
                             (self.__ab_add_errback,),
                             self._scenario,
-                            self._account)
+                            self.__account)
             return
         errback = self._errback[0]
         args = self._errback[1:]
