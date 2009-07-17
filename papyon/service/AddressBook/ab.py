@@ -154,7 +154,7 @@ class AB(SOAPService):
             @param errback: tuple(callable, *args)
             @param scenario: "Initial"
             @param account: the owner account"""
-        self.__soap_request(self._service.ABAll, scenario, (account,),
+        self.__soap_request(self._service.ABAdd, scenario, (account,),
                             callback, errback)
 
     def _HandleABAddResponse(self, callback, errback, response, user_data):
