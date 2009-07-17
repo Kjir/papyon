@@ -35,6 +35,7 @@ class InitialSyncScenario(BaseScenario):
 
         self.__membership_response = None
         self.__ab_response = None
+        self.__creating_ab = False
 
         self.__account = account
 
@@ -70,16 +71,23 @@ class InitialSyncScenario(BaseScenario):
 
     def __sync_errback(self, error_code):
         if error_code == 'ABDoesNotExist':
-            self.__ab.ABAdd((self.__ab_add_callback,),
-                            (self.__ab_add_errback,),
-                            self._scenario,
-                            self.__account)
+            if not self.__creating_ab:
+                self.__creating_ab = True
+                self.__address_book.Add((self.__ab_add_callback,),
+                                        (self.__ab_add_errback,),
+                                        self._scenario,
+                                        self.__account)
             return
         self.errback(AddressBookError.UNKNOWN)
 
     def __ab_add_callback(self, *args):
+        self.__creating_ab = False
         self.execute()
 
     def __ab_add_errback(self, error_code):
+        self.__creating_ab = False
+        if error_code == 'ABAlreadyExists':
+            self.execute()
+            return
         self.errback(AddressBookError.UNKNOWN)
 
