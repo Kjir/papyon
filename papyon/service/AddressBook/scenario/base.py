@@ -31,6 +31,16 @@ class BaseScenario(object):
         return self._scenario
     scenario = property(__get_scenario, __set_scenario)
 
+    def callback(self, *args):
+        callback = self._callback[0]
+        args = args + self._callback[1:]
+        callback(*args)
+
+    def errback(self, *args):
+        errback = self._errback[0]
+        args = args + self._errback[1:]
+        errback(*args)
+
     def execute(self):
         pass
 
