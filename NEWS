@@ -10,6 +10,7 @@ papyon-0.4.1
     o Fixed crash when receiving an offline message (Bug #14623)
     o Replaced deprecated modules (md5 and sha) (Bug #21885)
     o Fixed logging of binary data (non-ascii characters) (Bug #22722)
+    o Added handling for some address book errors (Bug #15869)
 
   * List of changes between 0.3.3 and 0.4.0
     o Forked pymsn to create papyon
