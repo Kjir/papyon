@@ -46,4 +46,6 @@ class GroupAddScenario(BaseScenario):
         errcode = AddressBookError.UNKNOWN
         if error_code == 'GroupAlreadyExists':
             errcode = AddressBookError.GROUP_ALREADY_EXISTS
+        elif error_code == 'BadArgumentLength':
+            errcode = AddressBookError.GROUP_NAME_TOO_LONG
         self.errback(errcode)

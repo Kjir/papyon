@@ -49,4 +49,8 @@ class GroupRenameScenario(BaseScenario):
         errcode = AddressBookError.UNKNOWN
         if error_code == 'GroupAlreadyExists':
             errcode = AddressBookError.GROUP_ALREADY_EXIST
+        elif error_code == 'GroupDoesNotExist':
+            errcode = AddressBookError.GROUP_DOES_NOT_EXIST
+        elif error_code == 'BadArgumentLength':
+            errcode = AddressBookError.GROUP_NAME_TOO_LONG
         self.errback(errcode)

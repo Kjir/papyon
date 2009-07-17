@@ -47,4 +47,6 @@ class GroupContactAddScenario(BaseScenario):
 
     def __group_contact_add_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
+        if error_code == 'ContactAlreadyExists':
+            errcode = AddressBookError.CONTACT_ALREADY_IN_GROUP
         self.errback(errcode)

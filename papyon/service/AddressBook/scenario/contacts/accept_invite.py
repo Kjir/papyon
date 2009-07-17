@@ -99,7 +99,7 @@ class AcceptInviteScenario(BaseScenario):
         errcode = AddressBookError.UNKNOWN
         if error_code == 'ContactAlreadyExists':
             errcode = AddressBookError.CONTACT_ALREADY_EXISTS
-        elif error_code == 'InvalidPassportUser':
+        elif error_code in ('BadEmailArgument', 'InvalidPassportUser'):
             errcode = AddressBookError.INVALID_CONTACT_ADDRESS
         self.errback(errcode)
 

@@ -22,19 +22,21 @@ __all__ = ['AddressBookError', 'AddressBookState']
 
 class AddressBookError(object):
     "Address book related errors"
-    UNKNOWN                 = 0
+    UNKNOWN                   = 0
 
-    CONTACT_ALREADY_EXISTS  = 1
-    CONTACT_DOES_NOT_EXIST  = 2
-    INVALID_CONTACT_ADDRESS = 3
+    CONTACT_ALREADY_EXISTS    = 1
+    CONTACT_DOES_NOT_EXIST    = 2
+    INVALID_CONTACT_ADDRESS   = 3
 
-    GROUP_ALREADY_EXISTS    = 4
-    GROUP_DOES_NOT_EXIST    = 5
-    CONTACT_NOT_IN_GROUP    = 6
+    GROUP_ALREADY_EXISTS      = 4
+    GROUP_DOES_NOT_EXIST      = 5
+    GROUP_NAME_TOO_LONG       = 6
+    CONTACT_ALREADY_IN_GROUP  = 7
+    CONTACT_NOT_IN_GROUP      = 8
 
-    MEMBER_ALREADY_EXISTS   = 7
-    MEMBER_DOES_NOT_EXIST   = 8
-    
+    MEMBER_ALREADY_EXISTS     = 9
+    MEMBER_DOES_NOT_EXIST     = 10
+
 
 class AddressBookState(object):
     """Addressbook synchronization state.
