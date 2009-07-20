@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__all__ = ['AddressBookError', 'AddressBookState']
+__all__ = ['AddressBookError', 'AddressBookState', 'DEFAULT_TIMESTAMP']
 
 class AddressBookError(object):
     "Address book related errors"
@@ -51,3 +51,5 @@ class AddressBookState(object):
     SYNCHRONIZED = 2
     """The addressbook is already synchronized"""
 
+
+DEFAULT_TIMESTAMP = "0001-01-01T00:00:00.0000000-08:00"

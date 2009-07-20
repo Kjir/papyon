@@ -151,7 +151,7 @@ class Sharing(SOAPService):
 
     def _HandleFindMembershipResponse(self, callback, errback, response, user_data):
         if response[1] is not None:
-            self._last_changes = response[1].text
+            self._last_changes = response[1]
 
         memberships = {}
         for role, members in response[0].iteritems():

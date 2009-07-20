@@ -22,6 +22,7 @@ from papyon.service.SOAPService import SOAPService
 from papyon.util.element_tree import XMLTYPE
 from papyon.service.SingleSignOn import *
 from papyon.service.AddressBook.common import *
+from papyon.service.AddressBook.constants import *
 
 from papyon.service.description.AB.constants import ContactGeneral
 
@@ -144,7 +145,7 @@ class AB(SOAPService):
         self._tokens = {}
         SOAPService.__init__(self, "AB", proxies)
 
-        self._last_changes = "0001-01-01T00:00:00.0000000-08:00"
+        self._last_changes = DEFAULT_TIMESTAMP
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def Add(self, callback, errback, scenario, account):
@@ -169,6 +170,8 @@ class AB(SOAPService):
             @param scenario: "Initial" | "ContactSave" ...
             @param deltas_only: True if the method should only check changes
                 since last_change, otherwise False"""
+        if deltas_only and self._last_changes == DEFAULT_TIMESTAMP:
+            deltas_only = False
         self.__soap_request(self._service.ABFindAll, scenario,
                 (XMLTYPE.bool.encode(deltas_only), self._last_changes),
                 callback, errback)

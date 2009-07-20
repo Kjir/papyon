@@ -80,12 +80,7 @@ def process_response(soap_response):
                 if role is None or len(members) == 0:
                     continue
                 result[role.text] = members
-        last_changes = service.find("./ab:LastChange")
+        last_changes = service.findtext("./ab:LastChange")
     else:
-        # FIXME: This has probably to be handled in a better way
-        # This is a "lambda object", dinamically modifiable
-        # http://evaisse.com/post/52748807/python-lambda-object-php-stdclass-equivalent
-        last_changes = type('lambdaobject', (object,), {'text':"0-0-0T0:0:0.0-0:0"})()
+        last_changes = "0001-01-01T00:00:00.0000000-08:00"
     return (result, last_changes)
-
-    
