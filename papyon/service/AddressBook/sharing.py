@@ -143,12 +143,12 @@ class Sharing(SOAPService):
             @param services: a list containing the services to check in
                              ['Messenger', 'Invitation', 'SocialNetwork',
                               'Space', 'Profile' ]
-            @param deltas_only: True if the method should only check changes 
+            @param deltas_only: True if the method should only check changes
                                 since last_change, False else
         """
         self.__soap_request(self._service.FindMembership, scenario,
                 (services, deltas_only, self._last_changes), callback, errback)
-    
+
     def _HandleFindMembershipResponse(self, callback, errback, response, user_data):
         if response[1] is not None:
             self._last_changes = response[1].text
@@ -183,7 +183,7 @@ class Sharing(SOAPService):
         callback[0](*callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
-    def DeleteMember(self, callback, errback, scenario, member_role, type, 
+    def DeleteMember(self, callback, errback, scenario, member_role, type,
                      state, account):
         """Deletes a member from a membership list.
 
@@ -207,11 +207,11 @@ class Sharing(SOAPService):
 
         soap_header = method.soap_header(scenario, token)
         soap_body = method.soap_body(*args)
-        
+
         method_name = method.__name__.rsplit(".", 1)[1]
         self._send_request(method_name,
-                self._service.url, 
-                soap_header, soap_body, soap_action, 
+                self._service.url,
+                soap_header, soap_body, soap_action,
                 callback, errback,
                 http_headers)
 
@@ -241,7 +241,7 @@ if __name__ == '__main__':
         password = sys.argv[2]
 
     mainloop = gobject.MainLoop(is_running=True)
-    
+
     signal.signal(signal.SIGTERM,
             lambda *args: gobject.idle_add(mainloop.quit()))
 

@@ -78,7 +78,7 @@ class SOAPFault(object):
             self.faultstring = tree.findtext("./faultstring")
             self.faultactor = tree.findtext("./faultactor")
             self.detail = tree.find("./detail")
-            
+
     def is_fault(self):
         return self.tree is not None
 
@@ -160,7 +160,7 @@ class SOAPService(object):
 
     def _send_request(self, name, url, soap_header, soap_body, soap_action,
             callback, errback=None, transport_headers={}, user_data=None):
-        
+
         scheme, host, port, resource = url_split(url)
         http_headers = transport_headers.copy()
         if soap_action is not None:
@@ -251,7 +251,7 @@ class SOAPService(object):
         for key, trans in self._active_transports.iteritems():
             if trans[0] == transport:
                 response = trans[1].pop(0)
-                
+
                 if len(trans[1]) != 0:
                     return response
 

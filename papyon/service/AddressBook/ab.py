@@ -46,7 +46,7 @@ class Group(object):
         self.IsPrivate = group_info.findtext("./ab:IsPrivate", "bool")
 
         self.Annotations = annotations_to_dict(group_info.find("./ab:Annotations"))
-        
+
         self.PropertiesChanged = [] #FIXME: implement this
         self.Deleted = group.findtext("./ab:fDeleted", "bool")
         self.LastChanged = group.findtext("./ab:lastChange", "bool")
@@ -127,7 +127,7 @@ class Contact(object):
         self.TimeZone = contact_info.findtext("./ab:TimeZone")
 
         self.Annotations = annotations_to_dict(contact_info.find("./ab:annotations"))
-        
+
         self.Emails = []
         emails = contact_info.find("./ab:emails") or []
         for contact_email in emails:
@@ -145,7 +145,7 @@ class AB(SOAPService):
         SOAPService.__init__(self, "AB", proxies)
 
         self._last_changes = "0001-01-01T00:00:00.0000000-08:00"
-   
+
     @RequireSecurityTokens(LiveService.CONTACTS)
     def Add(self, callback, errback, scenario, account):
         """Creates the address book on the server.
@@ -185,7 +185,7 @@ class AB(SOAPService):
 
         for contact in response[2]:
             contacts.append(Contact(contact))
-        
+
         address_book =  ABResult(None, contacts, groups) #FIXME: add support for the ab param
         callback[0](address_book, *callback[1:])
 
@@ -205,7 +205,7 @@ class AB(SOAPService):
         if is_messenger_user is not None:
             is_messenger_user = XMLTYPE.bool.encode(is_messenger_user)
         self.__soap_request(self._service.ABContactAdd, scenario,
-                (contact_info.get('passport_name', None), 
+                (contact_info.get('passport_name', None),
                     is_messenger_user,
                     contact_info.get('contact_type', None),
                     contact_info.get('first_name', None),
@@ -231,7 +231,7 @@ class AB(SOAPService):
     def ContactDelete(self, callback, errback, scenario,
             contact_id):
         """Deletes a contact from the contact list.
-        
+
             @param scenario: "Timer" | ...
             @param contact_id: the contact id (a GUID)
             @param callback: tuple(callable, *args)
@@ -239,7 +239,7 @@ class AB(SOAPService):
         """
         self.__soap_request(self._service.ABContactDelete, scenario,
                 (contact_id,), callback, errback)
-        
+
     def _HandleABContactDeleteResponse(self, callback, errback, response, user_data):
         callback[0](*callback[1:])
 
@@ -248,7 +248,7 @@ class AB(SOAPService):
             scenario, contact_id, contact_info,
             enable_allow_list_management=False):
         """Updates a contact informations.
-        
+
             @param scenario: "ContactSave" | "Timer" | ...
             @param contact_id: the contact id (a GUID)
             @param contact_info: info dict
@@ -258,7 +258,7 @@ class AB(SOAPService):
         if 'is_messenger_user' in contact_info:
             contact_info['is_messenger_user'] = \
                     XMLTYPE.bool.encode(contact_info['is_messenger_user'])
-        
+
         self.__soap_request(self._service.ABContactUpdate, scenario,
                 (contact_id,
                     contact_info.get('display_name', None),
@@ -280,7 +280,7 @@ class AB(SOAPService):
 
     def _HandleABContactUpdateResponse(self, callback, errback, response, user_data):
         callback[0](*callback[1:])
-        
+
     @RequireSecurityTokens(LiveService.CONTACTS)
     def GroupAdd(self, callback, errback, scenario,
             group_name):
@@ -356,7 +356,7 @@ class AB(SOAPService):
 
             @param scenario: "GroupSave" | ...
             @param group_id: the id of the group (a GUID)
-            @param contact_id: the id of the contact to delete from the 
+            @param contact_id: the id of the contact to delete from the
                                group (a GUID)
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
@@ -375,11 +375,11 @@ class AB(SOAPService):
 
         soap_header = method.soap_header(scenario, token)
         soap_body = method.soap_body(*args)
-        
+
         method_name = method.__name__.rsplit(".", 1)[1]
         self._send_request(method_name,
-                           self._service.url, 
-                           soap_header, soap_body, soap_action, 
+                           self._service.url,
+                           soap_header, soap_body, soap_action,
                            callback, errback,
                            http_headers)
 
@@ -409,7 +409,7 @@ if __name__ == '__main__':
         password = sys.argv[2]
 
     mainloop = gobject.MainLoop(is_running=True)
-    
+
     signal.signal(signal.SIGTERM,
             lambda *args: gobject.idle_add(mainloop.quit()))
 

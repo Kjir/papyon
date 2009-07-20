@@ -66,7 +66,7 @@ class AddressBookStorage(set):
             return group_by_func
         else:
             raise AttributeError, name
-        
+
     def search_by_memberships(self, memberships):
         result = []
         for contact in self:
@@ -277,7 +277,7 @@ class AddressBook(gobject.GObject):
         di.block = block
         di()
 
-    def add_messenger_contact(self, account, invite_display_name='', 
+    def add_messenger_contact(self, account, invite_display_name='',
             invite_message='', groups=[], network_id=NetworkID.MSN):
         def callback(contact_guid, address_book_delta):
             contacts = address_book_delta.contacts
@@ -633,10 +633,10 @@ if __name__ == '__main__':
         password = sys.argv[2]
 
     mainloop = gobject.MainLoop(is_running=True)
-    
+
     signal.signal(signal.SIGTERM,
             lambda *args: gobject.idle_add(mainloop.quit()))
-    
+
     def address_book_state_changed(address_book, pspec):
         if address_book.state == AddressBookState.SYNCHRONIZED:
             for group in address_book.groups:
@@ -644,8 +644,8 @@ if __name__ == '__main__':
 
             for contact in address_book.contacts:
                 print "Contact : %s (%s) %s" % \
-                    (contact.account, 
-                     contact.display_name, 
+                    (contact.account,
+                     contact.display_name,
                      contact.network_id)
 
             print address_book.contacts[0].account
@@ -683,8 +683,8 @@ if __name__ == '__main__':
             #address_book.add_messenger_contact("johanssn.prieur@gmail.com")
 
     def messenger_contact_added(address_book, contact):
-        print "Added contact : %s (%s) %s %s" % (contact.account, 
-                                                 contact.display_name, 
+        print "Added contact : %s (%s) %s %s" % (contact.account,
+                                                 contact.display_name,
                                                  contact.network_id,
                                                  contact.memberships)
 
