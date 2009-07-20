@@ -385,7 +385,8 @@ class AB(SOAPService):
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):
-        errback[0](soap_response.fault.faultcode, *errback[1:])
+        errcode, errstring = get_detailled_error(soap_response.fault)
+        errback[0](errcode, *errback[1:])
 
 if __name__ == '__main__':
     import sys

@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__all__ = ['annotations_to_dict']
+__all__ = ['annotations_to_dict', 'get_detailled_error']
 
 def annotations_to_dict(annotations):
     if annotations is None:
@@ -31,3 +31,11 @@ def annotations_to_dict(annotations):
         result[key] = value
     return result
 
+def get_detailled_error(fault):
+    if fault.detail is not None:
+        errorcode = fault.detail.findtext("./ab:errorcode")
+        errorstring = fault.detail.findtext("./ab:errorstring")
+    else:
+        errorcode = fault.faultcode
+        errorstring = fault.faultstring
+    return errorcode, errorstring
