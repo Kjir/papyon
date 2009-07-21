@@ -566,11 +566,15 @@ class AddressBook(gobject.GObject):
                     cid = member.CID
                 except AttributeError:
                     cid = None
+                try:
+                    display_name = member.DisplayName.encode("utf-8")
+                except AttributeError:
+                    display_name = member.Account.encode("utf-8")
                 msg = member.Annotations.get('MSN.IM.InviteMessage', u'')
                 c = profile.Contact("00000000-0000-0000-0000-000000000000",
                         network,
                         member.Account.encode("utf-8"),
-                        member.DisplayName.encode("utf-8"),
+                        display_name,
                         cid)
                 c._server_attribute_changed('invite_message', msg.encode("utf-8"))
                 self.contacts.add(c)
