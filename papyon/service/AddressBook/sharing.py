@@ -28,8 +28,8 @@ __all__ = ['Sharing']
 class Member(object):
     def __init__(self, member):
         self.Roles = {}
-        self.Account = ""
         self.MembershipId = member.findtext("./ab:MembershipId")
+        self.Account = self.MembershipId
         self.Type = member.findtext("./ab:Type")
         self.DisplayName = member.findtext("./ab:DisplayName")
         self.State = member.findtext("./ab:State")
@@ -57,6 +57,18 @@ class Member(object):
             return EmailMember(member)
         elif type == "Phone":
             return PhoneMember(member)
+        elif type == "Circle":
+            return CircleMember(member)
+        elif type == "Domain":
+            return DomainMember(member)
+        elif type == "Everyone":
+            return EveryoneMember(member)
+        elif type == "Group":
+            return GroupMember(member)
+        elif type == "Role":
+            return RoleMember(member)
+        elif type == "Service":
+            return ServiceMember(member)
         else:
             raise NotImplementedError("Member type not implemented : " + type)
 
@@ -68,21 +80,49 @@ class PassportMember(Member):
         self.PassportName = member.findtext("./ab:PassportName")
         self.IsPassportNameHidden = member.findtext("./ab:IsPassportNameHidden", "bool")
         self.CID = member.findtext("./ab:CID", "int")
-        self.Changes = [] # FIXME: extract the changes
-
         self.Account = self.PassportName
 
 class EmailMember(Member):
     def __init__(self, member):
         Member.__init__(self, member)
         self.Email = member.findtext("./ab:Email")
-        
         self.Account = self.Email
 
 class PhoneMember(Member):
     def __init__(self, member):
         Member.__init__(self, member)
         self.PhoneNumber = member.findtext("./ab:PhoneNumber")
+        self.Account = self.PhoneNumber
+
+class CircleMember(Member):
+    def __init__(self, member):
+        Member.__init__(self, member)
+        self.CircleId = member.findtext("./ab:CircleId")
+        self.Account = self.CircleId
+
+class DomainMember(Member):
+    def __init__(self, member):
+        Member.__init__(self, member)
+        self.DomainName = member.findtext("./ab:DomainName")
+        self.Account = self.DomainName
+
+class EveryoneMember(Member):
+    def __init__(self, member):
+        Member.__init__(self, member)
+
+class GroupMember(Member):
+    def __init__(self, member):
+        Member.__init__(self, member)
+        self.Id = member.findtext("./ab:Id")
+        self.Account = self.Id
+
+class RoleMember(Member):
+    def __init__(self, member):
+        Member.__init__(self, member)
+
+class ServiceMember(Member):
+    def __init__(self, member):
+        Member.__init__(self, member)
 
 
 class Sharing(SOAPService):
