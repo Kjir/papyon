@@ -38,7 +38,7 @@ import papyon.service.SingleSignOn as SSO
 import papyon.service.AddressBook as AB
 import papyon.service.OfflineIM as OIM
 
-import md5
+import hashlib
 import time
 import logging
 import urllib
@@ -581,7 +581,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         sl = str(int(time.time()) - int(profile['LoginTime']))
         sid = profile['sid']
         auth = profile['MSPAuth']
-        creds = md5.new(auth + sl + password).hexdigest()
+        creds = hashlib.md5(auth + sl + password).hexdigest()
         
         post_data = dict([
             ('mode', 'ttl'),            
