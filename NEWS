@@ -2,6 +2,7 @@ papyon-0.4.1
 ===============================
 
   * List of changes between 0.4.0 and 0.4.1
+    o Added handling of OUT commands (Bug #13004)
 
   * List of changes between 0.3.3 and 0.4.0
     o Forked pymsn to create papyon
