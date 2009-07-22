@@ -64,6 +64,14 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 gobject.TYPE_NONE,
                 ()),
 
+            "disconnected-by-other" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                ()),
+
+            "server-down" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                ()),
+
             "mail-received" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -331,7 +339,16 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         pass
 
     def _handle_OUT(self, command):
-        pass
+        reason = None
+        if len(command.arguments) > 0:
+            reason = command.arguments[0]
+
+        if reason == "OTH":
+            self.emit("disconnected-by-other")
+        elif reason == "SSD":
+            self.emit("server-down")
+        else:
+            self._transport.lose_connection()
 
     # --------- Presence & Privacy -------------------------------------------
     def _handle_BLP(self, command):

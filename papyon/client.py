@@ -96,7 +96,7 @@ from papyon.p2p import MSNObjectStore, WebcamHandler
 from papyon.conversation import SwitchboardConversation, \
     ExternalNetworkConversation
 from papyon.event import ClientState, ClientErrorType, \
-    AuthenticationError, EventsDispatcher
+    AuthenticationError, ProtocolError, EventsDispatcher
 
 import logging
 
@@ -366,6 +366,18 @@ class Client(EventsDispatcher):
             self.__die = True
             self._transport.lose_connection()
 
+        def disconnected_by_other(proto):
+            self._dispatch("on_client_error", ClientErrorType.PROTOCOL,
+                           ProtocolError.OTHER_CLIENT)
+            self.__die = True
+            self._transport.lose_connection()
+
+        def server_down(proto):
+            self._dispatch("on_client_error", ClientErrorType.PROTOCOL,
+                           ProtocolError.SERVER_DOWN)
+            self.__die = True
+            self._transport.lose_connection()
+
         def unmanaged_message_received(proto, sender, message):
             if sender in self._external_conversations:
                 conversation = self._external_conversations[sender]
@@ -379,6 +391,8 @@ class Client(EventsDispatcher):
 
         self._protocol.connect("notify::state", state_changed)
         self._protocol.connect("authentication-failed", authentication_failed)
+        self._protocol.connect("disconnected-by-other", disconnected_by_other)
+        self._protocol.connect("server-down", server_down)
         self._protocol.connect("unmanaged-message-received", unmanaged_message_received)
 
     def __connect_switchboard_manager_signals(self):

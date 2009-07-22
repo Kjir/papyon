@@ -79,6 +79,8 @@ class AuthenticationError(object):
 class ProtocolError(object):
     "Protocol related errors"
     UNKNOWN = 0
+    OTHER_CLIENT = 1
+    SERVER_DOWN = 2
 
 AddressBookError = papyon.service.AddressBook.constants.AddressBookError
 OfflineMessagesBoxError = papyon.service.OfflineIM.constants.OfflineMessagesBoxError
