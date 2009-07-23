@@ -179,7 +179,7 @@ class SOAPService(object):
         transport.request(resource, http_headers, request, 'POST')
 
     def _response_handler(self, transport, http_response):
-        logger.debug("<<< " + str(http_response))
+        logger.debug("<<< " + unicode(http_response))
         soap_response = SOAPResponse(http_response.body)
         request_id, callback, errback, user_data = self._unref_transport(transport)
 
@@ -210,7 +210,7 @@ class SOAPService(object):
                                       user_data)
 
     def _request_handler(self, transport, http_request):
-        logger.debug(">>> " + str(http_request))
+        logger.debug(">>> " + unicode(http_request))
 
     def _error_handler(self, transport, error):
         logger.warning("Transport Error :" + str(error))

@@ -20,6 +20,7 @@
 
 """HTTP Messages structures."""
 from UserDict import DictMixin
+import cgi
 
 from papyon.gnet.constants import *
 
@@ -93,7 +94,6 @@ class HTTPMessage(object):
 
     def __str__(self):
         result = []
-        body = str(self.body)
         for name in self.headers:
             result.append(": ".join((name, str(self.headers[name]))))
         #if "Content-Length" not in self.headers:
@@ -101,6 +101,11 @@ class HTTPMessage(object):
         result.append("")
         result.append(str(self.body))
         return "\r\n".join(result)
+
+    def __unicode__(self):
+        header = self.headers.get('Content-Type', '')
+        charset = cgi.parse_header(header)[1].get('charset', 'iso8859-1')
+        return str(self).decode(charset)
 
 
 class HTTPResponse(HTTPMessage):
