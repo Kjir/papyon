@@ -8,6 +8,7 @@ papyon-0.4.1
     o Fixed crash when a contact from address book don't have a display name (Bug #19920)
     o Added support to cancel login anytime (Bug #14089)
     o Fixed crash when receiving an offline message (Bug #14623)
+    o Replaced deprecated modules (md5 and sha) (Bug #21885)
 
   * List of changes between 0.3.3 and 0.4.0
     o Forked pymsn to create papyon
