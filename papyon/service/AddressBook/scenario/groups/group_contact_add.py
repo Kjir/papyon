@@ -43,11 +43,8 @@ class GroupContactAddScenario(BaseScenario):
                                   self.contact_guid)
 
     def __group_contact_add_callback(self):
-        callback = self._callback
-        callback[0](*callback[1:])
+        self.callback()
 
     def __group_contact_add_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+        self.errback(errcode)

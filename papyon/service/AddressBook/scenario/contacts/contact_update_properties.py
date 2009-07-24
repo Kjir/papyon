@@ -40,20 +40,14 @@ class ContactUpdatePropertiesScenario(BaseScenario):
         self.enable_allow_list_management = False
 
     def execute(self):
-        self.__ab.ContactUpdate((self.__contact_update_callback,),
+        self.__ab.ContactUpdate(self._callback,
                                 (self.__contact_update_errback,),
                                 self._scenario, self.contact_guid,
                                 self.contact_properties,
                                 self.enable_allow_list_management)
 
-    def __contact_update_callback(self):
-        callback = self._callback
-        callback[0](*callback[1:])
-
     def __contact_update_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
         if error_code == 'ContactDoesNotExist':
             errcode = AddressBookError.CONTACT_DOES_NOT_EXIST
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+        self.errback(errcode)

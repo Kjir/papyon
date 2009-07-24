@@ -43,13 +43,10 @@ class GroupRenameScenario(BaseScenario):
                               self.group_name)
 
     def __group_rename_callback(self):
-        callback = self._callback
-        callback[0](*callback[1:])
+        self.callback()
 
     def __group_rename_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
         if error_code == 'GroupAlreadyExists':
             errcode = AddressBookError.GROUP_ALREADY_EXIST
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+        self.errback(errcode)

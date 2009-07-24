@@ -118,8 +118,7 @@ class UpdateMembershipsScenario(BaseScenario):
                                             self.contact_type, self.state,
                                             self.account)
             else:
-                callback = self._callback
-                callback[0](self.__done, *callback[1:])
+                self.callback(self.__done)
             return
 
         current = memberships.pop()
@@ -139,6 +138,4 @@ class UpdateMembershipsScenario(BaseScenario):
             errcode = AddressBookError.MEMBER_ALREADY_EXISTS
         elif error_code == 'MemberDoesNotExist':
             errcode = AddressBookError.MEMBER_DOES_NOT_EXIST
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, done, failed, *args)
+        self.errback(errcode, done, failed)

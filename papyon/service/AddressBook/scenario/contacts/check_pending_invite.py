@@ -40,12 +40,9 @@ class CheckPendingInviteScenario(BaseScenario):
                 self._scenario, ['Messenger'], True)
     
     def __membership_findall_callback(self, result):
-        callback = self._callback
-        callback[0](result, *callback[1:])
+        self.callback(result)
 
     def __membership_findall_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+        self.errback(errcode)
 

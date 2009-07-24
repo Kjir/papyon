@@ -69,16 +69,11 @@ class ExternalContactAddScenario(BaseScenario):
 
     def __contact_add_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+        self.errback(errcode)
 
     def __find_all_callback(self, delta, contact_guid):
-        callback = self._callback
-        callback[0](contact_guid, delta, *callback[1:])
+        self.callback(contact_guid, delta)
 
     def __find_all_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+        self.errback(errcode)

@@ -40,13 +40,10 @@ class GroupDeleteScenario(BaseScenario):
                               self._scenario, self.group_guid)
 
     def __group_delete_callback(self):
-        callback = self._callback
-        callback[0](*callback[1:])
+        self.callback()
 
     def __group_delete_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
         if error_code == 'GroupDoesNotExist':
             errcode = AddressBookError.GROUP_DOES_NOT_EXIST
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+        self.errback(errcode)

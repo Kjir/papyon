@@ -40,13 +40,10 @@ class GroupAddScenario(BaseScenario):
                            self._scenario, self.group_name)
 
     def __group_add_callback(self, group_guid):
-        callback = self._callback
-        callback[0](group_guid, *callback[1:])
+        self.callback(group_guid)
 
     def __group_add_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
         if error_code == 'GroupAlreadyExists':
             errcode = AddressBookError.GROUP_ALREADY_EXISTS
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+        self.errback(errcode)

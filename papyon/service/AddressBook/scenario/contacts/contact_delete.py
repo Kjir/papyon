@@ -37,18 +37,12 @@ class ContactDeleteScenario(BaseScenario):
         self.contact_guid = contact_guid
 
     def execute(self):
-        self.__ab.ContactDelete((self.__contact_delete_callback,),
+        self.__ab.ContactDelete(self._callback,
                                 (self.__contact_delete_errback,),
                                 self._scenario, self.contact_guid)
-
-    def __contact_delete_callback(self):
-        callback = self._callback
-        callback[0](*callback[1:])
 
     def __contact_delete_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
         if error_code == 'ContactDoesNotExist':
             errcode = AddressBookError.CONTACT_DOES_NOT_EXIST
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+        self.errback(errcode)

@@ -62,7 +62,4 @@ class DeclineInviteScenario(BaseScenario):
 
     def __update_memberships_errback(self, error_code, done, failed):
         errcode = AddressBookError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
-
+        self.errback(errcode)

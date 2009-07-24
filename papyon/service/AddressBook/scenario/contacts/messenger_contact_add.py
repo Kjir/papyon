@@ -75,16 +75,11 @@ class MessengerContactAddScenario(BaseScenario):
             errcode = AddressBookError.CONTACT_ALREADY_EXISTS
         elif error_code == 'InvalidPassportUser':
             errcode = AddressBookError.INVALID_CONTACT_ADDRESS
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+        self.errback(errcode)
 
     def __find_all_callback(self, address_book_delta, contact_guid):
-        callback = self._callback
-        callback[0](contact_guid, address_book_delta, *callback[1:])
+        self.callback(contact_guid, address_book_delta)
 
     def __find_all_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+        self.errback(errcode)

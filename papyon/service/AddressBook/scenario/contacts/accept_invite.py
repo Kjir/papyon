@@ -101,17 +101,13 @@ class AcceptInviteScenario(BaseScenario):
             errcode = AddressBookError.CONTACT_ALREADY_EXISTS
         elif error_code == 'InvalidPassportUser':
             errcode = AddressBookError.INVALID_CONTACT_ADDRESS
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+        self.errback(errcode)
 
     def __update_memberships_callback(self, memberships):
         self.memberships = memberships
         contact = self._added_contact
-        callback[0](contact, memberships, *callback[1:])
+        self.callback(contact, memberships)
 
     def __update_memberships_errback(self, error_code, done, failed):
         errcode = AddressBookError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+        self.errback(errcode)
