@@ -27,7 +27,7 @@ __all__ = ['MessengerContactAddScenario']
 
 class MessengerContactAddScenario(BaseScenario):
     def __init__(self, ab, callback, errback,
-                 account='', 
+                 account='',
                  contact_type=ContactType.REGULAR,
                  contact_info={},
                  invite_display_name='',
@@ -41,7 +41,7 @@ class MessengerContactAddScenario(BaseScenario):
 
         self._ab = ab
 
-        self.account = account 
+        self.account = account
 
         self.contact_type = contact_type
         self.contact_info = contact_info
@@ -59,7 +59,7 @@ class MessengerContactAddScenario(BaseScenario):
         self.contact_info['is_messenger_user'] = True
         self._ab.ContactAdd((self.__contact_add_callback,),
                             (self.__contact_add_errback,),
-                            self._scenario, 
+                            self._scenario,
                             self.contact_info,
                             invite_info,
                             self.auto_manage_allow_list)

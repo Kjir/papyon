@@ -38,7 +38,7 @@ class GroupContactDeleteScenario(BaseScenario):
     def execute(self):
         self.__ab.GroupContactDelete((self.__group_contact_delete_callback,),
                                      (self.__group_contact_delete_errback,),
-                                     self._scenario, self.group_guid, 
+                                     self._scenario, self.group_guid,
                                      self.contact_guid)
 
     def __group_contact_delete_callback(self):

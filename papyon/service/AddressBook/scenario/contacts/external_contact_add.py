@@ -27,7 +27,7 @@ from papyon.profile import NetworkID
 __all__ = ['ExternalContactAddScenario']
 
 class ExternalContactAddScenario(BaseScenario):
-    def __init__(self, ab, callback, errback, account='', 
+    def __init__(self, ab, callback, errback, account='',
                  network_id=NetworkID.EXTERNAL, contact_info={},
                  invite_display_name='', invite_message=''):
         """Adds an external messenger contact and updates the address book.
@@ -39,7 +39,7 @@ class ExternalContactAddScenario(BaseScenario):
 
         self._ab = ab
 
-        self.account = account 
+        self.account = account
         self.network_id = network_id
         self.contact_info = contact_info
 
@@ -58,7 +58,7 @@ class ExternalContactAddScenario(BaseScenario):
         self.contact_info['capability'] = self.network_id
         self._ab.ContactAdd((self.__contact_add_callback,),
                             (self.__contact_add_errback,),
-                            self._scenario, 
+                            self._scenario,
                             self.contact_info,
                             invite_info)
 

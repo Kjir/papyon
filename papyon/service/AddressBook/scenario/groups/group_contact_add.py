@@ -39,7 +39,7 @@ class GroupContactAddScenario(BaseScenario):
     def execute(self):
         self.__ab.GroupContactAdd((self.__group_contact_add_callback,),
                                   (self.__group_contact_add_errback,),
-                                  self._scenario, self.group_guid, 
+                                  self._scenario, self.group_guid,
                                   self.contact_guid)
 
     def __group_contact_add_callback(self):

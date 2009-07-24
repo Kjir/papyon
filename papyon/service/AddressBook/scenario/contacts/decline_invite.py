@@ -27,7 +27,7 @@ from papyon.profile import NetworkID
 __all__ = ['DeclineInviteScenario']
 
 class DeclineInviteScenario(BaseScenario):
-    def __init__(self, sharing, callback, errback, account='', 
+    def __init__(self, sharing, callback, errback, account='',
                  network=NetworkID.MSN, memberships=Membership.NONE,
                  state='Accepted', block=True):
         """Declines an invitation.

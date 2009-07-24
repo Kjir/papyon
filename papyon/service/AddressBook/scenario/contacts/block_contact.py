@@ -27,7 +27,7 @@ __all__ = ['BlockContactScenario']
 
 class BlockContactScenario(BaseScenario):
     def __init__(self, sharing, callback, errback, account='',
-                 network=NetworkID.MSN, membership=Membership.NONE, 
+                 network=NetworkID.MSN, membership=Membership.NONE,
                  state='Accepted'):
         """Blocks a contact.
 
@@ -37,7 +37,7 @@ class BlockContactScenario(BaseScenario):
         """
         BaseScenario.__init__(self, Scenario.BLOCK_UNBLOCK, callback, errback)
         self.__sharing = sharing
-        
+
         self.account = account
         self.network = network
         self.membership = membership
@@ -45,7 +45,7 @@ class BlockContactScenario(BaseScenario):
 
     def execute(self):
         new_membership = self.membership & ~Membership.ALLOW | Membership.BLOCK
-        um = UpdateMembershipsScenario(self.__sharing, 
+        um = UpdateMembershipsScenario(self.__sharing,
                                        self._callback,
                                        (self.__update_memberships_errback,),
                                        self._scenario,

@@ -27,7 +27,7 @@ class InitialSyncScenario(BaseScenario):
 
             @param membership: the address book service
             @param callback: tuple(callable, *args)
-            @param errback: tuple(callable, *args)            
+            @param errback: tuple(callable, *args)
         """
         BaseScenario.__init__(self, 'Initial', callback, errback)
         self.__membership = membership

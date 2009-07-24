@@ -24,7 +24,7 @@ from papyon.service.description.AB import ContactPhoneType
 __all__ = ['MobileContactAddScenario']
 
 class MobileContactAddScenario(BaseScenario):
-    def __init__(self, ab, callback, errback, 
+    def __init__(self, ab, callback, errback,
                  phone_number="", contact_info={}):
         """Adds a mobile contact and updates the address book.
 
@@ -42,7 +42,7 @@ class MobileContactAddScenario(BaseScenario):
     def __get_phone_number(self):
         return self.__phone_number
     phone_number = property(__get_phone_number, __set_phone_number)
-    
+
     def __set_contact_info(self, contact_info):
         self.__contact_info = contact_info
     def __get_contact_info(self):
@@ -52,7 +52,7 @@ class MobileContactAddScenario(BaseScenario):
     def execute(self):
         phones = self.__contact_info.get('phone', {})
         phones[ContactPhoneType.MOBILE] = self.__phone_number
-        # self.__contact_info['phone'] = phones 
+        # self.__contact_info['phone'] = phones
         self.__ab.ContactAdd((self.__contact_add_callback,),
                              (self.__contact_add_errback,),
                              self.__scenario,

@@ -39,7 +39,7 @@ class GroupRenameScenario(BaseScenario):
     def execute(self):
         self.__ab.GroupUpdate((self.__group_rename_callback,),
                               (self.__group_rename_errback,),
-                              self._scenario, self.group_guid, 
+                              self._scenario, self.group_guid,
                               self.group_name)
 
     def __group_rename_callback(self):

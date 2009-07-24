@@ -33,7 +33,7 @@ class UpdateMembershipsScenario(BaseScenario):
                   Membership.BLOCK:   "Block",
                   Membership.REVERSE: "Reverse",
                   Membership.PENDING: "Pending" }
-    
+
     __contact_type = { NetworkID.MSN:      "Passport",
                        NetworkID.EXTERNAL: "Email" }
 
@@ -55,14 +55,14 @@ class UpdateMembershipsScenario(BaseScenario):
         self.new = new_membership
         self.state = state
 
-        # We keep a trace of what changes are actually done to pass it through 
+        # We keep a trace of what changes are actually done to pass it through
         # the callback or the errback so that the executor of the scenario can
         # update the memberships property of the contact.
         self.__done = old_membership
 
-        # Subscription to the REVERSE or ALLOW lists can only occur when the 
+        # Subscription to the REVERSE or ALLOW lists can only occur when the
         # contact is member of the PENDING list, so when a subscription to the
-        # REVERSE or ALLOW membership is detected, we delay the eventual deletion 
+        # REVERSE or ALLOW membership is detected, we delay the eventual deletion
         # from the PENDING membership list.
         self.__late_pending_delete = False
 
@@ -70,7 +70,7 @@ class UpdateMembershipsScenario(BaseScenario):
         return (membership & (self.old ^ self.new))
 
     def _add(self, membership):
-        return (self._change(membership) and (membership & self.new)) 
+        return (self._change(membership) and (membership & self.new))
 
     def _delete(self, membership):
         return (self._change(membership) and (membership & self.old))
@@ -80,14 +80,14 @@ class UpdateMembershipsScenario(BaseScenario):
                 self._delete(Membership.PENDING):
             self.__late_pending_delete = True
 
-        self.__process_delete(UpdateMembershipsScenario.__mapping.keys(), 
+        self.__process_delete(UpdateMembershipsScenario.__mapping.keys(),
                               Membership.NONE)
 
     def __process_delete(self, memberships, last):
         self.__done &= ~last
 
         if memberships == []:
-            self.__process_add(UpdateMembershipsScenario.__mapping.keys(), 
+            self.__process_add(UpdateMembershipsScenario.__mapping.keys(),
                                Membership.NONE)
             return
 

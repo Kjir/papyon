@@ -26,7 +26,7 @@ from papyon.profile import NetworkID
 __all__ = ['UnblockContactScenario']
 
 class UnblockContactScenario(BaseScenario):
-    def __init__(self, sharing, callback, errback, account='', 
+    def __init__(self, sharing, callback, errback, account='',
                  network=NetworkID.MSN, membership=Membership.NONE,
                  state='Accepted'):
         """Unblocks a contact.
@@ -37,7 +37,7 @@ class UnblockContactScenario(BaseScenario):
         """
         BaseScenario.__init__(self, Scenario.BLOCK_UNBLOCK, callback, errback)
         self.__sharing = sharing
-        
+
         self.account = account
         self.network = network
         self.membership = membership
@@ -45,7 +45,7 @@ class UnblockContactScenario(BaseScenario):
 
     def execute(self):
         new_membership = self.membership & ~Membership.BLOCK | Membership.ALLOW
-        um = UpdateMembershipsScenario(self.__sharing, 
+        um = UpdateMembershipsScenario(self.__sharing,
                                        self._callback,
                                        (self.__update_memberships_errback,),
                                        self._scenario,
