@@ -80,6 +80,11 @@ class MessengerContactAddScenario(BaseScenario):
     def __find_all_callback(self, address_book_delta, contact_guid):
         self.callback(contact_guid, address_book_delta)
 
-    def __find_all_errback(self, error_code):
+    def __find_all_errback(self, error_code, contact_guid):
         errcode = AddressBookError.UNKNOWN
+        if error_code == 'FullSyncRequired':
+            self._ab.FindAll((self.__find_all_callback, contact_guid),
+                             (self.__find_all_errback, contact_guid),
+                             self._scenario, False)
+            return
         self.errback(errcode)

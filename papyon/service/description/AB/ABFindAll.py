@@ -57,5 +57,5 @@ def process_response(soap_response):
 
     path = "./ab:ab"
     ab = find_all_result.find(path)
-    
+
     return (ab, groups, contacts)
