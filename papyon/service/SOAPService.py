@@ -178,6 +178,19 @@ class SOAPService(object):
                 callback, errback, user_data)
         transport.request(resource, http_headers, request, 'POST')
 
+    def _soap_request(self, method, header_args, body_args, callback, errback,
+            user_data=None):
+        http_headers = method.transport_headers()
+        soap_action = method.soap_action()
+
+        soap_header = method.soap_header(*header_args)
+        soap_body = method.soap_body(*body_args)
+
+        method_name = method.__name__.rsplit(".", 1)[1]
+        self._send_request(method_name, self._service.url, soap_header,
+                soap_body, soap_action, callback, errback, http_headers,
+                user_data)
+
     def _response_handler(self, transport, http_response):
         logger.debug("<<< " + unicode(http_response))
         soap_response = SOAPResponse(http_response.body)

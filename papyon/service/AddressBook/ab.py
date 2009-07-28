@@ -147,7 +147,6 @@ class AB(SOAPService):
 
         self._last_changes = DEFAULT_TIMESTAMP
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def Add(self, callback, errback, scenario, account):
         """Creates the address book on the server.
 
@@ -161,7 +160,6 @@ class AB(SOAPService):
     def _HandleABAddResponse(self, callback, errback, response, user_data):
         callback[0](*callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def FindAll(self, callback, errback, scenario, deltas_only):
         """Requests the contact list.
 
@@ -192,7 +190,6 @@ class AB(SOAPService):
         address_book =  ABResult(None, contacts, groups) #FIXME: add support for the ab param
         callback[0](address_book, *callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def ContactAdd(self, callback, errback, scenario,
             contact_info, invite_info, auto_manage_allow_list=True):
         """Adds a contact to the contact list.
@@ -230,7 +227,6 @@ class AB(SOAPService):
     def _HandleABContactAddResponse(self, callback, errback, response, user_data):
         callback[0](response.text, *callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def ContactDelete(self, callback, errback, scenario,
             contact_id):
         """Deletes a contact from the contact list.
@@ -246,7 +242,6 @@ class AB(SOAPService):
     def _HandleABContactDeleteResponse(self, callback, errback, response, user_data):
         callback[0](*callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def ContactUpdate(self, callback, errback,
             scenario, contact_id, contact_info,
             enable_allow_list_management=False):
@@ -284,7 +279,6 @@ class AB(SOAPService):
     def _HandleABContactUpdateResponse(self, callback, errback, response, user_data):
         callback[0](*callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def GroupAdd(self, callback, errback, scenario,
             group_name):
         """Adds a group to the address book.
@@ -301,7 +295,6 @@ class AB(SOAPService):
     def _HandleABGroupAddResponse(self, callback, errback, response, user_data):
         callback[0](response.text, *callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def GroupDelete(self, callback, errback, scenario,
             group_id):
         """Deletes a group from the address book.
@@ -317,7 +310,6 @@ class AB(SOAPService):
     def _HandleABGroupDeleteResponse(self, callback, errback, response, user_data):
         callback[0](*callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def GroupUpdate(self, callback, errback, scenario,
             group_id, group_name):
         """Updates a group name.
@@ -334,7 +326,6 @@ class AB(SOAPService):
     def _HandleABGroupUpdateResponse(self, callback, errback, response, user_data):
         callback[0](*callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def GroupContactAdd(self, callback, errback, scenario,
             group_id, contact_id):
         """Adds a contact to a group.
@@ -352,7 +343,6 @@ class AB(SOAPService):
     def _HandleABGroupContactAddResponse(self, callback, errback, response, user_data):
         callback[0](*callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def GroupContactDelete(self, callback, errback, scenario,
             group_id, contact_id):
         """Deletes a contact from a group.
@@ -370,21 +360,11 @@ class AB(SOAPService):
     def _HandleABGroupContactDeleteResponse(self, callback, errback, response, user_data):
         callback[0](*callback[1:])
 
+    @RequireSecurityTokens(LiveService.CONTACTS)
     def __soap_request(self, method, scenario, args, callback, errback):
         token = str(self._tokens[LiveService.CONTACTS])
+        self._soap_request(method, (scenario, token), args, callback, errback)
 
-        http_headers = method.transport_headers()
-        soap_action = method.soap_action()
-
-        soap_header = method.soap_header(scenario, token)
-        soap_body = method.soap_body(*args)
-
-        method_name = method.__name__.rsplit(".", 1)[1]
-        self._send_request(method_name,
-                           self._service.url,
-                           soap_header, soap_body, soap_action,
-                           callback, errback,
-                           http_headers)
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):

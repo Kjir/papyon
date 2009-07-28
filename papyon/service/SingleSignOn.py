@@ -123,7 +123,6 @@ class SingleSignOn(SOAPService):
         self.__pending_response = False
         self.__pending_requests = []
         SOAPService.__init__(self, "SingleSignOn", proxies)
-        self.url = self._service.url
 
     def RequestMultipleSecurityTokens(self, callback, errback, *services):
         """Requests multiple security tokens from the single sign on service.
@@ -137,8 +136,6 @@ class SingleSignOn(SOAPService):
         if self.__pending_response:
             self.__pending_requests.append((callback, errback, services))
             return
-
-        method = self._service.RequestMultipleSecurityTokens
 
         response_tokens = {}
         
@@ -160,16 +157,10 @@ class SingleSignOn(SOAPService):
                     errback, [], (requested_services, response_tokens))
             return
 
-        http_headers = method.transport_headers()
-        soap_action = method.soap_action()
-        
-        soap_header = method.soap_header(*self.__credentials)
-        soap_body = method.soap_body(*services)
-
         self.__pending_response = True
-        self._send_request("RequestMultipleSecurityTokens", self.url,
-                soap_header, soap_body, soap_action,
-                callback, errback, http_headers, (requested_services, response_tokens))
+        method = self._service.RequestMultipleSecurityTokens
+        self._soap_request(method, self.__credentials, services, callback,
+                errback, (requested_services, response_tokens))
     
     def _HandleRequestMultipleSecurityTokensResponse(self, callback, errback,
             response, user_data):
@@ -222,7 +213,7 @@ class SingleSignOn(SOAPService):
             errback[0](*errback[1:])
         elif soap_response.fault.faultcode.endswith("Redirect"):
             requested_services, response_tokens = user_data
-            self.url = soap_response.fault.tree.findtext("psf:redirectUrl")
+            self._service.url = soap_response.fault.tree.findtext("psf:redirectUrl")
             self.__pending_response = False
             self.RequestMultipleSecurityTokens(callback, errback, *requested_services)
             

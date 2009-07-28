@@ -133,7 +133,6 @@ class Sharing(SOAPService):
 
         self._last_changes = "0001-01-01T00:00:00.0000000-08:00"
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def FindMembership(self, callback, errback, scenario, services, deltas_only):
         """Requests the membership list.
 
@@ -166,7 +165,6 @@ class Sharing(SOAPService):
                     memberships[member_id] = member_obj
         callback[0](memberships.values(), *callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def AddMember(self, callback, errback, scenario, member_role, type,
                   state, account):
         """Adds a member to a membership list.
@@ -182,7 +180,6 @@ class Sharing(SOAPService):
     def _HandleAddMemberResponse(self, callback, errback, response, user_data):
         callback[0](*callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def DeleteMember(self, callback, errback, scenario, member_role, type,
                      state, account):
         """Deletes a member from a membership list.
@@ -199,21 +196,10 @@ class Sharing(SOAPService):
     def _HandleDeleteMemberResponse(self, callback, errback, response, user_data):
         callback[0](*callback[1:])
 
+    @RequireSecurityTokens(LiveService.CONTACTS)
     def __soap_request(self, method, scenario, args, callback, errback):
         token = str(self._tokens[LiveService.CONTACTS])
-
-        http_headers = method.transport_headers()
-        soap_action = method.soap_action()
-
-        soap_header = method.soap_header(scenario, token)
-        soap_body = method.soap_body(*args)
-
-        method_name = method.__name__.rsplit(".", 1)[1]
-        self._send_request(method_name,
-                self._service.url,
-                soap_header, soap_body, soap_action,
-                callback, errback,
-                http_headers)
+        self._soap_request(method, (scenario, token), args, callback, errback)
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):

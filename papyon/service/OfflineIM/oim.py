@@ -44,18 +44,18 @@ class OIM(SOAPService):
 
         content = self.__build_mail_data(session_id, message_number, message_content)
 
-        self.__soap_request(self._service.Store2,
-                            (from_member_name, fname, 
-                             ProtocolConstant.CVR[4],
-                             ProtocolConstant.VER[0],
-                             ProtocolConstant.CVR[5],
-                             to_member_name,
-                             message_number, 
-                             token,
-                             ProtocolConstant.PRODUCT_ID,
-                             self.__lock_key),
-                            (message_type, content),
-                            callback, errback)
+        self._soap_request(self._service.Store2,
+                           (from_member_name, fname, 
+                            ProtocolConstant.CVR[4],
+                            ProtocolConstant.VER[0],
+                            ProtocolConstant.CVR[5],
+                            to_member_name,
+                            message_number, 
+                            token,
+                            ProtocolConstant.PRODUCT_ID,
+                            self.__lock_key),
+                           (message_type, content),
+                           callback, errback)
 
     def _HandleStore2Response(self, callback, errback, response, user_data):
         callback[0](*callback[1:])
@@ -93,19 +93,6 @@ class OIM(SOAPService):
         mail_data += 'X-OIM-Sequence-Num: %s\r\n\r\n' % sequence_number
         mail_data += base64.b64encode(content)
         return mail_data
-    
-    def __soap_request(self, method, header_args, body_args, 
-                       callback, errback, user_data=None):
-        http_headers = method.transport_headers()
-        soap_action = method.soap_action()
-        
-        soap_header = method.soap_header(*header_args)
-        soap_body = method.soap_body(*body_args)
-        
-        method_name = method.__name__.rsplit(".", 1)[1]
-        self._send_request(method_name, self._service.url, 
-                           soap_header, soap_body, soap_action, 
-                           callback, errback, http_headers, user_data)
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):

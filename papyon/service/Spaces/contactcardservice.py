@@ -101,32 +101,19 @@ class ContactCardService(SOAPService):
         self._tokens = {}
         SOAPService.__init__(self, "Spaces", proxies)
 
-
     @RequireSecurityTokens(LiveService.SPACES)
     def GetXmlFeed(self, callback, errback, contact):
-        self.__soap_request(self._service.GetXmlFeed,
-                            (contact.cid),
-                            callback, errback)
+        token = str(self._tokens[LiveService.SPACES])
+        self._soap_request(self._service.GetXmlFeed,
+                           (token,),
+                           (contact.cid,),
+                           callback, errback)
     
     def _HandleGetXmlFeedResponse(self, callback, errback, response, user_data):
         if response is not None:
             callback[0](ContactCard(response.find("./spaces:contactCard")), *callback[1:])
         else:
             callback[0](None, *callback[1:])
-
-    def __soap_request(self, method, cid,
-                       callback, errback, user_data=None):
-        token = str(self._tokens[LiveService.SPACES])
-        http_headers = method.transport_headers()
-        soap_action = method.soap_action()
-        
-        soap_header = method.soap_header(token)
-        soap_body = method.soap_body(cid)
-        
-        method_name = method.__name__.rsplit(".", 1)[1]
-        self._send_request(method_name, self._service.url, 
-                           soap_header, soap_body, soap_action, 
-                           callback, errback, http_headers, user_data)
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):

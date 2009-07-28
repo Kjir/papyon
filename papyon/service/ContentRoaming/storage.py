@@ -31,7 +31,6 @@ class Storage(SOAPService):
         self._tokens = {}
         SOAPService.__init__(self, "SchematizedStore", proxies)
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def GetProfile(self, callback, errback, scenario, cid, profile_rid, 
                    p_date_modified, expression_rid, e_date_modified, 
                    display_name, dn_last_modified, personal_status, 
@@ -74,7 +73,6 @@ class Storage(SOAPService):
                     photo_rid, photo_mime_type, photo_data_size, photo_url,
                     *callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def UpdateProfile(self, callback, errback, scenario, profile_rid,
                       display_name, personal_status, flags):
         self.__soap_request(self._service.UpdateProfile, scenario,
@@ -84,7 +82,6 @@ class Storage(SOAPService):
     def _HandleUpdateProfileResponse(self, callback, errback, response, user_date):
         callback[0](*callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def CreateRelationships(self, callback, errback, scenario, 
                             source_rid, target_rid):
         self.__soap_request(self._service.CreateRelationships, scenario,
@@ -94,7 +91,6 @@ class Storage(SOAPService):
     def _HandleCreateRelationshipsResponse(self, callback, errback, response, user_date):
         callback[0](*callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def DeleteRelationships(self, callback, errback, scenario, 
                             target_id, cid=None, source_id=None):
         self.__soap_request(self._service.DeleteRelationships, scenario,
@@ -103,7 +99,6 @@ class Storage(SOAPService):
     def _HandleDeleteRelationshipsResponse(self, callback, errback, response, user_date):
         callback[0](*callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def CreateDocument(self, callback, errback, scenario, cid, photo_name,
                        photo_mime_type, photo_data):
         self.__soap_request(self._service.CreateDocument, scenario,
@@ -114,7 +109,6 @@ class Storage(SOAPService):
         document_rid = response.text
         callback[0](document_rid, *callback[1:])
 
-    @RequireSecurityTokens(LiveService.CONTACTS)
     def FindDocuments(self, callback, errback, scenario, cid):
         self.__soap_request(self._service.FindDocuments, scenario,
                             (cid,), callback, errback)
@@ -126,20 +120,10 @@ class Storage(SOAPService):
         document_name = response.findtext('./st:Name')        
         callback[0](document_rid, document_name, *callback[1:])
 
+    @RequireSecurityTokens(LiveService.CONTACTS)
     def __soap_request(self, method, scenario, args, callback, errback):
-        token = str(self._tokens[LiveService.CONTACTS])   
-
-        http_headers = method.transport_headers()
-        soap_action = method.soap_action()
-        
-        soap_header = method.soap_header(scenario, token)
-        soap_body = method.soap_body(*args)
-
-        method_name = method.__name__.rsplit(".", 1)[1]
-        self._send_request(method_name, 
-                           self._service.url, 
-                           soap_header, soap_body, soap_action, 
-                           callback, errback, http_headers)
+        token = str(self._tokens[LiveService.CONTACTS])
+        self._soap_request(method, (scenario, token), args, callback, errback)
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def get_display_picture(self, pre_auth_url, callback, errback):
