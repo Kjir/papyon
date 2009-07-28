@@ -476,6 +476,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             else: # contact Added
                 pass
 
+    def _handle_RML(self, command):
+        pass
+
     # --------- Messages -----------------------------------------------------
     def _handle_MSG(self, command):
         message = Message(None, command.payload)
