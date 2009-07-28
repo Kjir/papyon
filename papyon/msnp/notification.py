@@ -661,9 +661,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._client.profile._server_property_changed("display-name",
                 address_book.profile.display_name)
 
-        contacts = address_book.contacts\
-                .search_by_memberships(profile.Membership.FORWARD)\
-                .group_by_domain()
+        contacts = address_book.contacts.group_by_domain()
 
         payloads = ['<ml l="1">']
         mask = ~(profile.Membership.REVERSE | profile.Membership.PENDING)
