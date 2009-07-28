@@ -702,12 +702,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     def _address_book_contact_deleted_cb(self, address_book, contact):
         self.remove_contact_from_membership(contact.account, contact.network_id,
-                                            profile.Membership.ALLOW)
-
-        self.add_contact_to_membership(contact.account, contact.network_id,
-                                       profile.Membership.BLOCK)
-
-        self.remove_contact_from_membership(contact.account, contact.network_id,
                                             profile.Membership.FORWARD)
 
     def _address_book_contact_accepted_cb(self, address_book, contact):
