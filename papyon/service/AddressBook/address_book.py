@@ -282,7 +282,7 @@ class AddressBook(gobject.GObject):
         di.block = block
         di()
 
-    def add_messenger_contact(self, account, invite_display_name='',
+    def add_messenger_contact(self, account, auto_allow=True, invite_display_name='',
             invite_message='', groups=[], network_id=NetworkID.MSN):
         def callback(contact, memberships):
             try:
@@ -335,6 +335,7 @@ class AddressBook(gobject.GObject):
             s = scenario_class(self._ab, (callback,), (self.__common_errback,))
             s.account = account
             s.memberships = old_memberships
+            s.auto_manage_allow_list = auto_allow
             s.invite_display_name = invite_display_name
             s.invite_message = invite_message
             s()
