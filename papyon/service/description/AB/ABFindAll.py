@@ -49,6 +49,9 @@ def process_response(soap_response):
     find_all_result = soap_response.body.\
             find("./ab:ABFindAllResponse/ab:ABFindAllResult")
 
+    if find_all_result is None:
+        return (None, [], [])
+
     path = "./ab:groups/ab:Group"
     groups = find_all_result.findall(path)
 
