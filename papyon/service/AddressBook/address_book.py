@@ -297,11 +297,7 @@ class AddressBook(gobject.GObject):
                         c._add_group_ownership(group)
                 c._set_memberships(memberships)
 
-                annotations = contact.Annotations
-                for key in annotations:
-                    annotations[key] = annotations[key].encode("utf-8")
-                contact_infos = {ContactGeneral.ANNOTATIONS : annotations}
-
+                contact_infos = contact.contact_infos
                 c._server_infos_changed(contact_infos)
                 c.thaw_notify()
                 self.unblock_contact(c)
@@ -489,11 +485,6 @@ class AddressBook(gobject.GObject):
             if display_name == "":
                 display_name = external_email.Email
 
-            annotations = contact.Annotations
-            for key in annotations:
-                annotations[key] = annotations[key].encode("utf-8")
-            contact_infos = { ContactGeneral.ANNOTATIONS : annotations }
-
             if contact.IsMessengerUser:
                 memberships = profile.Membership.FORWARD
             else:
@@ -505,6 +496,7 @@ class AddressBook(gobject.GObject):
                     contact.CID,
                     memberships,
                     contact.Type)
+            contact_infos = contact.contact_infos
             c._server_infos_changed(contact_infos)
 
             for group in self.groups:
@@ -523,11 +515,6 @@ class AddressBook(gobject.GObject):
             if display_name == "":
                 display_name = contact.PassportName
 
-            annotations = contact.Annotations
-            for key in annotations:
-                annotations[key] = annotations[key].encode("utf-8")
-            contact_infos = {ContactGeneral.ANNOTATIONS : annotations}
-
             if contact.IsMessengerUser:
                 memberships = profile.Membership.FORWARD
             else:
@@ -538,6 +525,7 @@ class AddressBook(gobject.GObject):
                     display_name.encode("utf-8"),
                     contact.CID,
                     memberships)
+            contact_infos = contact.contact_infos
             c._server_infos_changed(contact_infos)
 
             for group in self.groups:

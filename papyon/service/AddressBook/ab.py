@@ -138,6 +138,13 @@ class Contact(object):
         self.Deleted = contact.findtext("./ab:fDeleted", "bool")
         self.LastChanged = contact.findtext("./ab:lastChanged", "datetime")
 
+    @property
+    def contact_infos(self):
+        annotations = {}
+        for key in self.Annotations:
+            annotations[key] = self.Annotations[key].encode("utf-8")
+        return {ContactGeneral.ANNOTATIONS : annotations}
+
 
 class AB(SOAPService):
     def __init__(self, sso, proxies=None):
