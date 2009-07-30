@@ -67,25 +67,25 @@ def soap_body(services_types, deltas_only, last_change):
 
 def process_response(soap_response):
     # FIXME: don't pick the 1st service only, we need to extract them all
-    result = {}
+    result = {'Allow':{},'Block':{},'Reverse':{},'Pending':{}}
     service = soap_response.body.find("./ab:FindMembershipResponse/"
                                       "ab:FindMembershipResult/ab:Services/"
                                       "ab:Service")
     if service is not None:
         memberships = service.find("./ab:Memberships")
-        for membership in memberships:
-            role = membership.find("./ab:MemberRole")
-            members = membership.findall("./ab:Members/ab:Member")
-            if role is None or len(members) == 0:
-                continue
-            result[role.text] = members
+        if memberships is not None:
+            for membership in memberships:
+                role = membership.find("./ab:MemberRole")
+                members = membership.findall("./ab:Members/ab:Member")
+                if role is None or len(members) == 0:
+                    continue
+                result[role.text] = members
         last_changes = service.find("./ab:LastChange")
     else:
         # FIXME: This has probably to be handled in a better way
         # This is a "lambda object", dinamically modifiable
         # http://evaisse.com/post/52748807/python-lambda-object-php-stdclass-equivalent
         last_changes = type('lambdaobject', (object,), {'text':"0-0-0T0:0:0.0-0:0"})()
-        result = {'Allow':{},'Block':{},'Reverse':{},'Pending':{}}
     return (result, last_changes)
 
     
