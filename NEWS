@@ -1,5 +1,8 @@
-papyon-0.4.1 (Blue Raincoat)
+papyon-0.4.2 (Blue Raincoat)
 ===============================
+
+  * List of changes between 0.4.0 and 0.4.2
+    o Fixed crash when FindMemberships response is empty (Bug #23039)
 
   * List of changes between 0.4.0 and 0.4.1
     o Added handling of OUT commands (Bug #13004)
