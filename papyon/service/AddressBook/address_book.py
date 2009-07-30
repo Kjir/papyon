@@ -284,46 +284,42 @@ class AddressBook(gobject.GObject):
 
     def add_messenger_contact(self, account, invite_display_name='',
             invite_message='', groups=[], network_id=NetworkID.MSN):
-        def callback(contact_guid, address_book_delta):
-            contacts = address_book_delta.contacts
-            for contact in contacts:
-                if contact.Id != contact_guid:
-                    continue
-                try:
-                    c = self.contacts.search_by_account(contact.PassportName).\
-                            search_by_network_id(NetworkID.MSN)[0]
-                    c.freeze_notify()
-                    c._id = contact.Id
-                    c._cid = contact.CID
-                    c._display_name = contact.DisplayName
-                    for group in self.groups:
-                        if group.id in contact.Groups:
-                            c._add_group_ownership(group)
-                    c._add_membership(profile.Membership.FORWARD)
-                    c._add_membership(profile.Membership.ALLOW)
+        def callback(contact, memberships):
+            try:
+                c = self.contacts.search_by_account(contact.PassportName).\
+                        search_by_network_id(NetworkID.MSN)[0]
+                c.freeze_notify()
+                c._id = contact.Id
+                c._cid = contact.CID
+                c._display_name = contact.DisplayName
+                for group in self.groups:
+                    if group.id in contact.Groups:
+                        c._add_group_ownership(group)
+                c._set_memberships(memberships)
 
-                    annotations = contact.Annotations
-                    for key in annotations:
-                        annotations[key] = annotations[key].encode("utf-8")
-                    contact_infos = {ContactGeneral.ANNOTATIONS : annotations}
+                annotations = contact.Annotations
+                for key in annotations:
+                    annotations[key] = annotations[key].encode("utf-8")
+                contact_infos = {ContactGeneral.ANNOTATIONS : annotations}
 
-                    c._server_infos_changed(contact_infos)
-                    c.thaw_notify()
-                    self.unblock_contact(c)
-                except IndexError:
-                    c = self.__build_contact(contact)
-                    if c.is_member(profile.Membership.FORWARD):
-                        c._add_membership(profile.Membership.ALLOW)
-                    if c is None:
-                        continue
-                    self.contacts.add(c)
-                    self.emit('contact-added', c)
-                    self.unblock_contact(c)
-                for group in groups:
-                    self.add_contact_to_group(group, c)
+                c._server_infos_changed(contact_infos)
+                c.thaw_notify()
+                self.unblock_contact(c)
+            except IndexError:
+                c = self.__build_contact(contact)
+                if c.is_member(profile.Membership.FORWARD):
+                    c._set_memberships(memberships)
+                if c is None:
+                    return
+                self.contacts.add(c)
+                self.emit('contact-added', c)
+                self.unblock_contact(c)
 
-                self.emit('messenger-contact-added', c)
+            self.emit('messenger-contact-added', c)
+            for group in groups:
+                self.add_contact_to_group(group, c)
 
+        old_memberships = profile.Membership.NONE
         try:
             contact = self.contacts.search_by_account(account).\
                 search_by_network_id(NetworkID.MSN)[0]
@@ -331,6 +327,7 @@ class AddressBook(gobject.GObject):
                     contact.id != "00000000-0000-0000-0000-000000000000":
                 self.__upgrade_mail_contact(contact, groups)
             elif contact.id == "00000000-0000-0000-0000-000000000000":
+                old_memberships = contact.memberships
                 raise IndexError
             else:
                 return
@@ -341,6 +338,7 @@ class AddressBook(gobject.GObject):
                 scenario_class = ExternalContactAddScenario
             s = scenario_class(self._ab, (callback,), (self.__common_errback,))
             s.account = account
+            s.memberships = old_memberships
             s.invite_display_name = invite_display_name
             s.invite_message = invite_message
             s()

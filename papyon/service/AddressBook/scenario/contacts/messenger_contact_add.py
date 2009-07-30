@@ -22,13 +22,14 @@ from papyon.service.AddressBook.scenario.base import Scenario
 from contact_find import FindContactScenario
 
 from papyon.service.AddressBook.constants import *
-from papyon.profile import ContactType
+from papyon.profile import ContactType, Membership
 
 __all__ = ['MessengerContactAddScenario']
 
 class MessengerContactAddScenario(BaseScenario):
     def __init__(self, ab, callback, errback,
                  account='',
+                 memberships=Membership.NONE,
                  contact_type=ContactType.REGULAR,
                  contact_info={},
                  invite_display_name='',
@@ -50,6 +51,7 @@ class MessengerContactAddScenario(BaseScenario):
         self.invite_display_name = invite_display_name
         self.invite_message = invite_message
         self.auto_manage_allow_list = True
+        self.memberships = memberships
 
     def execute(self):
         invite_info = { 'display_name' : self.invite_display_name ,
@@ -66,6 +68,14 @@ class MessengerContactAddScenario(BaseScenario):
                             self.auto_manage_allow_list)
 
     def __contact_add_callback(self, contact_guid):
+        self.memberships |= Membership.FORWARD
+
+        # AddContact automatically added the contact to the allow list if
+        # it wasn't already allowed or blocked
+        allowed_or_blocked = self.memberships & (Membership.BLOCK | Membership.ALLOW)
+        if self.auto_manage_allow_list and not allowed_or_blocked:
+            self.memberships |= Membership.ALLOW
+
         fc = FindContactScenario(self._ab,
                 (self.__find_contact_callback,),
                 self._errback,
@@ -74,7 +84,7 @@ class MessengerContactAddScenario(BaseScenario):
         fc()
 
     def __find_contact_callback(self, contact):
-        self.callback(contact)
+        self.callback(contact, self.memberships)
 
     def __contact_add_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
