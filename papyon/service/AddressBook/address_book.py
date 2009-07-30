@@ -25,7 +25,7 @@ import scenario
 
 import papyon
 import papyon.profile as profile
-from papyon.profile import NetworkID
+from papyon.profile import Membership, NetworkID
 from papyon.util.decorator import rw_property
 from papyon.profile import ContactType
 from papyon.service.AddressBook.constants import *
@@ -303,7 +303,7 @@ class AddressBook(gobject.GObject):
                 self.unblock_contact(c)
             except IndexError:
                 c = self.__build_contact(contact)
-                if c.is_member(profile.Membership.FORWARD):
+                if c.is_member(Membership.FORWARD):
                     c._set_memberships(memberships)
                 if c is None:
                     return
@@ -315,11 +315,11 @@ class AddressBook(gobject.GObject):
             for group in groups:
                 self.add_contact_to_group(group, c)
 
-        old_memberships = profile.Membership.NONE
+        old_memberships = Membership.NONE
         try:
             contact = self.contacts.search_by_account(account).\
                 search_by_network_id(NetworkID.MSN)[0]
-            if not contact.is_member(profile.Membership.FORWARD) and \
+            if not contact.is_member(Membership.FORWARD) and \
                     contact.id != "00000000-0000-0000-0000-000000000000":
                 self.__upgrade_mail_contact(contact, groups)
             elif contact.id == "00000000-0000-0000-0000-000000000000":
@@ -341,7 +341,7 @@ class AddressBook(gobject.GObject):
 
     def __upgrade_mail_contact(self, contact, groups=[]):
         def callback():
-            contact._add_memberships(profile.Membership.ALLOW)
+            contact._add_membership(Membership.ALLOW)
             for group in groups:
                 self.add_contact_to_group(group, contact)
 
@@ -486,9 +486,9 @@ class AddressBook(gobject.GObject):
                 display_name = external_email.Email
 
             if contact.IsMessengerUser:
-                memberships = profile.Membership.FORWARD
+                memberships = Membership.FORWARD
             else:
-                memberships = profile.Membership.NONE
+                memberships = Membership.NONE
             c = profile.Contact(contact.Id,
                     NetworkID.EXTERNAL,
                     external_email.Email.encode("utf-8"),
@@ -516,9 +516,9 @@ class AddressBook(gobject.GObject):
                 display_name = contact.PassportName
 
             if contact.IsMessengerUser:
-                memberships = profile.Membership.FORWARD
+                memberships = Membership.FORWARD
             else:
-                memberships = profile.Membership.NONE
+                memberships = Membership.NONE
             c = profile.Contact(contact.Id,
                     NetworkID.MSN,
                     contact.PassportName.encode("utf-8"),
@@ -573,13 +573,13 @@ class AddressBook(gobject.GObject):
 
             for role in member.Roles:
                 if role == "Allow":
-                    membership = profile.Membership.ALLOW
+                    membership = Membership.ALLOW
                 elif role == "Block":
-                    membership = profile.Membership.BLOCK
+                    membership = Membership.BLOCK
                 elif role == "Reverse":
-                    membership = profile.Membership.REVERSE
+                    membership = Membership.REVERSE
                 elif role == "Pending":
-                    membership = profile.Membership.PENDING
+                    membership = Membership.PENDING
                 else:
                     raise NotImplementedError("Unknown Membership Type : " + membership)
                 contact._add_membership(membership)
