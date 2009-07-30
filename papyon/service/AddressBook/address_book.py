@@ -138,12 +138,6 @@ class AddressBook(gobject.GObject):
             "messenger-contact-added" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
-#             "email-contact-added"     : (gobject.SIGNAL_RUN_FIRST,
-#                 gobject.TYPE_NONE,
-#                 (object,)),
-#             "mobile-contact-added"    : (gobject.SIGNAL_RUN_FIRST,
-#                 gobject.TYPE_NONE,
-#                 (object,)),
 
             "contact-deleted"         : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
@@ -252,6 +246,12 @@ class AddressBook(gobject.GObject):
         initial_sync()
 
     # Public API
+    def check_pending_invitations(self):
+        cp = scenario.CheckPendingInviteScenario(self._sharing,
+                 (self.__update_memberships,),
+                 (self.__common_errback,))
+        cp()
+
     def accept_contact_invitation(self, pending_contact, add_to_contact_list=True):
         def callback(contact_infos, memberships):
             pending_contact.freeze_notify()
@@ -321,7 +321,7 @@ class AddressBook(gobject.GObject):
                 search_by_network_id(NetworkID.MSN)[0]
             if not contact.is_member(Membership.FORWARD) and \
                     contact.id != "00000000-0000-0000-0000-000000000000":
-                self.__upgrade_mail_contact(contact, groups)
+                self.upgrade_mail_contact(contact, groups)
             elif contact.id == "00000000-0000-0000-0000-000000000000":
                 old_memberships = contact.memberships
                 raise IndexError
@@ -339,7 +339,7 @@ class AddressBook(gobject.GObject):
             s.invite_message = invite_message
             s()
 
-    def __upgrade_mail_contact(self, contact, groups=[]):
+    def upgrade_mail_contact(self, contact, groups=[]):
         def callback():
             contact._add_membership(Membership.ALLOW)
             for group in groups:
@@ -351,20 +351,6 @@ class AddressBook(gobject.GObject):
         up.contact_properties = { 'is_messenger_user' : True }
         up.enable_allow_list_management = True
         up()
-
-#     def add_email_contact(self, email_address):
-#         ae = scenario.EmailContactAddScenario(self._ab,
-#                 (self.__add_email_contact_cb,),
-#                 (self.__common_errback,))
-#         ae.email_address = email_address
-#         ae()
-
-#     def add_mobile_contact(self, phone_number):
-#         am = scenario.MobileContactAddScenario(self._ab,
-#                 (self.__add_mobile_contact_cb,),
-#                 (self.__common_errback,))
-#         am.phone_number = phone_number
-#         am()
 
     def delete_contact(self, contact):
         def callback():
@@ -466,12 +452,6 @@ class AddressBook(gobject.GObject):
         dc.contact_guid = contact.id
         dc()
     # End of public API
-
-    def check_pending_invitations(self):
-        cp = scenario.CheckPendingInviteScenario(self._sharing,
-                 (self.__update_memberships,),
-                 (self.__common_errback,))
-        cp()
 
     def __build_contact(self, contact):
         external_email = None
