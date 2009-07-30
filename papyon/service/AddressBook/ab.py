@@ -157,9 +157,6 @@ class AB(SOAPService):
         self.__soap_request(self._service.ABAdd, scenario, (account,),
                             callback, errback)
 
-    def _HandleABAddResponse(self, callback, errback, response, user_data):
-        callback[0](*callback[1:])
-
     def FindAll(self, callback, errback, scenario, deltas_only):
         """Requests the contact list.
 
@@ -187,7 +184,8 @@ class AB(SOAPService):
         for contact in response[2]:
             contacts.append(Contact(contact))
 
-        address_book =  ABResult(None, contacts, groups) #FIXME: add support for the ab param
+        #FIXME: add support for the ab param
+        address_book =  ABResult(None, contacts, groups)
         callback[0](address_book, *callback[1:])
 
     def ContactAdd(self, callback, errback, scenario,
@@ -239,9 +237,6 @@ class AB(SOAPService):
         self.__soap_request(self._service.ABContactDelete, scenario,
                 (contact_id,), callback, errback)
 
-    def _HandleABContactDeleteResponse(self, callback, errback, response, user_data):
-        callback[0](*callback[1:])
-
     def ContactUpdate(self, callback, errback,
             scenario, contact_id, contact_info,
             enable_allow_list_management=False):
@@ -276,9 +271,6 @@ class AB(SOAPService):
                     enable_allow_list_management),
                 callback, errback)
 
-    def _HandleABContactUpdateResponse(self, callback, errback, response, user_data):
-        callback[0](*callback[1:])
-
     def GroupAdd(self, callback, errback, scenario,
             group_name):
         """Adds a group to the address book.
@@ -307,9 +299,6 @@ class AB(SOAPService):
         self.__soap_request(self._service.ABGroupDelete, scenario,
                 (group_id,), callback, errback)
 
-    def _HandleABGroupDeleteResponse(self, callback, errback, response, user_data):
-        callback[0](*callback[1:])
-
     def GroupUpdate(self, callback, errback, scenario,
             group_id, group_name):
         """Updates a group name.
@@ -322,9 +311,6 @@ class AB(SOAPService):
         """
         self.__soap_request(self._service.ABGroupUpdate, scenario,
                 (group_id, group_name), callback, errback)
-
-    def _HandleABGroupUpdateResponse(self, callback, errback, response, user_data):
-        callback[0](*callback[1:])
 
     def GroupContactAdd(self, callback, errback, scenario,
             group_id, contact_id):
@@ -340,9 +326,6 @@ class AB(SOAPService):
         self.__soap_request(self._service.ABGroupContactAdd, scenario,
                 (group_id, contact_id), callback, errback)
 
-    def _HandleABGroupContactAddResponse(self, callback, errback, response, user_data):
-        callback[0](*callback[1:])
-
     def GroupContactDelete(self, callback, errback, scenario,
             group_id, contact_id):
         """Deletes a contact from a group.
@@ -357,14 +340,14 @@ class AB(SOAPService):
         self.__soap_request(self._service.ABGroupContactDelete, scenario,
                 (group_id, contact_id), callback, errback)
 
-    def _HandleABGroupContactDeleteResponse(self, callback, errback, response, user_data):
-        callback[0](*callback[1:])
-
     @RequireSecurityTokens(LiveService.CONTACTS)
     def __soap_request(self, method, scenario, args, callback, errback):
         token = str(self._tokens[LiveService.CONTACTS])
         self._soap_request(method, (scenario, token), args, callback, errback)
 
+    def _HandleSOAPResponse(self, request_id, callback, errback,
+            soap_response, user_data):
+        callback[0](*callback[1:])
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):

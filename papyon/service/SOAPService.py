@@ -210,7 +210,7 @@ class SOAPService(object):
             if handler is not None:
                 handler(callback, errback, response, user_data)
             else:
-                self._HandleUnhandledResponse(request_id, callback, errback,
+                self._HandleSOAPResponse(request_id, callback, errback,
                         response, user_data)
         else:
             handler = getattr(self,
@@ -235,7 +235,7 @@ class SOAPService(object):
             soap_response, user_data):
         logger.warning("Unhandled SOAPFault to %s" % request_id)
 
-    def _HandleUnhandledResponse(self, request_id, callback, errback,
+    def _HandleSOAPResponse(self, request_id, callback, errback,
             response, user_data):
         logger.warning("Unhandled Response to %s" % request_id)
 
