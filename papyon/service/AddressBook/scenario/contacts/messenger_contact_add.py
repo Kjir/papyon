@@ -19,6 +19,7 @@
 
 from papyon.service.AddressBook.scenario.base import BaseScenario
 from papyon.service.AddressBook.scenario.base import Scenario
+from contact_find import FindContactScenario
 
 from papyon.service.AddressBook.constants import *
 from papyon.profile import ContactType
@@ -65,9 +66,15 @@ class MessengerContactAddScenario(BaseScenario):
                             self.auto_manage_allow_list)
 
     def __contact_add_callback(self, contact_guid):
-        self._ab.FindAll((self.__find_all_callback, contact_guid),
-                         (self.__find_all_errback, contact_guid),
-                         self._scenario, True)
+        fc = FindContactScenario(self._ab,
+                (self.__find_contact_callback,),
+                self._errback,
+                self._scenario)
+        fc.id = contact_guid
+        fc()
+
+    def __find_contact_callback(self, contact):
+        self.callback(contact)
 
     def __contact_add_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
@@ -75,16 +82,4 @@ class MessengerContactAddScenario(BaseScenario):
             errcode = AddressBookError.CONTACT_ALREADY_EXISTS
         elif error_code in ('BadEmailArgument', 'InvalidPassportUser'):
             errcode = AddressBookError.INVALID_CONTACT_ADDRESS
-        self.errback(errcode)
-
-    def __find_all_callback(self, address_book_delta, contact_guid):
-        self.callback(contact_guid, address_book_delta)
-
-    def __find_all_errback(self, error_code, contact_guid):
-        errcode = AddressBookError.UNKNOWN
-        if error_code == 'FullSyncRequired':
-            self._ab.FindAll((self.__find_all_callback, contact_guid),
-                             (self.__find_all_errback, contact_guid),
-                             self._scenario, False)
-            return
         self.errback(errcode)
