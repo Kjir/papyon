@@ -92,4 +92,6 @@ class MessengerContactAddScenario(BaseScenario):
             errcode = AddressBookError.CONTACT_ALREADY_EXISTS
         elif error_code in ('BadEmailArgument', 'InvalidPassportUser'):
             errcode = AddressBookError.INVALID_CONTACT_ADDRESS
+        elif error_code == 'RequestLimitReached':
+            errcode = AddressBookError.LIMIT_REACHED
         self.errback(errcode)
