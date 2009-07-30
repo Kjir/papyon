@@ -132,6 +132,9 @@ class AddressBook(gobject.GObject):
                 gobject.TYPE_NONE,
                 (object,)),
 
+            "contact-added"           : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
             "messenger-contact-added" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -314,10 +317,12 @@ class AddressBook(gobject.GObject):
                     if c is None:
                         continue
                     self.contacts.add(c)
-                    self.emit('messenger-contact-added', c)
+                    self.emit('contact-added', c)
                     self.unblock_contact(c)
                 for group in groups:
                     self.add_contact_to_group(group, c)
+
+                self.emit('messenger-contact-added', c)
 
         try:
             contact = self.contacts.search_by_account(account).\
@@ -594,7 +599,7 @@ class AddressBook(gobject.GObject):
                 contact._add_membership(membership)
 
             if new_contact and self.state == AddressBookState.SYNCHRONIZED:
-                self.emit('messenger-contact-added', contact)
+                self.emit('contact-added', contact)
 
     # Callbacks
     def __common_errback(self, error_code, *args):
