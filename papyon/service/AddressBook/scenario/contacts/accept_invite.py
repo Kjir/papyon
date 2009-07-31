@@ -54,29 +54,33 @@ class AcceptInviteScenario(BaseScenario):
     def execute(self):
         if self.add_to_contact_list and not (self.memberships & Membership.FORWARD):
             if self.network == NetworkID.MSN:
-                am = MessengerContactAddScenario(self.__ab,
-                         (self.__add_contact_callback,),
-                         (self.__add_contact_errback,),
-                         self.account)
-                am()
+                self.__add_messenger_contact()
             elif self.network == NetworkID.EXTERNAL:
-                em = ExternalContactAddScenario(self.__ab,
-                         (self.__add_contact_callback,),
-                         (self.__add_contact_errback,),
-                         self.account)
-                em()
+                self.__add_external_contact()
             else:
-                # FIXME: maybe raise an exception ?
-                self.__update_memberships()
+                self.errback(AddressBookError.UNKNOWN)
         else:
-            self.__update_memberships()
+            new_membership = self.memberships | Membership.ALLOW
+            self.__update_memberships(None, new_membership)
 
-    def __update_memberships(self):
-        new_membership = (self.memberships & ~Membership.PENDING) | \
-                Membership.ALLOW | Membership.REVERSE
+    def __add_messenger_contact(self):
+        am = MessengerContactAddScenario(self.__ab,
+                 (self.__add_contact_callback,),
+                 self._errback,
+                 self.account)
+        am()
+
+    def __add_external_contact(self):
+        em = ExternalContactAddScenario(self.__ab,
+                 (self.__add_contact_callback,),
+                 self._errback,
+                 self.account)
+        em()
+
+    def __update_memberships(self, contact, new_membership):
         um = UpdateMembershipsScenario(self.__sharing,
-                (self.__update_memberships_callback,),
-                (self.__update_memberships_errback,),
+                (self.__update_memberships_callback, contact),
+                self._errback,
                 self._scenario,
                 self.account,
                 self.network,
@@ -85,29 +89,12 @@ class AcceptInviteScenario(BaseScenario):
                 new_membership)
         um()
 
-    def __add_contact_callback(self, contact_guid, address_book_delta):
-        contacts = address_book_delta.contacts
-        self.memberships |= Membership.ALLOW | Membership.FORWARD
-        for contact in contacts:
-            if contact.Id != contact_guid:
-                continue
-            self._added_contact = contact
-            break
-        self.__update_memberships()
-
-    def __add_contact_errback(self, error_code):
-        errcode = AddressBookError.UNKNOWN
-        if error_code == 'ContactAlreadyExists':
-            errcode = AddressBookError.CONTACT_ALREADY_EXISTS
-        elif error_code in ('BadEmailArgument', 'InvalidPassportUser'):
-            errcode = AddressBookError.INVALID_CONTACT_ADDRESS
-        self.errback(errcode)
-
-    def __update_memberships_callback(self, memberships):
-        self.memberships = memberships
-        contact = self._added_contact
+    def __add_contact_callback(self, contact, memberships):
+        memberships &= ~Membership.PENDING
+        memberships |= Membership.REVERSE
         self.callback(contact, memberships)
 
-    def __update_memberships_errback(self, error_code, done, failed):
-        errcode = AddressBookError.UNKNOWN
-        self.errback(errcode)
+    def __update_memberships_callback(self, memberships, contact):
+        memberships &= ~Membership.PENDING
+        memberships |= Membership.REVERSE
+        self.callback(contact, memberships)

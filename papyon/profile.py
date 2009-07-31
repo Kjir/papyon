@@ -726,6 +726,11 @@ class Contact(gobject.GObject):
             @type memberships: bitmask of L{Membership<papyon.profile.Membership>}s"""
         return (self.memberships & memberships) == memberships
 
+    def is_mail_contact(self):
+        """Determines if this contact is a mail contact"""
+        blank_id = "00000000-0000-0000-0000-000000000000"
+        return (not self.is_member(Membership.FORWARD) and self.id != blank_id)
+
     def _set_memberships(self, memberships):
         self._memberships = memberships
         self.notify("memberships")

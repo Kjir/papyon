@@ -229,7 +229,7 @@ class AddressBook(gobject.GObject):
                 g = profile.Group(group.Id, group.Name.encode("utf-8"))
                 self.groups.add(g)
             for contact in contacts:
-                c = self.__build_contact(contact)
+                c = self.__build_contact(contact, Membership.FORWARD)
                 if c is None:
                     continue
                 if contact.Type == ContactType.ME:
@@ -246,6 +246,13 @@ class AddressBook(gobject.GObject):
         initial_sync()
 
     # Public API
+   def search_contact(self, account, network_id):
+        contacts = self.contacts.search_by_network_id(network_id).\
+                search_by_account(account)
+        if len(contacts) == 0:
+            return None
+        return contacts[0]
+
     def check_pending_invitations(self):
         cp = scenario.CheckPendingInviteScenario(self._sharing,
                  (self.__update_memberships,),
@@ -282,52 +289,25 @@ class AddressBook(gobject.GObject):
         di.block = block
         di()
 
-    def add_messenger_contact(self, account, auto_allow=True, invite_display_name='',
-            invite_message='', groups=[], network_id=NetworkID.MSN):
+    def add_messenger_contact(self, account, invite_display_name='',
+            invite_message='', groups=[], network_id=NetworkID.MSN,
+            auto_allow=True):
         def callback(contact, memberships):
-            try:
-                c = self.contacts.search_by_account(contact.PassportName).\
-                        search_by_network_id(NetworkID.MSN)[0]
-                c.freeze_notify()
-                c._id = contact.Id
-                c._cid = contact.CID
-                c._display_name = contact.DisplayName
-                for group in self.groups:
-                    if group.id in contact.Groups:
-                        c._add_group_ownership(group)
-                c._set_memberships(memberships)
-
-                contact_infos = contact.contact_infos
-                c._server_infos_changed(contact_infos)
-                c.thaw_notify()
-                self.unblock_contact(c)
-            except IndexError:
-                c = self.__build_contact(contact)
-                if c.is_member(Membership.FORWARD):
-                    c._set_memberships(memberships)
-                if c is None:
-                    return
-                self.contacts.add(c)
-                self.emit('contact-added', c)
-                self.unblock_contact(c)
-
+            c = self.__build_or_update_contact(contact.PassportName,
+                    network_id, contact, memberships)
             self.emit('messenger-contact-added', c)
             for group in groups:
                 self.add_contact_to_group(group, c)
 
-        old_memberships = Membership.NONE
-        try:
-            contact = self.contacts.search_by_account(account).\
-                search_by_network_id(NetworkID.MSN)[0]
-            if not contact.is_member(Membership.FORWARD) and \
-                    contact.id != "00000000-0000-0000-0000-000000000000":
-                self.upgrade_mail_contact(contact, groups)
-            elif contact.id == "00000000-0000-0000-0000-000000000000":
-                old_memberships = contact.memberships
-                raise IndexError
-            else:
-                return
-        except IndexError:
+        contact = self.search_contact(account, network_id)
+        if contact is None
+            old_memberships = Membership.NONE
+        else:
+            old_memberships = contact.memberships
+
+        if contact is not None and contact.is_mail_contact():
+            self.upgrade_mail_contact(contact, groups)
+        elif contact is None or not contact.is_member(Membership.FORWARD):
             if network_id == NetworkID.MSN:
                 scenario_class = MessengerContactAddScenario
             elif network_id == NetworkID.EXTERNAL:
@@ -454,7 +434,7 @@ class AddressBook(gobject.GObject):
         dc()
     # End of public API
 
-    def __build_contact(self, contact):
+    def __build_contact(self, contact, memberships=Membership.NONE):
         external_email = None
         for email in contact.Emails:
             if email.Type == ContactEmailType.EXTERNAL:
@@ -515,6 +495,29 @@ class AddressBook(gobject.GObject):
 
             return c
         return None
+
+    def __update_contact(self, c, contact, memberships):
+        c.freeze_notify()
+        c._id = contact.Id
+        c._cid = contact.CID
+        c._display_name = contact.DisplayName
+        for group in self.groups:
+            if group.id in contact.Groups:
+                c._add_group_ownership(group)
+        contact_infos = contact.contact_infos
+        c._server_infos_changed(contact_infos)
+        c._set_memberships(memberships)
+        c.thaw_notify()
+
+    def __build_or_update_contact(self, account, network, infos, memberships):
+        contact = self.search_contact(account, network_id)
+        if c is not None:
+            self.__update_contact(contact, infos, memberships)
+        else:
+            contact = self.__build_contact(infos, memberships)
+            self.contacts.add(contact)
+            self.emit('contact-added', contact)
+        return contact
 
     def __update_memberships(self, memberships):
         for member in memberships:
