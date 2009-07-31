@@ -687,7 +687,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._state = ProtocolState.SYNCHRONIZED
 
     def _address_book_contact_added_cb(self, address_book, contact):
-        self.add_contact_to_membership(contact, profile.Membership.ALLOW)
+        if contact.is_member(profile.Membership.ALLOW):
+            self.add_contact_to_membership(contact, profile.Membership.ALLOW)
         self.add_contact_to_membership(contact, profile.Membership.FORWARD)
         
         if contact.network_id != profile.NetworkID.MOBILE:
