@@ -262,8 +262,9 @@ class AddressBook(gobject.GObject):
     def accept_contact_invitation(self, pending_contact, add_to_contact_list=True):
         def callback(contact_infos, memberships):
             pending_contact.freeze_notify()
-            pending_contact._id = contact_infos.Id
-            pending_contact._cid = contact_infos.CID
+            if contact_infos is not None:
+                pending_contact._id = contact_infos.Id
+                pending_contact._cid = contact_infos.CID
             pending_contact._set_memberships(memberships)
             pending_contact.thaw_notify()
             self.emit('contact-accepted', pending_contact)
