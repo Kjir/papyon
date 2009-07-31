@@ -192,56 +192,52 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self.__switchboard_callbacks.add((callback, callback_args), priority)
         self._send_command('XFR', ('SB',))
 
-    def add_contact_to_membership(self, account,
-            network_id=profile.NetworkID.MSN,
+    def add_contact_to_membership(self, contact,
             membership=profile.Membership.FORWARD):
         """Add a contact to a given membership.
 
-            @param account: the contact identifier
-            @type account: string
-
-            @param network_id: the contact network
-            @type network_id: integer
-            @see L{papyon.profile.NetworkID}
+            @param contact: the contact
+            @type contact: L{papyon.profile.Contact}
 
             @param membership: the list to be added to
             @type membership: integer
             @see L{papyon.profile.Membership}"""
 
+        account = contact.account
+        network_id = contact.network_id
+
         if network_id == profile.NetworkID.MOBILE:
             payload = '<ml><t><c n="tel:%s" l="%d" /></t></ml>' % \
-                    (contact, membership)
+                    (account, membership)
             self._send_command("ADL", payload=payload)
         else:
-            contact, domain = account.split("@", 1)
+            user, domain = account.split("@", 1)
             payload = '<ml><d n="%s"><c n="%s" l="%d" t="%d"/></d></ml>' % \
-                    (domain, contact, membership, network_id)
+                    (domain, user, membership, network_id)
             self._send_command("ADL", payload=payload)
 
-    def remove_contact_from_membership(self, account,
-            network_id=profile.NetworkID.MSN,
+    def remove_contact_from_membership(self, contact,
             membership=profile.Membership.FORWARD):
         """Remove a contact from a given membership.
 
-            @param account: the contact identifier
-            @type account: string
-
-            @param network_id: the contact network
-            @type network_id: integer
-            @see L{papyon.profile.NetworkID}
+            @param contact: the contact
+            @type contact: L{papyon.profile.Contact}
 
             @param membership: the list to be added to
             @type membership: integer
             @see L{papyon.profile.Membership}"""
 
+        account = contact.account
+        network_id = contact.network_id
+
         if network_id == profile.NetworkID.MOBILE:
             payload = '<ml><t><c n="tel:%s" l="%d" /></t></ml>' % \
-                    (contact, membership)
+                    (account, membership)
             self._send_command("RML", payload=payload)
         else:
-            contact, domain = account.split("@", 1)
+            user, domain = account.split("@", 1)
             payload = '<ml><d n="%s"><c n="%s" l="%d" t="%d"/></d></ml>' % \
-                    (domain, contact, membership, network_id)
+                    (domain, user, membership, network_id)
             self._send_command("RML", payload=payload)
 
     def send_unmanaged_message(self, contact, message):
@@ -691,11 +687,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._state = ProtocolState.SYNCHRONIZED
 
     def _address_book_contact_added_cb(self, address_book, contact):
-        self.add_contact_to_membership(contact.account, contact.network_id,
-                                       profile.Membership.ALLOW)
-        
-        self.add_contact_to_membership(contact.account, contact.network_id,
-                                       profile.Membership.FORWARD)
+        self.add_contact_to_membership(contact, profile.Membership.ALLOW)
+        self.add_contact_to_membership(contact, profile.Membership.FORWARD)
         
         if contact.network_id != profile.NetworkID.MOBILE:
             account, domain = contact.account.split('@', 1)
@@ -704,33 +697,24 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             self._send_command("FQY", payload=payload)
 
     def _address_book_contact_deleted_cb(self, address_book, contact):
-        self.remove_contact_from_membership(contact.account, contact.network_id,
-                                            profile.Membership.FORWARD)
+        self.remove_contact_from_membership(contact, profile.Membership.FORWARD)
 
     def _address_book_contact_accepted_cb(self, address_book, contact):
         mask = ~(profile.Membership.REVERSE | profile.Membership.PENDING)
         memberships = contact.memberships & mask
         if memberships:
-            self.add_contact_to_membership(contact.account, contact.network_id,
-                    memberships)
+            self.add_contact_to_membership(contact, memberships)
 
     def _address_book_contact_rejected_cb(self, address_book, contact):
         mask = ~(profile.Membership.REVERSE | profile.Membership.PENDING)
         memberships = contact.memberships & mask
         if memberships:
-            self.add_contact_to_membership(contact.account, contact.network_id,
-                    memberships)
+            self.add_contact_to_membership(contact, memberships)
 
     def _address_book_contact_blocked_cb(self, address_book, contact):
-        self.remove_contact_from_membership(contact.account, contact.network_id,
-                                            profile.Membership.ALLOW)
-
-        self.add_contact_to_membership(contact.account, contact.network_id,
-                                       profile.Membership.BLOCK)
+        self.remove_contact_from_membership(contact, profile.Membership.ALLOW)
+        self.add_contact_to_membership(contact, profile.Membership.BLOCK)
 
     def _address_book_contact_unblocked_cb(self, address_book, contact):
-        self.remove_contact_from_membership(contact.account, contact.network_id,
-                                            profile.Membership.BLOCK)
-
-        self.add_contact_to_membership(contact.account, contact.network_id,
-                                       profile.Membership.ALLOW)
+        self.remove_contact_from_membership(contact, profile.Membership.BLOCK)
+        self.add_contact_to_membership(contact, profile.Membership.ALLOW)
