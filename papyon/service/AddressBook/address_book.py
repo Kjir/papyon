@@ -246,7 +246,7 @@ class AddressBook(gobject.GObject):
         initial_sync()
 
     # Public API
-   def search_contact(self, account, network_id):
+    def search_contact(self, account, network_id):
         contacts = self.contacts.search_by_network_id(network_id).\
                 search_by_account(account)
         if len(contacts) == 0:
