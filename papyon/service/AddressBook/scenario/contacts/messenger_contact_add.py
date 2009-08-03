@@ -22,13 +22,15 @@ from papyon.service.AddressBook.scenario.base import Scenario
 from contact_find import FindContactScenario
 
 from papyon.service.AddressBook.constants import *
-from papyon.profile import ContactType, Membership
+from papyon.service.description.AB.constants import ContactEmailType
+from papyon.profile import ContactType, Membership, NetworkID
 
 __all__ = ['MessengerContactAddScenario']
 
 class MessengerContactAddScenario(BaseScenario):
     def __init__(self, ab, callback, errback,
                  account='',
+                 network_id=NetworkID.MSN,
                  memberships=Membership.NONE,
                  contact_type=ContactType.REGULAR,
                  contact_info={},
@@ -44,6 +46,7 @@ class MessengerContactAddScenario(BaseScenario):
         self._ab = ab
 
         self.account = account
+        self.network_id = network_id
 
         self.contact_type = contact_type
         self.contact_info = contact_info
@@ -54,12 +57,20 @@ class MessengerContactAddScenario(BaseScenario):
         self.memberships = memberships
 
     def execute(self):
-        invite_info = { 'display_name' : self.invite_display_name ,
+        invite_info = { 'display_name' : self.invite_display_name,
                         'invite_message' : self.invite_message }
 
-        self.contact_info['passport_name'] = self.account
-        self.contact_info['contact_type'] = self.contact_type
-        self.contact_info['is_messenger_user'] = True
+        if self.network_id == NetworkID.MSN:
+            self.contact_info['passport_name'] = self.account
+            self.contact_info['contact_type'] = self.contact_type
+            self.contact_info['is_messenger_user'] = True
+        elif self.network_id == NetworkID.EXTERNAL:
+            self.contact_info.setdefault('email', {})[ContactEmailType.EXTERNAL] = self.account
+            self.contact_info['capability'] = self.network_id
+        else:
+            self.errback(AddressBookError.UNKNOWN)
+            return
+
         self._ab.ContactAdd((self.__contact_add_callback,),
                             (self.__contact_add_errback,),
                             self._scenario,

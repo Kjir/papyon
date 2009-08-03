@@ -30,6 +30,5 @@ from contact_delete import *
 
 from email_contact_add import *
 from messenger_contact_add import *
-from external_contact_add import *
 from mobile_contact_add import *
 

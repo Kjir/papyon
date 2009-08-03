@@ -53,12 +53,7 @@ class AcceptInviteScenario(BaseScenario):
 
     def execute(self):
         if self.add_to_contact_list and not (self.memberships & Membership.FORWARD):
-            if self.network == NetworkID.MSN:
-                self.__add_messenger_contact()
-            elif self.network == NetworkID.EXTERNAL:
-                self.__add_external_contact()
-            else:
-                self.errback(AddressBookError.UNKNOWN)
+            self.__add_messenger_contact()
         else:
             new_membership = self.memberships | Membership.ALLOW
             self.__update_memberships(None, new_membership)
@@ -67,15 +62,9 @@ class AcceptInviteScenario(BaseScenario):
         am = MessengerContactAddScenario(self.__ab,
                  (self.__add_contact_callback,),
                  self._errback,
-                 self.account)
+                 self.account,
+                 self.network)
         am()
-
-    def __add_external_contact(self):
-        em = ExternalContactAddScenario(self.__ab,
-                 (self.__add_contact_callback,),
-                 self._errback,
-                 self.account)
-        em()
 
     def __update_memberships(self, contact, new_membership):
         um = UpdateMembershipsScenario(self.__sharing,

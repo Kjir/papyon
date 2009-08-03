@@ -303,12 +303,10 @@ class AddressBook(gobject.GObject):
         if contact is not None and contact.is_mail_contact():
             self.upgrade_mail_contact(contact, groups)
         elif contact is None or not contact.is_member(Membership.FORWARD):
-            if network_id == NetworkID.MSN:
-                scenario_class = MessengerContactAddScenario
-            elif network_id == NetworkID.EXTERNAL:
-                scenario_class = ExternalContactAddScenario
+            scenario_class = MessengerContactAddScenario
             s = scenario_class(self._ab, (callback,), (self.__common_errback,))
             s.account = account
+            s.network_id = network_id
             s.memberships = old_memberships
             s.auto_manage_allow_list = auto_allow
             s.invite_display_name = invite_display_name
