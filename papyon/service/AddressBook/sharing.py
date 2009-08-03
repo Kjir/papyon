@@ -204,7 +204,11 @@ class Sharing(SOAPService):
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):
         errcode, errstring = get_detailled_error(soap_response.fault)
-        errback[0](errcode, *errback[1:])
+        if (request_id == 'AddMember' and errcode == 'MemberAlreadyExists') or \
+           (request_id == 'DeleteMember' and errcode == 'MemberDoesNotExist'):
+            callback[0](*callback[1:])
+        else:
+            errback[0](errcode, *errback[1:])
 
 if __name__ == '__main__':
     import sys
