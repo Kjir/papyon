@@ -1,8 +1,11 @@
 papyon-0.4.2 (Blue Raincoat)
 ===============================
 
-  * List of changes between 0.4.0 and 0.4.2
+  * List of changes between 0.4.1 and 0.4.2
     o Fixed crash when FindMemberships response is empty (Bug #23039)
+    o Fixed crash when accepting contact invites (Bugs #18514, #19229)
+    o No longer disconnect the client when an non-critical address
+      book error is triggered (Bugs #14371, #15869)
 
   * List of changes between 0.4.0 and 0.4.1
     o Added handling of OUT commands (Bug #13004)
