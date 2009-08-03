@@ -241,7 +241,7 @@ class AddressBook(gobject.GObject):
 
         initial_sync = scenario.InitialSyncScenario(self._ab, self._sharing,
                 (callback,),
-                (self.__common_errback,),
+                (self.__common_errback, None),
                 self._client.profile.account)
         initial_sync()
 
@@ -256,29 +256,31 @@ class AddressBook(gobject.GObject):
     def check_pending_invitations(self):
         cp = scenario.CheckPendingInviteScenario(self._sharing,
                  (self.__update_memberships,),
-                 (self.__common_errback,))
+                 (self.__common_errback, None))
         cp()
 
-    def accept_contact_invitation(self, pending_contact, add_to_contact_list=True):
+    def accept_contact_invitation(self, pending_contact, add_to_contact_list=True,
+            done_cb=None, failed_cb=None):
         def callback(contact_infos, memberships):
             self.__update_contact(pending_contact, memberships, contact_infos)
-            self.emit('contact-accepted', pending_contact)
+            self.__common_callback('contact-accepted', done_cb, pending_contact)
         ai = scenario.AcceptInviteScenario(self._ab, self._sharing,
                  (callback,),
-                 (self.__common_errback,))
+                 (self.__common_errback, failed_cb))
         ai.account = pending_contact.account
         ai.network = pending_contact.network_id
         ai.memberships = pending_contact.memberships
         ai.add_to_contact_list = add_to_contact_list
         ai()
 
-    def decline_contact_invitation(self, pending_contact, block=True):
+    def decline_contact_invitation(self, pending_contact, block=True,
+            done_cb=None, failed_cb=None):
         def callback(memberships):
             pending_contact._set_memberships(memberships)
-            self.emit('contact-rejected', pending_contact)
+            self.__common_callback('contact-rejected', done_cb, pending_contact)
         di = scenario.DeclineInviteScenario(self._sharing,
                  (callback,),
-                 (self.__common_errback,))
+                 (self.__common_errback, failed_cb))
         di.account = pending_contact.account
         di.network = pending_contact.network_id
         di.memberships = pending_contact.memberships
@@ -287,24 +289,24 @@ class AddressBook(gobject.GObject):
 
     def add_messenger_contact(self, account, invite_display_name='',
             invite_message='', groups=[], network_id=NetworkID.MSN,
-            auto_allow=True, done=None, failed=None):
+            auto_allow=True, done_cb=None, failed_cb=None):
         def callback(contact_infos, memberships):
             c = self.__build_or_update_contact(account, network_id,
                     memberships, contact_infos)
-            self.emit('messenger-contact-added', c)
+            self.__common_callback('messenger-contact-added', done_cb, c)
             for group in groups:
                 self.add_contact_to_group(group, c)
-            if done is not None:
-                done()
 
         contact = self.search_contact(account, network_id)
         old_memberships = (contact and contact.memberships) or Membership.NONE
 
         if contact is not None and contact.is_mail_contact():
-            self.upgrade_mail_contact(contact, groups)
+            self.upgrade_mail_contact(contact, groups, done_cb, failed_cb)
         elif contact is None or not contact.is_member(Membership.FORWARD):
             scenario_class = MessengerContactAddScenario
-            s = scenario_class(self._ab, (callback,), (self.__common_errback,))
+            s = scenario_class(self._ab,
+                    (callback,),
+                    (self.__common_errback, failed_cb))
             s.account = account
             s.network_id = network_id
             s.memberships = old_memberships
@@ -313,115 +315,119 @@ class AddressBook(gobject.GObject):
             s.invite_message = invite_message
             s()
 
-    def upgrade_mail_contact(self, contact, groups=[]):
+    def upgrade_mail_contact(self, contact, groups=[],
+            done_cb=None, failed_cb=None):
         def callback():
             contact._add_membership(Membership.ALLOW)
             for group in groups:
                 self.add_contact_to_group(group, contact)
+            self.__common_callback(None, done_cb)
 
         up = scenario.ContactUpdatePropertiesScenario(self._ab,
-                (callback,), (self.__common_errback,))
+                (callback,), (self.__common_errback, failed_cb))
         up.contact_guid = contact.id
         up.contact_properties = { 'is_messenger_user' : True }
         up.enable_allow_list_management = True
         up()
 
-    def delete_contact(self, contact):
+    def delete_contact(self, contact, done_cb=None, failed_cb=None):
         def callback():
             self.contacts.discard(contact)
-            self.emit('contact-deleted', contact)
+            self.__common_callback('contact-deleted', done_cb, contact)
         dc = scenario.ContactDeleteScenario(self._ab,
                 (callback,),
-                (self.__common_errback,))
+                (self.__common_errback, failed_cb))
         dc.contact_guid = contact.id
         dc()
 
-    def update_contact_infos(self, contact, infos):
+    def update_contact_infos(self, contact, infos, done_cb=None, failed_cb=None):
         def callback():
             contact._server_infos_changed(infos)
+            self.__common_callback(None, done_cb)
         up = scenario.ContactUpdatePropertiesScenario(self._ab,
                 (callback,),
-                (self.__common_errback,))
+                (self.__common_errback, failed_cb))
         up.contact_guid = contact.id
         up.contact_properties = infos
         up()
 
-    def block_contact(self, contact):
+    def block_contact(self, contact, done_cb=None, failed_cb=None):
         def callback(memberships):
             contact._set_memberships(memberships)
-            self.emit('contact-blocked', contact)
+            self.__common_callback('contact-blocked', done_cb, contact)
         bc = scenario.BlockContactScenario(self._sharing,
                 (callback,),
-                (self.__common_errback,))
+                (self.__common_errback, failed_cb))
         bc.account = contact.account
         bc.network = contact.network_id
         bc.membership = contact.memberships
         bc()
 
-    def unblock_contact(self, contact):
+    def unblock_contact(self, contact, done_cb=None, failed_cb=None):
         def callback(memberships):
             contact._set_memberships(memberships)
-            self.emit('contact-unblocked', contact)
+            self.__common_callback('contact-unblocked', done_cb, contact)
         uc = scenario.UnblockContactScenario(self._sharing,
                 (callback,),
-                (self.__common_errback,))
+                (self.__common_errback, failed_cb))
         uc.account = contact.account
         uc.network = contact.network_id
         uc.membership = contact.memberships
         uc()
 
-    def add_group(self, group_name):
+    def add_group(self, group_name, done_cb=None, failed_cb=None):
         def callback(group_id):
             group = profile.Group(group_id, group_name)
             self.groups.add(group)
-            self.emit('group-added', group)
+            self.__common_callback('group-added', done_cb, group)
         ag = scenario.GroupAddScenario(self._ab,
                 (callback,),
-                (self.__common_errback,))
+                (self.__common_errback, failed_cb))
         ag.group_name = group_name
         ag()
 
-    def delete_group(self, group):
+    def delete_group(self, group, done_cb=None, failed_cb=None):
         def callback():
             for contact in self.contacts:
                 contact._delete_group_ownership(group)
             self.groups.discard(group)
-            self.emit('group-deleted', group)
+            self.__common_callback('group-deleted', done_cb, group)
         dg = scenario.GroupDeleteScenario(self._ab,
                 (callback,),
-                (self.__common_errback,))
+                (self.__common_errback, failed_cb))
         dg.group_guid = group.id
         dg()
 
-    def rename_group(self, group, new_name):
+    def rename_group(self, group, new_name, done_cb=None, failed_cb=None):
         def callback():
             group._name = new_name
-            self.emit('group-renamed', group)
+            self.__common_callback('group-renamed', done_cb, group)
         rg = scenario.GroupRenameScenario(self._ab,
                 (callback,),
-                (self.__common_errback,))
+                (self.__common_errback, failed_cb))
         rg.group_guid = group.id
         rg.group_name = new_name
         rg()
 
-    def add_contact_to_group(self, group, contact):
+    def add_contact_to_group(self, group, contact, done_cb=None, failed_cb=None):
         def callback():
             contact._add_group_ownership(group)
-            self.emit('group-contact-added', group, contact)
+            self.__common_callback('group-contact-added', done_cb, group, contact)
         ac = scenario.GroupContactAddScenario(self._ab,
                 (callback,),
-                (self.__common_errback,))
+                (self.__common_errback, failed_cb))
         ac.group_guid = group.id
         ac.contact_guid = contact.id
         ac()
 
-    def delete_contact_from_group(self, group, contact):
+    def delete_contact_from_group(self, group, contact,
+            done_cb=None, failed_cb=None):
         def callback():
             contact._delete_group_ownership(group)
-            self.emit('group-contact-deleted', group, contact)
+            self.__common_callback('group-contact-deleted', done_cb, group, contact)
         dc = scenario.GroupContactDeleteScenario(self._ab,
                 (callback,),
-                (self.__common_errback,))
+                (self.__common_errback, failed_cb))
         dc.group_guid = group.id
         dc.contact_guid = contact.id
         dc()
@@ -552,8 +558,19 @@ class AddressBook(gobject.GObject):
                 self.emit('contact-added', contact)
 
     # Callbacks
+    def __common_callback(self, signal, callback, *args):
+        self.emit(signal, *args)
+        if callback is not None:
+            callback(*args)
+
     def __common_errback(self, error_code, *args):
-        self.emit('error', error_code)
+        callback = args[-1]
+        args = args[:-1]
+        if callback is not None:
+            callback(error_code, *args)
+        if error_code == AddressBookError.UNKNOWN:
+            # known errors are not fatal, just ignore them
+            self.emit('error', error_code)
 
 gobject.type_register(AddressBook)
 
