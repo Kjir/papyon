@@ -429,20 +429,21 @@ class AddressBook(gobject.GObject):
 
     def __build_contact(self, memberships=Membership.NONE, contact=None):
         external_email = None
+        is_messenger_enabled = False
         for email in contact.Emails:
             if email.Type == ContactEmailType.EXTERNAL:
                 external_email = email
-                break
+            if email.IsMessengerEnabled:
+                is_messenger_enabled = True
 
         if (not contact.IsMessengerUser) and (external_email is not None):
             display_name = contact.DisplayName
             if display_name == "":
                 display_name = external_email.Email
 
-            if contact.IsMessengerUser:
-                memberships = Membership.FORWARD
-            else:
+            if not is_messenger_enabled:
                 memberships = Membership.NONE
+
             c = profile.Contact(contact.Id,
                     NetworkID.EXTERNAL,
                     external_email.Email.encode("utf-8"),
@@ -469,9 +470,7 @@ class AddressBook(gobject.GObject):
             if display_name == "":
                 display_name = contact.PassportName
 
-            if contact.IsMessengerUser:
-                memberships = Membership.FORWARD
-            else:
+            if not contact.IsMessengerUser:
                 memberships = Membership.NONE
             c = profile.Contact(contact.Id,
                     NetworkID.MSN,
