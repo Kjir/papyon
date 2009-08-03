@@ -577,7 +577,7 @@ class Contact(gobject.GObject):
             memberships=Membership.NONE, contact_type=ContactType.REGULAR):
         """Initializer"""
         gobject.GObject.__init__(self)
-        self._id = id
+        self._id = id or "00000000-0000-0000-0000-000000000000"
         self._cid = cid or "00000000-0000-0000-0000-000000000000"
         self._network_id = network_id
         self._account = account
