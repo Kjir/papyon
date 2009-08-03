@@ -81,7 +81,7 @@ class MessengerContactAddScenario(BaseScenario):
     def __contact_add_callback(self, contact_guid):
         self.memberships |= Membership.FORWARD
 
-        # AddContact automatically added the contact to the allow list if
+        # ContactAdd automatically added the contact to the allow list if
         # it wasn't already allowed or blocked
         allowed_or_blocked = self.memberships & (Membership.BLOCK | Membership.ALLOW)
         if self.auto_manage_allow_list and not allowed_or_blocked:

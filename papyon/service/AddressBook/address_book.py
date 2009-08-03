@@ -157,6 +157,12 @@ class AddressBook(gobject.GObject):
             "contact-unblocked"       : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
+            "contact-allowed"         : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            "contact-disallowed"      : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
 
             "group-added"             : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
@@ -229,7 +235,7 @@ class AddressBook(gobject.GObject):
                 g = profile.Group(group.Id, group.Name.encode("utf-8"))
                 self.groups.add(g)
             for contact in contacts:
-                c = self.__build_contact(Membership.FORWARD, contact)
+                c = self.__build_contact(contact, Membership.FORWARD)
                 if c is None:
                     continue
                 if contact.Type == ContactType.ME:
@@ -375,6 +381,38 @@ class AddressBook(gobject.GObject):
         uc.membership = contact.memberships
         uc()
 
+    def allow_contact(self, account, network_id=NetworkID.MSN,
+            done_cb=None, failed_cb=None):
+        def callback(memberships):
+            c = self.__build_or_update_contact(account, network_id, memberships)
+            self.__common_callback('contact-allowed', done_cb, c)
+
+        contact = self.search_contact(account, network_id)
+        old_memberships = (contact and contact.memberships) or Membership.NONE
+
+        if old_memberships & Membership.BLOCK:
+            self.unblock_contact(contact, done_cb, failed_cb)
+        else:
+            ac = scenario.AllowContactScenario(self._sharing,
+                     (callback,),
+                     (self.__common_errback, failed_cb))
+            ac.account = account
+            ac.network = network_id
+            ac.membership = old_memberships
+            ac()
+
+    def disallow_contact(self, contact, done_cb=None, failed_cb=None):
+        def callback(memberships):
+            self.__update_contact(contact, memberships)
+            self.__common_callback('contact-disallowed', done_cb, contact)
+        dc = scenario.DisallowContactScenario(self._sharing,
+                (callback,),
+                (self.__common_errback, failed_cb))
+        dc.account = contact.account
+        dc.network = contact.network_id
+        dc.membership = contact.memberships
+        dc()
+
     def add_group(self, group_name, done_cb=None, failed_cb=None):
         def callback(group_id):
             group = profile.Group(group_id, group_name)
@@ -433,7 +471,7 @@ class AddressBook(gobject.GObject):
         dc()
     # End of public API
 
-    def __build_contact(self, memberships=Membership.NONE, contact=None):
+    def __build_contact(self, contact=None, memberships=Membership.NONE):
         external_email = None
         is_messenger_enabled = False
         for email in contact.Emails:
@@ -514,7 +552,12 @@ class AddressBook(gobject.GObject):
         if contact is not None:
             self.__update_contact(contact, memberships, infos)
         else:
-            contact = self.__build_contact(memberships, infos)
+            if infos is None:
+                display_name = ""
+                contact = profile.Contact(None, network_id, account,
+                        display_name, memberships)
+            else:
+                contact = self.__build_contact(infos, memberships)
             self.contacts.add(contact)
             self.emit('contact-added', contact)
         return contact

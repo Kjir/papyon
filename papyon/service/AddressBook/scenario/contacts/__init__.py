@@ -24,6 +24,8 @@ from check_pending_invite import *
 from update_memberships import *
 from block_contact import *
 from unblock_contact import *
+from allow_contact import *
+from disallow_contact import *
 
 from contact_update_properties import *
 from contact_delete import *

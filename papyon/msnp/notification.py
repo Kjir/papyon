@@ -327,6 +327,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                         self._address_book_contact_blocked_cb)
                 self._client.address_book.connect("contact-unblocked",
                         self._address_book_contact_unblocked_cb)
+                self._client.address_book.connect("contact-allowed",
+                        self._address_book_contact_allowed_cb)
+                self._client.address_book.connect("contact-disallowed",
+                        self._address_book_contact_disallowed_cb)
 
             elif command.arguments[0] == "TWN":
                 raise NotImplementedError, "Missing Implementation, please fix"
@@ -719,3 +723,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _address_book_contact_unblocked_cb(self, address_book, contact):
         self.remove_contact_from_membership(contact, profile.Membership.BLOCK)
         self.add_contact_to_membership(contact, profile.Membership.ALLOW)
+
+    def _address_book_contact_allowed_cb(self, address_book, contact):
+        self.add_contact_to_membership(contact, profile.Membership.ALLOW)
+
+    def _address_book_contact_disallowed_cb(self, address_book, contact):
+        self.remove_contact_from_membership(contact, profile.Membership.ALLOW)
