@@ -338,8 +338,12 @@ class AddressBook(gobject.GObject):
 
     def delete_contact(self, contact, done_cb=None, failed_cb=None):
         def callback():
-            self.contacts.discard(contact)
+            contact._remove_membership(Membership.FORWARD)
+            contact._reset()
             self.__common_callback('contact-deleted', done_cb, contact)
+            if contact.memberships == Membership.NONE:
+                self.contacts.discard(contact)
+
         dc = scenario.ContactDeleteScenario(self._ab,
                 (callback,),
                 (self.__common_errback, failed_cb))
@@ -403,8 +407,11 @@ class AddressBook(gobject.GObject):
 
     def disallow_contact(self, contact, done_cb=None, failed_cb=None):
         def callback(memberships):
-            self.__update_contact(contact, memberships)
+            contact._remove_membership(Membership.ALLOW)
             self.__common_callback('contact-disallowed', done_cb, contact)
+            if contact.memberships == Membership.NONE:
+                self.contacts.discard(contact)
+
         dc = scenario.DisallowContactScenario(self._sharing,
                 (callback,),
                 (self.__common_errback, failed_cb))

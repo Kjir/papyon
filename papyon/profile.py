@@ -764,6 +764,20 @@ class Contact(gobject.GObject):
         self.emit("infos-changed", updated_infos)
         self.notify("infos")
 
+    def _reset(self):
+        self._id = "00000000-0000-0000-0000-000000000000"
+        self._cid = "00000000-0000-0000-0000-000000000000"
+        self._groups = set()
+
+        self._server_property_changed("presence", Presence.OFFLINE)
+        self._server_property_changed("display-name", self._account)
+        self._server_property_changed("personal-message", "")
+        self._server_property_changed("current-media", None)
+        self._server_property_changed("msn-object", None)
+        self._server_property_changed("client-capabilities", 0)
+        self._server_infos_changed({})
+
+
     ### group management
     def _add_group_ownership(self, group):
         self._groups.add(group)
