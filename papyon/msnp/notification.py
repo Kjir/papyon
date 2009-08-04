@@ -677,6 +677,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             for contact in contacts:
                 user = contact.account.split("@", 1)[0]
                 lists = contact.memberships & mask
+                if lists == profile.Membership.NONE:
+                    continue
                 network_id = contact.network_id
                 node = '<c n="%s" l="%d" t="%d"/>' % (user, lists, network_id)
                 size = len(payloads[-1]) + len(node) + len('</d></ml>')
