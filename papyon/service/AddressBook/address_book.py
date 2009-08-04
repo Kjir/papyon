@@ -612,13 +612,15 @@ class AddressBook(gobject.GObject):
         if signal is not None:
             self.emit(signal, *args)
         if callback is not None:
-            callback(*args)
+            cb_args = args + callback[1:]
+            callback[0](*cb_args)
 
     def __common_errback(self, error_code, *args):
         callback = args[-1]
         args = args[:-1]
         if callback is not None:
-            callback(error_code, *args)
+            cb_args = args + callback[1:]
+            callback[0](error_code, *cb_args)
         if error_code == AddressBookError.UNKNOWN:
             # known errors are not fatal, just ignore them
             self.emit('error', error_code)
