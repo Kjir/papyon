@@ -609,7 +609,8 @@ class AddressBook(gobject.GObject):
 
     # Callbacks
     def __common_callback(self, signal, callback, *args):
-        self.emit(signal, *args)
+        if signal is not None:
+            self.emit(signal, *args)
         if callback is not None:
             callback(*args)
 
