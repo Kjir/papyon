@@ -6,6 +6,7 @@ papyon-0.4.2 (Blue Raincoat)
     o Fixed crash when accepting contact invites (Bugs #18514, #19229)
     o No longer disconnect the client when an non-critical address
       book error is triggered (Bugs #14371, #15869)
+    o Fixed sending of messages to contacts using Microsoft Messenger for Mac
 
   * List of changes between 0.4.0 and 0.4.1
     o Added handling of OUT commands (Bug #13004)
