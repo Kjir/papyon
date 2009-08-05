@@ -63,7 +63,8 @@ class MSNObjectSession(P2PSession):
     def invite(self, context):
         self._session_manager._register_session(self)
         body = SLPSessionRequestBody(self._euf_guid, self._application_id,
-                context, self._id)
+                context, self._id, s_channel_state=None,
+                capabilities_flags=None)
 
         message = SLPRequestMessage(SLPRequestMethod.INVITE,
                 "MSNMSGR:" + self._peer.account,
