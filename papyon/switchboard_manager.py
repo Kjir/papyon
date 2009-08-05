@@ -89,9 +89,10 @@ class SwitchboardClient(object):
     def _send_message(self, content_type, body, headers={},
             ack=msnp.MessageAcknowledgement.HALF):
         message = msnp.Message(self._client.profile)
+        message.add_header('MIME-Version', '1.0')
+        message.content_type = content_type
         for key, value in headers.iteritems():
             message.add_header(key, value)
-        message.content_type = content_type
         message.body = body
 
         self._pending_messages.append((message, ack))
