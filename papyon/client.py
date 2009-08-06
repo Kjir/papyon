@@ -93,7 +93,7 @@ from papyon.transport import *
 from papyon.switchboard_manager import SwitchboardManager
 from papyon.msnp2p import P2PSessionManager
 from papyon.p2p import MSNObjectStore, WebcamHandler
-from papyon.sip import SIPCallManager
+from papyon.sip import SIPConnectionManager
 from papyon.conversation import SwitchboardConversation, \
     ExternalNetworkConversation
 from papyon.event import ClientState, ClientErrorType, \
@@ -145,7 +145,7 @@ class Client(EventsDispatcher):
         self._webcam_handler = WebcamHandler(self)
         self._p2p_session_manager.register_handler(self._webcam_handler)
 
-        self._call_manager = SIPCallManager(self, self._protocol)
+        self._call_manager = SIPConnectionManager(self, self._protocol)
 
         self._msn_object_store = MSNObjectStore(self)
         self._p2p_session_manager.register_handler(self._msn_object_store)
@@ -190,8 +190,8 @@ class Client(EventsDispatcher):
 
     @property
     def call_manager(self):
-        """The SIP call manager
-            @type: L{SIPCallManager<papyon.sip.SIPCallManager>}"""
+        """The SIP connection manager
+            @type: L{SIPConnectionManager<papyon.sip.SIPConnectionManager>}"""
         return self._call_manager
 
     @property

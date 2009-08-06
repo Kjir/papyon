@@ -19,12 +19,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.msnp.constants import *
-from papyon.sip.sip import *
+from papyon.sip.connection import *
 from papyon.sip.transport import *
 
 import gobject
 
-class SIPCallManager(gobject.GObject):
+class SIPConnectionManager(gobject.GObject):
 
     __gsignals__ = {
         'invite-received': (gobject.SIGNAL_RUN_FIRST,

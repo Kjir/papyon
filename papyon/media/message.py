@@ -20,22 +20,32 @@
 
 from papyon.util.decorator import rw_property
 
-__all__ = ['MediaSessionMessage', 'MediaDescription']
+__all__ = ['MediaSessionMessage', 'MediaStreamDescription']
 
 class MediaSessionMessage(object):
+    """Class representing messages sent between call participants. It contains
+       the different media descriptions. Different implementations need to
+       override create_stream_description, parse and __str__ functions."""
 
     def __init__(self):
-        self._medias = []
+        self._descriptions = []
 
     @property
-    def medias(self):
-        return self._medias
+    def descriptions(self):
+        """Media stream descriptions"""
+        return self._descriptions
 
-    def create_media_description(self):
-        return MediaDescription()
+    def create_stream_description(self):
+        raise NotImplementedError
 
+    def parse(self, body):
+        raise NotImplementedError
 
-class MediaDescription(object):
+    def __str__(self):
+        raise NotImplementedError
+
+class MediaStreamDescription(object):
+    """Class representing a media stream description."""
 
     def __init__(self, name, direction):
         self._name = name

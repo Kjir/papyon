@@ -23,8 +23,27 @@ from papyon.media.session import MediaSession
 __all__ = ['MediaCall']
 
 class MediaCall(object):
+    """This class represents the signaling part in a call between two or more
+       peers. Subclasses need to implement the underneath protocol to handle
+       invitations and transaction during calls (start/pause/end).
+
+       The media related stuff (NAT traversal, codecs, etc.) would be handled
+       by the MediaSession. The MediaCall might however need to implement the
+       on_media_prepared and on_media_ready functions. For example, once the
+       media session is prepared, we might send a message with the media
+       details."""
 
     def __init__(self, session_type, candidate_encoder_class, session_msg_call):
+        """Initialize the media call.
+
+           @param session_type: Type of session (SIP, webcam...)
+           @type session_type: L{papyon.media.constants.MediaSessionType}
+           @param candidate_encoder_class: Class used to encode candidates
+           @type candidate_encoder_class: subclass of
+                L{papyon.media.candidate.MediaCandidateEncoder}
+           @type session_msg_call: Class used to build/parse session messages
+           @param session_msg_call: L{papyon.media.message.MediaSessionMessage}"""
+
         self._media_session = MediaSession(session_type,
                 candidate_encoder_class, session_msg_call)
 
@@ -39,21 +58,28 @@ class MediaCall(object):
         return self._media_session
 
     def invite(self):
+        """Invite the peer for a call.
+           @note The other participants need to have been previously set."""
         pass
 
     def accept(self):
+        """Accept the call invitation."""
         pass
 
     def reject(self):
+        """Reject the call invitation."""
         pass
 
     def ring(self):
+        """Signal to the peer that we are waiting for the user approval."""
         pass
 
     def end(self):
+        """End the call."""
         pass
 
     def dispose(self):
+        """Close the media session and dispose the call."""
         for handler_id in self._signals:
             self._media_session.disconnect(handler_id)
         self._media_session.close()

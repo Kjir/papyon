@@ -27,6 +27,9 @@ import logging
 logger = logging.getLogger('ICE')
 
 class ICECandidateEncoder(MediaCandidateEncoder):
+    """Class to encode and decode ICE media candidates from a SDP message.
+       See section "4.3 Encoding the SDP" of the ICE draft for more
+       details. Both versions 6 and 19 of the draft are supported."""
 
     def __init__(self, session_type):
         MediaCandidateEncoder.__init__(self, session_type)
@@ -35,15 +38,15 @@ class ICECandidateEncoder(MediaCandidateEncoder):
         else:
             self.draft = 6
 
-    def encode_candidates(self, stream, media):
+    def encode_candidates(self, stream, desc):
         candidates = stream.get_active_local_candidates()
         if candidates:
             if self.draft is 19:
-                media.add_attribute("ice-ufrag", candidates[0].username)
-                media.add_attribute("ice-pwd", candidates[0].password)
+                desc.add_attribute("ice-ufrag", candidates[0].username)
+                desc.add_attribute("ice-pwd", candidates[0].password)
             for candidate in candidates:
                 attribute = ICECandidateBuilder.build_candidate(self.draft, candidate)
-                media.add_attribute("candidate", attribute)
+                desc.add_attribute("candidate", attribute)
 
         candidates = stream.get_active_remote_candidates()
         if candidates:
@@ -52,14 +55,14 @@ class ICECandidateEncoder(MediaCandidateEncoder):
             list = [ICECandidateBuilder.build_remote_id(self.draft, candidate) \
                     for candidate in candidates]
             name = (len(list) > 1 and "remote-candidates") or "remote-candidate"
-            media.add_attribute(name, " ".join(list))
+            desc.add_attribute(name, " ".join(list))
 
-    def decode_candidates(self, media):
+    def decode_candidates(self, desc):
         candidates = []
 
-        ufrag = media.get_attribute("ice-ufrag")
-        pwd = media.get_attribute("ice-pwd")
-        attributes = media.get_attributes("candidate")
+        ufrag = desc.get_attribute("ice-ufrag")
+        pwd = desc.get_attribute("ice-pwd")
+        attributes = desc.get_attributes("candidate")
 
         if attributes is None:
             return candidates
@@ -80,13 +83,13 @@ class ICECandidateEncoder(MediaCandidateEncoder):
 
         return candidates
 
-    def get_default_candidates(self, media):
+    def get_default_candidates(self, desc):
         candidates = []
         candidates.append(MediaCandidate(component_id=COMPONENTS.RTP,
-            ip=media.ip, port=media.port, transport="UDP", priority=1,
+            ip=desc.ip, port=desc.port, transport="UDP", priority=1,
             type="host"))
         candidates.append(MediaCandidate(component_id=COMPONENTS.RTCP,
-            ip=media.ip, port=media.rtcp, transport="UDP", priority=1,
+            ip=desc.ip, port=desc.rtcp, transport="UDP", priority=1,
             type="host"))
         return candidates
 
@@ -94,6 +97,7 @@ class ICECandidateEncoder(MediaCandidateEncoder):
 REL_EXT = [("typ", "type"), ("raddr", "base_ip"), ("rport", "base_port")]
 
 class ICECandidateBuilder(object):
+    """Class to build the ICE string representation of a MediaCandidate."""
 
     @staticmethod
     def build_candidate(draft, cand):
@@ -118,6 +122,7 @@ class ICECandidateBuilder(object):
 
 
 class ICECandidateParser(object):
+    """Class to parse a MediaCandidate from its ICE representation."""
 
     @staticmethod
     def parse(draft, cand, line):

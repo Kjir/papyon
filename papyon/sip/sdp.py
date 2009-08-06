@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from papyon.media import MediaCodec, MediaDescription, MediaSessionMessage
+from papyon.media import MediaCodec, MediaStreamDescription, MediaSessionMessage
 from papyon.media.constants import *
 from papyon.util.decorator import rw_property
 from papyon.util.odict import odict
@@ -26,6 +26,7 @@ from papyon.util.odict import odict
 import logging
 
 logger = logging.getLogger('SDP')
+
 
 class SDPMessage(MediaSessionMessage):
 
@@ -35,14 +36,14 @@ class SDPMessage(MediaSessionMessage):
 
     @property
     def ip(self):
-        if self._ip == "" and len(self._medias) > 0:
-            return self._medias[0].ip
+        if self._ip == "" and len(self._descriptions) > 0:
+            return self._descriptions[0].ip
         return self._ip
 
-    def create_media_description(self, name):
-        media = SDPMediaDescription(name)
-        self._medias.append(media)
-        return media
+    def create_stream_description(self, name):
+        desc = SDPDescription(name)
+        self._descriptions.append(desc)
+        return desc
 
     def __str__(self):
         out = []
@@ -52,18 +53,18 @@ class SDPMessage(MediaSessionMessage):
         out.append("b=CT:99980")
         out.append("t=0 0")
 
-        for media in self._medias:
-            types = " ".join(media.payload_types)
-            out.append("m=%s %i RTP/AVP %s" % (media.name, media.port, types))
-            out.append("c=IN IP4 %s" % media.ip)
-            for (k, v) in media.attributes.items():
+        for desc in self._descriptions:
+            types = " ".join(desc.payload_types)
+            out.append("m=%s %i RTP/AVP %s" % (desc.name, desc.port, types))
+            out.append("c=IN IP4 %s" % desc.ip)
+            for (k, v) in desc.attributes.items():
                 for value in v:
                     out.append("a=%s:%s" % (k, value))
 
         return "\r\n".join(out) + "\r\n\r\n"
 
     def parse(self, message):
-        media = None
+        desc = None
 
         for line in message.splitlines():
             line = line.strip()
@@ -80,35 +81,35 @@ class SDPMessage(MediaSessionMessage):
                 if key == 'o':
                     self._ip = val.split()[5]
                 elif key == 'm':
-                    media = self.create_media_description(val.split()[0])
-                    media.port = int(val.split()[1])
-                    media.ip = self.ip # default IP address
-                    media.rtcp = media.port + 1 # default RTCP port
-                    media.payload_types = val.split()[3:]
+                    desc = self.create_stream_description(val.split()[0])
+                    desc.port = int(val.split()[1])
+                    desc.ip = self.ip # default IP address
+                    desc.rtcp = desc.port + 1 # default RTCP port
+                    desc.payload_types = val.split()[3:]
                 elif key == 'c':
-                    if media is None:
+                    if desc is None:
                         self._ip = val.split()[2]
                     else:
-                        media.ip = val.split()[2]
+                        desc.ip = val.split()[2]
                 elif key == 'a':
-                    if media is None:
+                    if desc is None:
                         continue
                     if ':' in val:
                         subkey, subval = val.split(':', 1)
-                        media.parse_attribute(subkey, subval)
+                        desc.parse_attribute(subkey, subval)
                     else:
-                        media.add_attribute(val)
+                        desc.add_attribute(val)
             except:
-                self._medias = []
+                self._descriptions = []
                 raise ValueError('Invalid value "%s" for field "%s"' % (val, key))
 
-        return self._medias
+        return self._descriptions
 
 
-class SDPMediaDescription(MediaDescription):
+class SDPDescription(MediaStreamDescription):
 
     def __init__(self, name):
-        MediaDescription.__init__(self, name, MediaStreamDirection.BOTH)
+        MediaStreamDescription.__init__(self, name, MediaStreamDirection.BOTH)
         self._attributes = odict({"encryption": ["rejected"]})
 
         self.ip = ""

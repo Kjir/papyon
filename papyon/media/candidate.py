@@ -21,6 +21,7 @@
 __all__ = ['MediaCandidate', 'MediaCandidateEncoder']
 
 class MediaCandidate(object):
+    """Class representing a transport candidate."""
 
     def __init__(self, foundation=None, component_id=None, transport=None,
                  priority=None, username=None, password=None, type=None,
@@ -56,6 +57,8 @@ class MediaCandidate(object):
 
 
 class MediaCandidateEncoder(object):
+    """Class to encode and decode stream candidates into/from a media
+       description."""
 
     def __init__(self, session_type):
         self._session_type = session_type

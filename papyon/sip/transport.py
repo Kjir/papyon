@@ -21,7 +21,7 @@
 from papyon.gnet.constants import *
 from papyon.gnet.io import *
 from papyon.msnp.constants import *
-from papyon.sip.sip import SIPMessageParser
+from papyon.sip.message import SIPMessageParser
 
 import base64
 import gobject
@@ -31,6 +31,7 @@ import xml.dom.minidom
 logger = logging.getLogger('SIP:transport')
 
 class SIPBaseTransport(gobject.GObject):
+    """Base class for SIP transports."""
 
     __gsignals__ = {
         "message-received": (gobject.SIGNAL_RUN_FIRST,
@@ -55,6 +56,8 @@ class SIPBaseTransport(gobject.GObject):
 
 
 class SIPTransport(SIPBaseTransport):
+    """Default transport on older MSNP versions. The messages are sent over a
+       typical SSL TCP connection."""
 
     def __init__(self, host, port):
         SIPBaseTransport.__init__(self)
@@ -125,6 +128,9 @@ class SIPTransport(SIPBaseTransport):
 
 
 class SIPTunneledTransport(SIPBaseTransport):
+    """Default SIP transport with newer MSNP versions (>= 18). The messages
+       are base64 encoded and sent to the notication server using a UBX
+       command."""
 
     def __init__(self, protocol):
         SIPBaseTransport.__init__(self)

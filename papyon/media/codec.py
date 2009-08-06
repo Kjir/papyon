@@ -21,6 +21,7 @@
 __all__ = ['MediaCodec']
 
 class MediaCodec(object):
+    """Class representing a media codec."""
 
     def __init__(self, payload=None, encoding=None, clockrate=None, params=None):
         self.payload = payload

@@ -35,7 +35,7 @@ import base64
 import random
 
 from papyon.media import MediaCall, MediaCandidate, MediaCandidateEncoder, \
-                         MediaSessionMessage, MediaDescription
+                         MediaSessionMessage, MediaStreamDescription
 from papyon.media.constants import MediaStreamDirection, MediaSessionType
 
 __all__ = ['WebcamSession']
@@ -174,22 +174,22 @@ class WebcamCandidateEncoder(MediaCandidateEncoder):
     def __init__(self, session_type):
         MediaCandidateEncoder.__init__(self, session_type)
 
-    def encode_candidates(self, stream, media):
+    def encode_candidates(self, stream, desc):
         candidates = stream.get_active_local_candidates()
         for candidate in candidates:
-            media.ips.append(candidate.ip)
-            media.ports.append(candidate.port)
-        media.rid = int(candidates[0].foundation)
-        media.sid = int(candidates[0].username)
+            desc.ips.append(candidate.ip)
+            desc.ports.append(candidate.port)
+        desc.rid = int(candidates[0].foundation)
+        desc.sid = int(candidates[0].username)
 
-    def decode_candidates(self, media):
+    def decode_candidates(self, desc):
         candidates = []
-        for ip in media.ips:
-            for port in media.ports:
+        for ip in desc.ips:
+            for port in desc.ports:
                 candidate = MediaCandidate()
-                candidate.foundation = str(media.rid)
+                candidate.foundation = str(desc.rid)
                 candidate.component_id = 1
-                candidate.username = str(media.sid)
+                candidate.username = str(desc.sid)
                 candidate.password = ""
                 candidate.ip = ip
                 candidate.port = port
@@ -213,50 +213,50 @@ class WebcamSessionMessage(MediaSessionMessage):
     def producer(self):
         return self._producer
 
-    def create_media_description(self, name="video"):
-        media = WebcamMediaDescription(self._id, self._producer)
-        self._medias.append(media)
-        return media
+    def create_stream_description(self, name="video"):
+        desc = WebcamStreamDescription(self._id, self._producer)
+        self._descriptions.append(desc)
+        return desc
 
     def parse(self, body):
         tree = ElementTree.fromstring(body)
         self._id = int(tree.find("session").text)
-        media = self.create_media_description()
+        desc = self.create_stream_description()
         for node in tree.findall("tcp/*"):
             if node.tag == "tcpport":
-                media.ports.append(int(node.text))
+                desc.ports.append(int(node.text))
             elif node.tag.startswith("tcpipaddress"):
-                media.ips.append(node.text)
-        media.rid = tree.find("rid").text
-        return self._medias
+                desc.ips.append(node.text)
+        desc.rid = tree.find("rid").text
+        return self._descriptions
 
     def __str__(self):
         tag = self.producer and "producer" or "viewer"
-        media = self._medias[0]
+        desc = self._descriptions[0]
         body = "<%s>" \
             "<version>2.0</version>" \
             "<rid>%s</rid>" \
             "<session>%u</session>" \
             "<ctypes>0</ctypes>" \
-            "<cpu>2010</cpu>" % (tag, media.rid, media.sid)
+            "<cpu>2010</cpu>" % (tag, desc.rid, desc.sid)
         body += "<tcp>" \
             "<tcpport>%(port)u</tcpport>" \
             "<tcplocalport>%(port)u</tcplocalport>" \
             "<tcpexternalport>0</tcpexternalport>" % \
-            {"port":  media.ports[0]}
-        for i, addr in enumerate(media.ips):
+            {"port":  desc.ports[0]}
+        for i, addr in enumerate(desc.ips):
             body += "<tcpipaddress%u>%s</tcpipaddress%u>" % (i + 1, addr, i + 1)
         body += "</tcp>"
         body += "<codec></codec><channelmode>2</channelmode>"
         body += "</%s>\r\n\r\n" % tag
         return body
 
-class WebcamMediaDescription(MediaDescription):
+class WebcamStreamDescription(MediaStreamDescription):
 
     def __init__(self, sid, producer):
         direction = producer and MediaStreamDirection.SENDING or \
                 MediaStreamDirection.RECEIVING
-        MediaDescription.__init__(self, "video", direction)
+        MediaStreamDescription.__init__(self, "video", direction)
         self._ips = []
         self._ports = []
         self._rid = None
