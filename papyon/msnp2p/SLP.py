@@ -374,11 +374,11 @@ class SLPTransferResponseBody(SLPMessageBody):
 SLPMessageBody.register_content(SLPContentType.TRANSFER_RESPONSE, SLPTransferResponseBody)
 
 class SLPSessionCloseBody(SLPMessageBody):
-    def __init__(self, context=None, session_id=None, s_channel_state=0,
-            capabilities_flags=1):
+    def __init__(self, context=None, session_id=None, s_channel_state=None,
+            capabilities_flags=None):
         SLPMessageBody.__init__(self, SLPContentType.SESSION_CLOSE,
                 session_id, s_channel_state, capabilities_flags)
-        
+
         if context is not None:
             self.add_header("Context",  base64.b64encode(context));
 
