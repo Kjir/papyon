@@ -243,7 +243,11 @@ class DirectConnection(BaseTransport):
     __init__.__doc__ = BaseTransport.__init__.__doc__
 
     ### public commands
-    
+
+    @property
+    def sockname(self):
+        return self._transport.sockname
+
     def establish_connection(self):
         logger.debug('<-> Connecting to %s:%d' % self.server )
         self._transport.open()

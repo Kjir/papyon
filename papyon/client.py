@@ -209,6 +209,10 @@ class Client(EventsDispatcher):
             @rtype: L{papyon.event.ClientState}"""
         return self.__state
 
+    @property
+    def local_ip(self):
+        return self._transport.sockname[0]
+
     def login(self, account, password):
         """Login to the server.
 

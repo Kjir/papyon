@@ -148,6 +148,10 @@ class AbstractClient(gobject.GObject):
         self.set_property("port", port)
     port = property(__get_port, __set_port)
 
+    def __get_sockname(self):
+        return self._transport.getsockname()
+    sockname = property(__get_sockname, None)
+
     @property
     def domain(self):
         return self._domain
