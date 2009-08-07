@@ -39,26 +39,18 @@ __all__ = ['WebcamSession']
 
 class WebcamSession(P2PSession, EventsDispatcher):
 
-    def __init__(self, producer, session_manager, peer, \
-                     euf_guid,  message = None):
-        P2PSession.__init__(self, session_manager, peer, \
-                                euf_guid, ApplicationID.WEBCAM)
+    def __init__(self, producer, session_manager, peer,
+            euf_guid,  message = None):
+        P2PSession.__init__(self, session_manager, peer, euf_guid,
+                ApplicationID.WEBCAM, message)
         EventsDispatcher.__init__(self)
 
         self._producer = producer
-
-        if message is not None:
-            self._call_id = message.call_id
-            self._cseq = message.cseq
-            self._branch = message.branch
-            self._id = message.body.session_id
-
         self._sent_syn = False
         self._local_candidates = None
         self._remote_candidates = None
         self._session_id = 0
         self._xml_needed = False
-        self._session_manager._register_session(self)
 
     @rw_property
     def local_candidates():
@@ -92,21 +84,8 @@ class WebcamSession(P2PSession, EventsDispatcher):
   
     def invite(self):
         context = "{B8BE70DE-E2CA-4400-AE03-88FF85B9F4E8}"
-        body = SLPSessionRequestBody(EufGuid.MEDIA_SESSION, self._application_id,
-                context.decode('ascii').encode('utf-16_le'), self._id)
-        message = SLPRequestMessage(SLPRequestMethod.INVITE,
-                "MSNMSGR:" + self._peer.account,
-                to=self._peer.account,
-                frm=self._session_manager._client.profile.account,
-                branch=self._branch,
-                cseq=self._cseq,
-                call_id=self._call_id)
-        message.body = body
-
-        self._call_id = message.call_id
-        self._cseq = message.cseq
-        self._branch = message.branch
-        self._send_p2p_data(message)
+        context = context.decode('ascii').encode('utf-16_le')
+        self._invite(context)
 
     def accept(self):
         temp_application_id = self._application_id

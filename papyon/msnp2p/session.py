@@ -26,11 +26,11 @@ from papyon.msnp2p.exceptions import *
 import papyon.util.element_tree as ElementTree
 import struct
 
-import papyon.util.guid as guid
-
 import gobject
 import base64
 import random
+import uuid
+
 __all__ = ['P2PSession']
 
 MAX_INT32 = 0x7fffffff
@@ -38,24 +38,33 @@ MAX_INT16 = 0x7fff
 
 
 class P2PSession(gobject.GObject):
+
     __gsignals__ = {
             "transfer-completed" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,))
     }
-    def __init__(self, session_manager, peer, euf_guid="", application_id=0):
+
+    def __init__(self, session_manager, peer, euf_guid="", application_id=0,
+            message=None):
         gobject.GObject.__init__(self)
         self._session_manager = session_manager
         self._peer = peer
 
-        self._id =  self._generate_id()
-        self._call_id = "{%s}" % guid.generate_guid()
-
         self._euf_guid = euf_guid
         self._application_id = application_id
 
-        self._cseq = 0
-        self._branch = "{%s}" % guid.generate_guid()
+        if message is not None:
+            self._id = message.body.session_id
+            self._call_id = message.call_id
+            self._cseq = message.cseq
+            self._branch = message.branch
+        else:
+            self._id =  self._generate_id()
+            self._call_id = "{%s}" % uuid.uuid4()
+            self._cseq = 0
+            self._branch = "{%s}" % uuid.uuid4()
+
         self._session_manager._register_session(self)
 
     def _generate_id(self, max=MAX_INT32):
@@ -79,8 +88,22 @@ class P2PSession(gobject.GObject):
     def peer(self):
         return self._peer
 
+    def _invite(self, context):
+        body = SLPSessionRequestBody(self._euf_guid, self._application_id,
+                context, self._id)
+        message = SLPRequestMessage(SLPRequestMethod.INVITE,
+                "MSNMSGR:" + self._peer.account,
+                to=self._peer.account,
+                frm=self._session_manager._client.profile.account,
+                branch=self._branch,
+                cseq=self._cseq,
+                call_id=self._call_id)
+        message.body = body
+        self._send_p2p_data(message)
+
     def _respond(self, status_code):
-        body = SLPSessionRequestBody(session_id=self._id,capabilities_flags=None,s_channel_state=None)
+        body = SLPSessionRequestBody(session_id=self._id, capabilities_flags=None,
+                s_channel_state=None)
         self._cseq += 1
         response = SLPResponseMessage(status_code,
             to=self._peer.account,
@@ -94,7 +117,7 @@ class P2PSession(gobject.GObject):
     def _close(self):
         body = SLPSessionCloseBody()
         self._cseq = 0
-        self._branch = "{%s}" % guid.generate_guid()
+        self._branch = "{%s}" % uuid.uuid4()
         message = SLPRequestMessage(SLPRequestMethod.BYE,
                 "MSNMSGR:" + self._peer.account,
                 to=self._peer.account,

@@ -27,54 +27,31 @@ from papyon.msnp2p.session import P2PSession
 from papyon.event import EventsDispatcher
 from papyon.util.decorator import rw_property
 
-
 import gobject
 import random
 
 __all__ = ['MSNObjectSession']
 
 class MSNObjectSession(P2PSession):
-    def __init__(self, session_manager, peer, application_id, message = None):
+    def __init__(self, session_manager, peer, application_id, message=None):
         P2PSession.__init__(self, session_manager, peer,
-                EufGuid.MSN_OBJECT, application_id)
+                EufGuid.MSN_OBJECT, application_id, message)
 
         if message is not None:
-            self._id =  message.body.session_id
-            self._call_id = message.call_id
-
-            self._cseq = message.cseq
-            self._branch = message.branch
             self._application_id = message.body.application_id
-            try: 
+            try:
                 self._context = message.body.context.strip('\x00')
             except AttributeError:
                 raise SLPError("Incoming INVITE without context")
-
 
     def accept(self, data_file):
         self._respond(200)
         self._send_p2p_data("\x00" * 4)
         self._send_p2p_data(data_file)
-    
+
     def reject(self):
         self._respond(603)
 
-
     def invite(self, context):
-        self._session_manager._register_session(self)
-        body = SLPSessionRequestBody(self._euf_guid, self._application_id,
-                context, self._id, s_channel_state=None,
-                capabilities_flags=None)
-
-        message = SLPRequestMessage(SLPRequestMethod.INVITE,
-                "MSNMSGR:" + self._peer.account,
-                to=self._peer.account,
-                frm=self._session_manager._client.profile.account,
-                branch=self._branch,
-                cseq=self._cseq,
-                call_id=self._call_id)
-
-        message.body = body
-        self._send_p2p_data(message)
+        self._invite(context)
         return False
-
