@@ -24,10 +24,12 @@ from papyon.msnp2p.exceptions import ParseError
 from papyon.msnp2p.constants import SLPContentType
 
 import base64
+import uuid
 
 __all__ = ['SLPMessage', 'SLPRequestMessage', 'SLPResponseMessage',
            'SLPMessageBody', 'SLPNullBody', 'SLPSessionRequestBody',
-           'SLPSessionCloseBody', 'SLPSessionFailureResponseBody', 'SLPTransferRequestBody']
+           'SLPSessionCloseBody', 'SLPSessionFailureResponseBody',
+           'SLPTransferRequestBody', 'SLPTransferResponseBody']
 
 
 class SLPMessage(HTTPMessage):
@@ -275,46 +277,101 @@ class SLPSessionRequestBody(SLPMessageBody):
 SLPMessageBody.register_content(SLPContentType.SESSION_REQUEST, SLPSessionRequestBody)
 
 class SLPTransferRequestBody(SLPMessageBody):
-    def __init__(self, euf_guid=None, app_id=None, context=None,
-            session_id=None, s_channel_state=None, capabilities_flags=None):
+    def __init__(self, session_id=None, s_channel_state=None,
+            capabilities_flags=None):
         SLPMessageBody.__init__(self,SLPContentType.TRANSFER_REQUEST,
                                     session_id, s_channel_state, capabilities_flags)
-        
-        #Examples of headers that might be useful
-        
-        #self.add_header("Bridges","TRUDPv1 TCPv1")
-        #self.add_header("NetID",0)
-        #self.add_header("Conn-Type","Firewall")
-        #self.add_header("UPnPNat","false")
-        #self.add_header("ICF","false")
-            
-            
+
+        self.add_header("NetID",-1388627126)
+        self.add_header("Bridges","TCPv1 SBBridge")
+        self.add_header("Conn-Type","Port-Restrict-NAT")
+        self.add_header("TCP-Conn-Type","Symmetric-NAT")
+        self.add_header("UPnPNat","false")
+        self.add_header("ICF","false")
+        self.add_header("Nonce", "{%s}" % str(uuid.uuid4()).upper())
+        self.add_header("Nat-Trav-Msg-Type", "WLX-Nat-Trav-Msg-Direct-Connect-Req")
+
+SLPMessageBody.register_content(SLPContentType.TRANSFER_REQUEST, SLPTransferRequestBody)
+
+class SLPTransferResponseBody(SLPMessageBody):
+    def __init__(self, bridge=None, listening=None, nonce=None, internal_ips=None,
+            internal_port=None, external_ips=None, external_port=None,
+            session_id=None, s_channel_state=None, capabilities_flags=None):
+        SLPMessageBody.__init__(self,SLPContentType.TRANSFER_RESPONSE,
+                                    session_id, s_channel_state, capabilities_flags)
+
+        if bridge is not None:
+            self.add_header("Bridge", bridge)
+        if listening is not None:
+            self.add_header("Listening", listening and "true" or "false")
+        if nonce is not None:
+            self.add_header("Nonce", "{%s}" % nonce.upper())
+        if internal_ips is not None:
+            internal_ips = " ".join(internal_ips)
+            self.add_header("IPv4Internal-Addrs"[::-1], internal_ips[::-1])
+        if internal_port is not None:
+            self.add_header("IPv4Internal-Port"[::-1], str(internal_port)[::-1])
+        if external_ips is not None:
+            external_ips = " ".join(external_ips)
+            self.add_header("IPv4External-Addrs"[::-1], external_ips[::-1])
+        if external_port is not None:
+            self.add_header("IPv4External-Port"[::-1], str(external_port)[::-1])
+        self.add_header("Nat-Trav-Msg-Type", "WLX-Nat-Trav-Msg-Direct-Connect-Req")
+        self.add_header("Conn-Type","Port-Restrict-NAT")
+        self.add_header("TCP-Conn-Type", "Symmetric-NAT")
+        self.add_header("IPv6-global", "")
+
     @property
-    def euf_guid(self):
+    def bridge(self):
         try:
-            return self.get_header("EUF-GUID")
+            return self.get_header("Bridge")
         except (KeyError, ValueError):
             return ""
 
     @property
-    def context(self):
+    def listening(self):
         try:
-            context = self.get_header("Context")
-            # Make the b64 string correct by append '=' to get a length as a
-            # multiple of 4. Kopete client seems to use incorrect b64 strings.
-            context += '=' * (len(context) % 4)
-            return base64.b64decode(context)
+            listening = self.get_header("Listening").lower()
+            return (listening == "true")
         except KeyError:
-            return None
+            return False
 
     @property
-    def application_id(self):
+    def nonce(self):
         try:
-            return int(self.get_header("AppID"))
+            return self.get_header("Nonce")[1:-1]
+        except (KeyError, ValueError):
+            return ""
+
+    @property
+    def internal_ips(self):
+        try:
+            return self.get_header("IPv4Internal-Addrs"[::-1])[::-1].split()
+        except (KeyError, ValueError):
+            return []
+
+    @property
+    def internal_port(self):
+        try:
+            return int(self.get_header("IPv4Internal-Port"[::-1])[::-1])
         except (KeyError, ValueError):
             return 0
 
-SLPMessageBody.register_content(SLPContentType.TRANSFER_REQUEST, SLPTransferRequestBody)
+    @property
+    def external_ips(self):
+        try:
+            return self.get_header("IPv4External-Addrs"[::-1])[::-1].split()
+        except (KeyError, ValueError):
+            return []
+
+    @property
+    def external_port(self):
+        try:
+            return int(self.get_header("IPv4External-Port"[::-1])[::-1])
+        except (KeyError, ValueError):
+            return 0
+
+SLPMessageBody.register_content(SLPContentType.TRANSFER_RESPONSE, SLPTransferResponseBody)
 
 class SLPSessionCloseBody(SLPMessageBody):
     def __init__(self, context=None, session_id=None, s_channel_state=0,

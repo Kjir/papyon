@@ -91,28 +91,12 @@ class WebcamSession(P2PSession, EventsDispatcher):
         temp_application_id = self._application_id
         self._application_id = 0
         self._respond(200)
-        self.send_transreq()
+        self._transreq()
         self._application_id = temp_application_id
+        self.send_binary_syn()
 
     def reject(self):
         self._respond(603)
-
-    def send_transreq(self):
-        self._cseq=0
-        body = SLPTransferRequestBody(self._euf_guid, self._application_id,None,
-                                     None)
-        message = SLPRequestMessage(SLPRequestMethod.INVITE,
-                "MSNMSGR:" + self._peer.account,
-                to=self._peer.account,
-                frm=self._session_manager._client.profile.account,
-                branch=self._branch,
-                cseq=self._cseq,
-                call_id=self._call_id)
-        message.body = body
-        self._application_id=0
-        self._send_p2p_data(message)
-        self._application_id=4
-        self.send_binary_syn()
 
     def _on_blob_received(self, blob):
         data = blob.data.read()

@@ -101,6 +101,19 @@ class P2PSession(gobject.GObject):
         message.body = body
         self._send_p2p_data(message)
 
+    def _transreq(self):
+        self._cseq = 0
+        body = SLPTransferRequestBody(self._id, 0, 1)
+        message = SLPRequestMessage(SLPRequestMethod.INVITE,
+                "MSNMSGR:" + self._peer.account,
+                to=self._peer.account,
+                frm=self._session_manager._client.profile.account,
+                branch=self._branch,
+                cseq=self._cseq,
+                call_id=self._call_id)
+        message.body = body
+        self._send_p2p_data(message)
+
     def _respond(self, status_code):
         body = SLPSessionRequestBody(session_id=self._id, capabilities_flags=None,
                 s_channel_state=None)
@@ -113,6 +126,27 @@ class P2PSession(gobject.GObject):
             call_id=self._call_id)
         response.body = body
         self._send_p2p_data(response)
+
+    def _respond_transreq(self, transreq, status, body):
+        self._cseq += 1
+        response = SLPResponseMessage(status,
+            to=self._peer.account,
+            frm=self._session_manager._client.profile.account,
+            cseq=self._cseq,
+            branch=transreq.branch,
+            call_id=self._call_id)
+        response.body = body
+        self._send_p2p_data(response)
+
+    def _accept_transreq(self, transreq, bridge, listening, nonce, local_ip,
+            local_port, extern_ip, extern_port):
+        body = SLPTransferResponseBody(bridge, listening, nonce, [local_ip],
+                local_port, [extern_ip], extern_port, self._id, 0, 1)
+        self._respond_transreq(transreq, 200, body)
+
+    def _decline_transreq(self, transreq):
+        body = SLPTransferResponseBody(session_id=self._id)
+        self._respond_transreq(transreq, 603, body)
 
     def _close(self):
         body = SLPSessionCloseBody()
