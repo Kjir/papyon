@@ -189,16 +189,32 @@ class P2PSession(gobject.GObject):
             self._on_data_blob_sent(blob)
 
     def _on_blob_received(self, blob):
+        data = blob.data.read()
+
         if blob.session_id == 0:
-            # FIXME: handle the signaling correctly
+            message = SLPMessage.build(data)
+            if isinstance(message, SLPRequestMessage):
+                if isinstance(message.body, SLPSessionRequestBody):
+                    self._on_invite_received(message)
+                elif isinstance(message.body, SLPTransferRequestBody):
+                    self._decline_transreq(message)
+                elif isinstance(message.body, SLPSessionCloseBody):
+                    self._on_bye_received(message)
+                else:
+                    print "Unhandled signaling blob :", message
+            elif isinstance(message, SLPResponseMessage):
+                if message.status is 200:
+                    self._on_session_accepted()
+                elif message.status is 603:
+                    self._on_session_rejected(message)
+                else:
+                    print "Unhandled response blob :", message
             return
 
-        if blob.total_size == 4 and \
-                blob.data.read() == ('\x00' * 4):
+        if blob.total_size == 4 and data == ('\x00' * 4):
             self._on_data_preparation_blob_received(blob)
         else:
             self._on_data_blob_received(blob)
-            self._close()
 
     def _on_data_preparation_blob_received(self, blob):
         pass
@@ -213,5 +229,20 @@ class P2PSession(gobject.GObject):
     def _on_data_blob_received(self, blob):
         blob.data.seek(0, 0)
         self.emit("transfer-completed", blob.data)
+        self._close()
+
+    # Methods to implement in different P2P applications
+
+    def _on_invite_received(self, message):
+        pass
+
+    def _on_bye_received(self, message):
+        pass
+
+    def _on_session_accepted(self):
+        pass
+
+    def _on_session_rejected(self, message):
+        pass
 
 gobject.type_register(P2PSession)

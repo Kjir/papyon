@@ -98,22 +98,13 @@ class WebcamSession(P2PSession, EventsDispatcher):
     def reject(self):
         self._respond(603)
 
-    def _on_blob_received(self, blob):
-        data = blob.data.read()
+    def _on_session_accepted(self):
+        self._dispatch("on_webcam_accepted")
 
-        if blob.session_id == 0:
-            message = SLPMessage.build(data)
-            if isinstance(message, SLPResponseMessage):
-                if message.status is 200:
-                    self._dispatch("on_webcam_accepted")
-                elif message.status is 603:
-                    self._dispatch("on_webcam_rejected")
+    def _on_session_rejected(self):
+        self._dispatch("on_webcam_rejected")
 
-            # FIXME: handle the signaling correctly
-            # Determine if it actually is a transreq or not
-            # send 603
-            return
-
+    def _on_data_blob_received(self, blob):
         if not self._sent_syn:
             self.send_binary_syn() #Send 603 first ?
         if '\x00s\x00y\x00n\x00\x00\x00' in data:
