@@ -19,7 +19,6 @@
 from papyon.service.AddressBook.scenario.base import BaseScenario
 from papyon.service.AddressBook.scenario.base import Scenario
 from messenger_contact_add import MessengerContactAddScenario
-from external_contact_add import ExternalContactAddScenario
 from update_memberships import UpdateMembershipsScenario
 
 from papyon.service.AddressBook.constants import *
