@@ -24,7 +24,6 @@ from papyon.msnp2p.SLP import *
 from papyon.msnp2p.transport import *
 from papyon.msnp2p.exceptions import *
 import papyon.util.element_tree as ElementTree
-import struct
 
 import gobject
 import base64
