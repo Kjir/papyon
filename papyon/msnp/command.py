@@ -30,12 +30,12 @@ class CommandPrinter(object):
     def __init__(self, command):
         self.command = command
 
-    def __repr__(self):
+    def __unicode__(self):
         printer = getattr(self, "_print_" + self.command.name,
                 self._print_default)
         return printer()
     
-    def _print_MSG(self):
+    def _print_default_header(self):
         command = self.command
         
         result = command.name
@@ -43,26 +43,26 @@ class CommandPrinter(object):
             result += ' ' + str(command.transaction_id)
 
         if command.arguments is not None and len(command.arguments) > 0:
-            result += ' ' + ' '.join(command.arguments) 
+            arguments = [str(argument).decode("utf-8") for argument in command.arguments]
+            result += ' ' + ' '.join(arguments)
 
+        return result
+
+    def _print_MSG(self):
+        command = self.command
+        result = self._print_default_header()
+        
         if command.payload is not None:
             result += "\n" + repr(Message(None, str(command.payload)))
         return result
 
     def _print_QRY(self):
         command = self.command
-        
-        result = command.name
-        if command.transaction_id is not None:
-            result += ' ' + str(command.transaction_id)
-
-        if command.arguments is not None and len(command.arguments) > 0:
-            arguments = [str(argument) for argument in command.arguments]
-            result += ' ' + ' '.join(arguments) 
+        result = self._print_default_header()
         
         if command.payload is not None:
+            length = len(command.payload)
             payload = repr(command.payload)
-            length = len(payload)
             if length > 0:
                 result += ' ' + str(length) + '\r\n'
                 result += payload
@@ -70,18 +70,11 @@ class CommandPrinter(object):
 
     def _print_default(self):
         command = self.command
-        
-        result = command.name
-        if command.transaction_id is not None:
-            result += ' ' + str(command.transaction_id)
-
-        if command.arguments is not None and len(command.arguments) > 0:
-            arguments = [str(argument) for argument in command.arguments]
-            result += ' ' + ' '.join(arguments) 
+        result = self._print_default_header()
         
         if command.payload is not None:
+            length = len(command.payload)
             payload = repr(command.payload)
-            length = len(payload)
             if length > 0:
                 result += ' ' + str(length) + '\r\n'
                 if not command.is_error():
@@ -205,9 +198,8 @@ class Command(object):
 
         return result + '\r\n'
 
-    def __repr__(self):
-        return repr(CommandPrinter(self))
-        #return papyon.util.debug.raw_cmd_to_debug(self.__str__())
+    def __unicode__(self):
+        return unicode(CommandPrinter(self))
 
     def __parse_command(self, buf):
         words = buf.split()

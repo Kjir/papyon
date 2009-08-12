@@ -268,7 +268,7 @@ class DirectConnection(BaseTransport):
         self._transport.open()
 
     def send_command(self, command, increment=True, callback=None, *cb_args):
-        logger.debug('>>> ' + repr(command))
+        logger.debug('>>> ' + unicode(command))
         our_cb_args = (command, callback, cb_args)
         self._transport.send(str(command), self.__on_command_sent, *our_cb_args)
         if increment:
@@ -330,7 +330,7 @@ class DirectConnection(BaseTransport):
                     self.__pending_chunk = chunk
                     self._receiver.delimiter = payload_len
                     return
-        logger.debug('<<< ' + repr(cmd))
+        logger.debug('<<< ' + unicode(cmd))
         if cmd.name == 'QNG':
             self.__handle_ping_reply(cmd)
         else:
@@ -415,7 +415,7 @@ class HTTPPollConnection(BaseTransport):
         self._waiting_for_response = True
         
         if command is not None:
-            logger.debug('>>> ' + repr(command))
+            logger.debug('>>> ' + unicode(command))
         
         if increment:
             self._increment_transaction_id()
@@ -475,11 +475,11 @@ class HTTPPollConnection(BaseTransport):
                 payload_len = 0
             if payload_len > 0:
                 cmd.payload = rest[:payload_len].strip()
-            logger.debug('<<< ' + repr(cmd))
+            logger.debug('<<< ' + unicode(cmd))
             self.emit("command-received", cmd)
             return rest[payload_len:]
         else:
-            logger.debug('<<< ' + repr(cmd))
+            logger.debug('<<< ' + unicode(cmd))
             self.emit("command-received", cmd)
             return rest
 

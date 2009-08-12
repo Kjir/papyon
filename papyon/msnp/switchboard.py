@@ -276,7 +276,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             except:
                 pass
         else:
-            logger.error('Notification got error :' + repr(error))
+            logger.error('Notification got error :' + unicode(error))
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
         self._state = ProtocolState.OPENING
