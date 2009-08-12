@@ -160,7 +160,7 @@ class SDPDescription(MediaStreamDescription):
         return locals()
 
     def is_valid_codec(self, codec):
-        return codec.payload in VALID_CODECS[self.name]
+        return codec.encoding.lower() in VALID_CODECS[self.name]
 
     def has_active_remote(self):
         return (self.get_attribute("remote-candidates") or
