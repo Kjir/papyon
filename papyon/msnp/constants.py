@@ -17,7 +17,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-__all__ = ["ProtocolConstant"]
+__all__ = ["ProtocolConstant", "ClientTypes"]
 
 class ProtocolConstant(object):
     VER = (18, 15)
@@ -25,3 +25,9 @@ class ProtocolConstant(object):
     PRODUCT_ID = "PROD0114ES4Z%Q5W"
     PRODUCT_KEY = "PK}_A_0N_K%O?A9S"
     CHL_MAGIC_NUM = 0x0E79A9C1
+
+class ClientTypes(object):
+    COMPUTER = 1
+    WEBSITE = 2
+    MOBILE = 3
+    XBOX = 4

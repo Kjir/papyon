@@ -111,7 +111,7 @@ class Client(EventsDispatcher):
                 msn_object_store, oim_box, spaces"""
 
     def __init__(self, server, proxies={}, transport_class=DirectConnection,
-            version=15):
+            version=15, client_type=msnp.ClientTypes.COMPUTER):
         """Initializer
 
             @param server: the Notification server to connect to.
@@ -129,7 +129,7 @@ class Client(EventsDispatcher):
 
         self._proxies = proxies
         self._transport_class = transport_class
-        self._proxies = proxies
+        self._client_type = client_type
 
         self._transport = transport_class(server, ServerType.NOTIFICATION,
                 self._proxies)
@@ -217,6 +217,10 @@ class Client(EventsDispatcher):
     @property
     def protocol_version(self):
         return self._protocol._protocol_version
+
+    @property
+    def client_type(self):
+        return self._client_type
 
     def login(self, account, password):
         """Login to the server.
