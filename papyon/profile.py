@@ -99,6 +99,9 @@ class ClientCapabilities(object):
         @ivar supports_sip_invite: does the client supports SIP
         @type supports_sip_invite: bool
 
+        @ivar supports_tunneled_sip: does the client supports tunneled SIP
+        @type supports_tunneled_sip: bool
+
         @ivar supports_shared_drive: does the client supports File sharing
         @type supports_shared_drive: bool
 
@@ -137,8 +140,10 @@ class ClientCapabilities(object):
             'supports_voice_im': 0x00040000,
             'supports_secure_channel': 0x00080000,
             'supports_sip_invite': 0x00100000,
+            'supports_tunneled_sip': 0x00200000,
             'supports_shared_drive': 0x00400000,
 
+            'p2p_aware': 0xF0000000,
             'p2p_supports_turn': 0x02000000,
             'p2p_bootstrap_via_uun': 0x04000000
             }
@@ -147,7 +152,7 @@ class ClientCapabilities(object):
         """Initializer
 
             @param msnc: The MSNC version
-            @type msnc: integer < 8 and >= 0
+            @type msnc: integer < 11 and >= 0
 
             @param client_id: the full client ID"""
         MSNC = (0x0,        # MSNC0
@@ -157,13 +162,14 @@ class ClientCapabilities(object):
                 0x40000000, # MSNC4
                 0x50000000, # MSNC5
                 0x60000000, # MSNC6
-                0x70000000) # MSNC7
+                0x70000000, # MSNC7
+                0x80000000, # MSNC8
+                0x90000000, # MSNC9
+                0xA0000000) # MSNC10
         object.__setattr__(self, 'client_id', MSNC[msnc] | client_id)
 
     def __getattr__(self, name):
-        if name == "p2p_aware":
-            mask = 0xf0000000
-        elif name in self._CAPABILITIES:
+        if name in self._CAPABILITIES:
             mask = self._CAPABILITIES[name]
         else:
             raise AttributeError("object 'ClientCapabilities' has no attribute '%s'" % name)
