@@ -82,7 +82,7 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         return self._name
 
     @property
-    def controlling(self):
+    def created_locally(self):
         """Is the stream created locally (outgoing call)"""
         return self._created
 
