@@ -47,6 +47,9 @@ class SwitchboardClient(object):
         self._pending_invites = set(contacts)
         self._pending_messages = []
 
+        if self._client.protocol_version >= 18:
+            self._pending_invites.add(self._client.profile)
+
         self.participants = set()
         self._process_pending_queues()
 
