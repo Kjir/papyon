@@ -117,7 +117,7 @@ class MediaStream(gobject.GObject, EventsDispatcher):
            @param desc: Stream description to complete
            @type desc: L{papyon.media.message.MediaStreamDescription}"""
 
-        desc.ip, desc.port, desc.rtcp = self.get_default_address()
+        desc._ip, desc._port, desc._rtcp = self.get_default_address()
         desc.set_codecs(self._local_codecs)
         self._encoder.encode_candidates(self, desc)
         return desc

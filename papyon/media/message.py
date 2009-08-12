@@ -52,6 +52,10 @@ class MediaStreamDescription(object):
         self._direction = direction
         self._codecs = []
 
+        self._ip = ""
+        self._port = 0
+        self._rtcp = 0
+
     @property
     def name(self):
         return self._name
@@ -59,6 +63,18 @@ class MediaStreamDescription(object):
     @property
     def direction(self):
         return self._direction
+
+    @property
+    def ip(self):
+        return self._ip
+
+    @property
+    def port(self):
+        return self._port
+
+    @property
+    def rtcp(self):
+        return self._rtcp
 
     @rw_property
     def codecs():

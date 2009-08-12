@@ -112,10 +112,6 @@ class SDPDescription(MediaStreamDescription):
         MediaStreamDescription.__init__(self, name, MediaStreamDirection.BOTH)
         self._attributes = odict({"encryption": ["rejected"]})
 
-        self.ip = ""
-        self.port = 0
-        self.rtcp = 0
-
     @property
     def attributes(self):
         return self._attributes
