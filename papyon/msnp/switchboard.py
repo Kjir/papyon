@@ -213,13 +213,13 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
     def _handle_IRO(self, command):
         account = command.arguments[2]
         display_name = urllib.unquote(command.arguments[3])
-        client_id = int(command.arguments[4])
+        client_id = command.arguments[4]
         self.__participant_join(account, display_name, client_id)
 
     def _handle_JOI(self, command):
         account = command.arguments[0]
         display_name = urllib.unquote(command.arguments[1])
-        client_id = int(command.arguments[2])
+        client_id = command.arguments[2]
         self.__participant_join(account, display_name, client_id)
         if len(self.__invitations) == 0:
             self._inviting = False

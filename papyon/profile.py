@@ -114,6 +114,18 @@ class ClientCapabilities(object):
         @undocumented: __getattr__, __setattr__, __str__
         """
 
+    MSNC = [0x0,        # MSNC0
+            0x10000000, # MSNC1
+            0x20000000, # MSNC2
+            0x30000000, # MSNC3
+            0x40000000, # MSNC4
+            0x50000000, # MSNC5
+            0x60000000, # MSNC6
+            0x70000000, # MSNC7
+            0x80000000, # MSNC8
+            0x90000000, # MSNC9
+            0xA0000000] # MSNC10
+
     _CAPABILITIES = {
             'is_bot': 0x00020000,
             'is_mobile_device': 0x00000001,
@@ -148,45 +160,61 @@ class ClientCapabilities(object):
             'p2p_bootstrap_via_uun': 0x04000000
             }
 
-    def __init__(self, msnc=0, client_id=0):
+    _EXTRA = {
+            'supports_rtc_video': 0x00000010,
+            'unknown': 0x00000020
+            }
+
+    def __init__(self, msnc=0, client_id="0:0"):
         """Initializer
 
             @param msnc: The MSNC version
             @type msnc: integer < 11 and >= 0
 
             @param client_id: the full client ID"""
-        MSNC = (0x0,        # MSNC0
-                0x10000000, # MSNC1
-                0x20000000, # MSNC2
-                0x30000000, # MSNC3
-                0x40000000, # MSNC4
-                0x50000000, # MSNC5
-                0x60000000, # MSNC6
-                0x70000000, # MSNC7
-                0x80000000, # MSNC8
-                0x90000000, # MSNC9
-                0xA0000000) # MSNC10
-        object.__setattr__(self, 'client_id', MSNC[msnc] | client_id)
+        caps = client_id.split(":")
+        capabilities = int(caps[0])
+        if len(caps) > 1:
+            extra = int(caps[1])
+        else:
+            extra = 0
+        object.__setattr__(self, 'capabilities', self.MSNC[msnc] | capabilities)
+        object.__setattr__(self, 'extra', extra)
 
     def __getattr__(self, name):
         if name in self._CAPABILITIES:
             mask = self._CAPABILITIES[name]
+            id = self.capabilities
+        elif name in self._EXTRA:
+            mask = self._EXTRA[name]
+            id = self.extra
         else:
             raise AttributeError("object 'ClientCapabilities' has no attribute '%s'" % name)
-        return (self.client_id & mask != 0)
+        return (id & mask != 0)
 
     def __setattr__(self, name, value):
         if name in self._CAPABILITIES:
             mask = self._CAPABILITIES[name]
             if value:
-                object.__setattr__(self, 'client_id', self.client_id | mask)
+                object.__setattr__(self, 'capabilities', self.capabilities | mask)
             else:
-                object.__setattr__(self, 'client_id', self.client_id ^ mask)
+                object.__setattr__(self, 'capabilities', self.capabilities & ~mask)
+        elif name in self._EXTRA:
+            mask = self._EXTRA[name]
+            if value:
+                object.__setattr__(self, 'extra', self.extra | mask)
+            else:
+                object.__setattr__(self, 'extra', self.extra & ~mask)
         else:
             raise AttributeError("object 'ClientCapabilities' has no attribute '%s'" % name)
 
     def __str__(self):
-        return str(self.client_id)
+        msnc = self.MSNC.index(self.capabilities & 0xF0000000)
+        if msnc >= 9:
+            client_id = "%s:%s" % (self.capabilities, self.extra)
+        else:
+            client_id = str(self.capabilities)
+        return client_id
 
 
 class NetworkID(object):
@@ -365,7 +393,8 @@ class Profile(gobject.GObject):
         self.client_id = ClientCapabilities(7)
         #self.client_id.supports_sip_invite = True
         #FIXME: this should only be advertised when a webcam is plugged
-        #self.client_id.has_webcam = True
+        self.client_id.has_webcam = True
+        self.client_id.supports_rtc_video = True
 
         self._msn_object = None
 
@@ -588,10 +617,10 @@ class Contact(gobject.GObject):
                 "The contact automatic update status flag",
                  gobject.PARAM_READABLE),
 
-            "client-capabilities": (gobject.TYPE_UINT64,
+            "client-capabilities": (gobject.TYPE_STRING,
                 "Client capabilities",
                 "The client capabilities of the contact 's client",
-                0, 0xFFFFFFFF, 0,
+                "",
                 gobject.PARAM_READABLE),
 
             "msn-object": (gobject.TYPE_STRING,
@@ -810,7 +839,7 @@ class Contact(gobject.GObject):
         self._server_property_changed("personal-message", "")
         self._server_property_changed("current-media", None)
         self._server_property_changed("msn-object", None)
-        self._server_property_changed("client-capabilities", 0)
+        self._server_property_changed("client-capabilities", "0:0")
         self._server_infos_changed({})
 
 

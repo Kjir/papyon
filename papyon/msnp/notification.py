@@ -418,11 +418,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         presence = command.arguments[0]
         display_name = urllib.unquote(command.arguments[idx])
         idx += 1
-        caps = command.arguments[idx].split(":")
+        capabilities = command.arguments[idx]
         idx += 1
-        capabilities = int(caps[0])
-        if len(caps) > 0:
-            extra_capabilities = int(caps[1])
 
         msn_object = None
         icon_url = None
