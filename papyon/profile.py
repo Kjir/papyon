@@ -389,6 +389,7 @@ class Profile(gobject.GObject):
         self._personal_message = ""
         self._current_media = None
         self._signature_sound = None
+        self._end_point_name = ""
 
         self.client_id = ClientCapabilities(7)
         #self.client_id.supports_sip_invite = True
@@ -497,6 +498,16 @@ class Profile(gobject.GObject):
             self._ns_client.set_personal_message(*self.__pending_set_personal_message)
         def fget(self):
             return self._signature_sound
+        return locals()
+
+    @rw_property
+    def end_point_name():
+        def fset(self, name):
+            if name == self._end_point_name:
+                return
+            self._ns_client.set_end_point_name(name)
+        def fget(self):
+            return self._end_point_name
         return locals()
 
     @rw_property

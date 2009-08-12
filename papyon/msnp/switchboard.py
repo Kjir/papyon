@@ -197,6 +197,9 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         pass
     # --------- Invitation ---------------------------------------------------
     def __participant_join(self, account, display_name, client_id):
+        if self._client.protocol_version >= 18:
+            if account.split(";")[0] == self._client.profile.account:
+                return # ignore our own user
         contacts = self._client.address_book.contacts.\
                 search_by_account(account)
         if len(contacts) == 0:
@@ -206,6 +209,8 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
                     display_name=display_name)
         else:
             contact = contacts[0]
+        if contact in self.participants:
+            return # ignore duplicate users
         contact._server_property_changed("client-capabilities", client_id)
         self.participants[account] = contact
         self.emit("user-joined", contact)

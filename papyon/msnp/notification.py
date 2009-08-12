@@ -187,6 +187,23 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             self._client.profile._server_property_changed("current-media",
                 current_media)
 
+    @throttled(2000, LastElementQueue())
+    def set_end_point_name(self, name="Papyon", idle=False):
+        ep = '<EndpointData>'\
+                '<Capabilities>%s</Capabilities>'\
+            '</EndpointData>' % self._client.profile.client_id
+
+        name = xml_utils.escape(name)
+        pep = '<PrivateEndpointData>'\
+                '<EpName>%s</EpName>'\
+                '<Idle>%s</Idle>'\
+                '<State>%s</State>'\
+                '<ClientType>%i</ClientType>'\
+            '</PrivateEndpointData>' % (name, str(idle).lower(),
+                    self._client.profile.presence, self._client.client_type)
+        self._send_command('UUX', payload=ep)
+        self._send_command('UUX', payload=pep)
+
     def signoff(self):
         """Logout from the server"""
         self._send_command('OUT')
