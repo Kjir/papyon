@@ -49,20 +49,17 @@ class MediaSession(gobject.GObject, EventsDispatcher):
             ())
     }
 
-    def __init__(self, type, encoder_class, msg_class):
+    def __init__(self, type, msg_class):
         """Initialize the session
 
            @param type: Session type
            @type type: L{papyon.media.constants.MediaSessionType}
-           @param encoder_class: The candidates encoder class to use (e.g. ICECandidateEncoder)
-           @type encoder_class: subclass of L{papyon.media.candidate.MediaCandidateEncoder}
            @param msg_class: The session message class to use (e.g SDPMessage)
            @type msg_class: subclass of L{papyon.media.message.MediaSessionMessage}"""
 
         gobject.GObject.__init__(self)
         EventsDispatcher.__init__(self)
         self._type = type
-        self._encoder = encoder_class(type)
         self._msg_class = msg_class
 
         self._streams = []
@@ -125,7 +122,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
            @returns the new stream"""
 
         logger.debug("Create stream %s" % name)
-        stream = MediaStream(name, direction, created, self._encoder)
+        stream = MediaStream(name, direction, created)
         self._dispatch("on_stream_created", stream)
         return stream
 

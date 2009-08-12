@@ -53,8 +53,7 @@ class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
 
         P2PSession.__init__(self, session_manager, peer, euf_guid,
                 ApplicationID.WEBCAM, message)
-        MediaCall.__init__(self, type,
-                WebcamCandidateEncoder, WebcamSessionMessage)
+        MediaCall.__init__(self, type, WebcamSessionMessage)
         EventsDispatcher.__init__(self)
 
         self._producer = producer
@@ -171,19 +170,20 @@ class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
 
 class WebcamCandidateEncoder(MediaCandidateEncoder):
 
-    def __init__(self, session_type):
-        MediaCandidateEncoder.__init__(self, session_type)
+    def __init__(self):
+        MediaCandidateEncoder.__init__(self)
 
-    def encode_candidates(self, stream, desc):
-        candidates = stream.get_active_local_candidates()
-        for candidate in candidates:
+    def encode_candidates(self, desc, local_candidates, remote_candidates):
+        for candidate in local_candidates:
             desc.ips.append(candidate.ip)
             desc.ports.append(candidate.port)
-        desc.rid = int(candidates[0].foundation)
-        desc.sid = int(candidates[0].username)
+        desc.rid = int(local_candidates[0].foundation)
+        desc.sid = int(local_candidates[0].username)
 
     def decode_candidates(self, desc):
-        candidates = []
+        local_candidates = []
+        remote_candidate = []
+
         for ip in desc.ips:
             for port in desc.ports:
                 candidate = MediaCandidate()
@@ -195,8 +195,10 @@ class WebcamCandidateEncoder(MediaCandidateEncoder):
                 candidate.port = port
                 candidate.transport = "TCP"
                 candidate.priority = 1
-                candidates.append(candidate)
-        return candidates
+                local_candidates.append(candidate)
+
+        return local_candidates, remote_candidate
+
 
 class WebcamSessionMessage(MediaSessionMessage):
 
@@ -253,6 +255,8 @@ class WebcamSessionMessage(MediaSessionMessage):
 
 class WebcamStreamDescription(MediaStreamDescription):
 
+    _candidate_encoder = WebcamCandidateEncoder()
+
     def __init__(self, sid, producer):
         direction = producer and MediaStreamDirection.SENDING or \
                 MediaStreamDirection.RECEIVING
@@ -261,6 +265,10 @@ class WebcamStreamDescription(MediaStreamDescription):
         self._ports = []
         self._rid = None
         self._sid = sid
+
+    @property
+    def candidate_encoder(self):
+        return self._candidate_encoder
 
     @property
     def ips(self):

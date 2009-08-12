@@ -47,7 +47,7 @@ class MediaStream(gobject.GObject, EventsDispatcher):
             ())
     }
 
-    def __init__(self, name, direction, created, encoder):
+    def __init__(self, name, direction, created):
         """Initialize the media stream.
 
            @param name: Stream name
@@ -55,9 +55,7 @@ class MediaStream(gobject.GObject, EventsDispatcher):
            @param direction: Stream direction
            @type direction: L{papyon.media.constants.MediaStreamDirection}
            @param created: Whether or not the stream has been requested by the client
-           @type created: bool
-           @param encoder: Candidates encoder/decoder
-           @type encoder: L{papyon.media.candidate.MediaCandidateEncoder}"""
+           @type created: bool"""
 
         gobject.GObject.__init__(self)
         EventsDispatcher.__init__(self)
@@ -65,7 +63,6 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         self._active = False
         self._created = created
         self._direction = direction
-        self._encoder = encoder
         self._local_codecs = []
         self._local_codecs_prepared = False
         self._local_candidate_id = None
@@ -130,15 +127,14 @@ class MediaStream(gobject.GObject, EventsDispatcher):
            @type desc: L{papyon.media.message.MediaStreamDescription}"""
 
         self._remote_codecs = desc.valid_codecs
-        candidates = self._encoder.decode_candidates(desc)
-        self._remote_candidates.extend(candidates)
-        if not self._remote_candidates:
-            self._remote_candidates = self._encoder.get_default_candidates(desc)
+        local_candidates, remote_candidates = desc.get_candidates()
+        if local_candidates:
+            self._remote_candidates.extend(local_candidates)
 
-        # If the media description has a remote candidate, the active pair
+        # If the media description has remote candidates, the active pair
         # has already been selected and the first candidate should be the
         # remote active one.
-        if desc.has_active_remote():
+        if remote_candidates:
             self._remote_candidate_id = candidates[0].foundation
 
         self.process()

@@ -76,6 +76,14 @@ class MediaStreamDescription(object):
     def rtcp(self):
         return self._rtcp
 
+    @property
+    def candidate_encoder(self):
+        return None
+
+    @property
+    def session_type(self):
+        return self._session_type
+
     @rw_property
     def codecs():
         def fget(self):
@@ -95,14 +103,24 @@ class MediaStreamDescription(object):
         codecs = filter(lambda c: self.is_valid_codec(c), codecs)
         self.codecs = codecs
 
-    def has_active_remote(self):
-        return False
-
     def get_codec(self, payload):
         for codec in self._codecs:
             if codec.payload == payload:
                 return codec
         raise KeyError("No codec with payload %i in media", payload)
+
+    def set_candidates(self, local_candidates=None, remote_candidates=None):
+        if self.candidate_encoder is not None:
+            encoder = self.candidate_encoder
+            encoder.encode_candidates(self, local_candidates, remote_candidates)
+
+    def get_candidates(self):
+        if self.candidate_encoder is not None:
+            candidates = list(self.candidate_encoder.decode_candidates(self))
+            if not candidates[0]:
+                candidates[0] = self.candidate_encoder.get_default_candidates(self)
+            return candidates
+        return [], []
 
     def __repr__(self):
         return "<Media Description: %s>" % self.name

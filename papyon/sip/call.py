@@ -22,7 +22,6 @@ from papyon.event import EventsDispatcher
 from papyon.media import MediaCall, MediaSessionType
 from papyon.profile import Presence
 from papyon.sip.constants import *
-from papyon.sip.ice import ICECandidateEncoder
 from papyon.sip.message import SIPRequest, SIPResponse
 from papyon.sip.sdp import SDPMessage
 from papyon.sip.turn import TURNClient
@@ -215,7 +214,7 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
         session_type = connection.tunneled and MediaSessionType.TUNNELED_SIP \
                 or MediaSessionType.SIP
         SIPBaseCall.__init__(self, connection, client, id)
-        MediaCall.__init__(self, session_type, ICECandidateEncoder, SDPMessage)
+        MediaCall.__init__(self, session_type, SDPMessage)
         EventsDispatcher.__init__(self)
 
         self._incoming = (id is not None)

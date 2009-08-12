@@ -31,57 +31,66 @@ class ICECandidateEncoder(MediaCandidateEncoder):
        See section "4.3 Encoding the SDP" of the ICE draft for more
        details. Both versions 6 and 19 of the draft are supported."""
 
-    def __init__(self, session_type):
-        MediaCandidateEncoder.__init__(self, session_type)
-        if session_type is MediaSessionType.TUNNELED_SIP:
-            self.draft = 19
-        else:
-            self.draft = 6
+    def __init__(self):
+        MediaCandidateEncoder.__init__(self)
 
-    def encode_candidates(self, stream, desc):
-        candidates = stream.get_active_local_candidates()
-        if candidates:
-            if self.draft is 19:
-                desc.add_attribute("ice-ufrag", candidates[0].username)
-                desc.add_attribute("ice-pwd", candidates[0].password)
-            for candidate in candidates:
-                attribute = ICECandidateBuilder.build_candidate(self.draft, candidate)
-                desc.add_attribute("candidate", attribute)
-
-        candidates = stream.get_active_remote_candidates()
-        if candidates:
-            if self.draft is 6:
-                candidates = candidates[0:1]
-            list = [ICECandidateBuilder.build_remote_id(self.draft, candidate) \
-                    for candidate in candidates]
-            name = (len(list) > 1 and "remote-candidates") or "remote-candidate"
-            desc.add_attribute(name, " ".join(list))
-
-    def decode_candidates(self, desc):
-        candidates = []
-
-        ufrag = desc.get_attribute("ice-ufrag")
-        pwd = desc.get_attribute("ice-pwd")
-        attributes = desc.get_attributes("candidate")
-
-        if attributes is None:
-            return candidates
-
-        if ufrag and pwd:
+    def encode_candidates(self, desc, local_candidates, remote_candidates):
+        if desc.session_type is MediaSessionType.TUNNELED_SIP:
             draft = 19
         else:
             draft = 6
 
-        for attribute in attributes:
-            candidate = MediaCandidate(username=ufrag, password=pwd)
-            try:
-                ICECandidateParser.parse(draft, candidate, attribute)
-            except:
-                logger.warning('Invalid ICE candidate "%s"' % attribute)
-            else:
-                candidates.append(candidate)
+        if local_candidates:
+            if draft is 19:
+                desc.add_attribute("ice-ufrag", local_candidates[0].username)
+                desc.add_attribute("ice-pwd", local_candidates[0].password)
+            for candidate in local_candidates:
+                attribute = ICECandidateBuilder.build_candidate(self.draft, candidate)
+                desc.add_attribute("candidate", attribute)
 
-        return candidates
+        if remote_candidates:
+            if draft is 6:
+                remote_candidates = remote_candidates[0:1]
+            list = [ICECandidateBuilder.build_remote_id(self.draft, candidate) \
+                    for candidate in remote_candidates]
+            name = (len(list) > 1 and "remote-candidates") or "remote-candidate"
+            desc.add_attribute(name, " ".join(list))
+
+    def decode_candidates(self, desc):
+        local_candidates = []
+        remote_candidates = []
+
+        # Local candidates
+        ufrag = desc.get_attribute("ice-ufrag")
+        pwd = desc.get_attribute("ice-pwd")
+        attributes = desc.get_attributes("candidate")
+        if attributes is not None:
+            if ufrag and pwd:
+                draft = 19
+            else:
+                draft = 6
+
+            for attribute in attributes:
+                candidate = MediaCandidate(username=ufrag, password=pwd)
+                try:
+                    ICECandidateParser.parse_candidate(draft, candidate, attribute)
+                except:
+                    logger.warning('Invalid ICE candidate "%s"' % attribute)
+                else:
+                    local_candidates.append(candidate)
+
+        # Remote candidates
+        attribute = desc.get_attribute("remote-candidates")
+        if attribute is None:
+            attribute = desc.get_attribute("remote-candidate")
+        if attribute is not None:
+            try:
+                remote_candidates = ICECandidateParser.parse_remote_id(attribute)
+            except:
+                logger.warning('Invalid ICE remote candidates "%s"' % attribute)
+
+        return local_candidates, remote_candidates
+
 
     def get_default_candidates(self, desc):
         candidates = []
@@ -125,7 +134,7 @@ class ICECandidateParser(object):
     """Class to parse a MediaCandidate from its ICE representation."""
 
     @staticmethod
-    def parse(draft, cand, line):
+    def parse_candidate(draft, cand, line):
         parts = line.split()
 
         if draft is 19:
@@ -154,3 +163,20 @@ class ICECandidateParser(object):
         cand.port = int(cand.port)
         if cand.base_port is not None:
             cand.base_port = int(cand.base_port)
+
+    @staticmethod
+    def parse_remote_id(remote_id):
+        candidates = []
+
+        parts = remote_id.split(" ")
+        if len(parts) == 1: # ICE 6
+            candidates.append(MediaCandidate(foundation=parts[0]))
+        else: #ICE 19
+            for i in range(0, len(parts), 3):
+                component_id = int(parts[i])
+                ip = parts[i + 1]
+                port = int(parts[i + 2])
+                candidates.append(MediaCandidate(component_id=component_id,
+                    ip=ip, port=port))
+
+        return candidates

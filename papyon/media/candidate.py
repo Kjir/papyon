@@ -59,11 +59,16 @@ class MediaCandidateEncoder(object):
     """Class to encode and decode stream candidates into/from a media
        description."""
 
-    def __init__(self, session_type):
-        self._session_type = session_type
-
     def encode_candidates(self, media_stream, media_description):
+        """Encode media_stream local and remote candidates into the
+           given media_description."""
         pass
 
     def decode_candidates(self, media_description):
+        """Decode local and remote candidates from the given
+           media_description."""
+        return [], []
+
+    def get_default_candidates(self, media_description):
+        """Create the set of default candidates from the media description."""
         return []

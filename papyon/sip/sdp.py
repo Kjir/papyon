@@ -20,6 +20,7 @@
 
 from papyon.media import MediaCodec, MediaStreamDescription, MediaSessionMessage
 from papyon.media.constants import *
+from papyon.sip.ice import ICECandidateEncoder
 from papyon.util.decorator import rw_property
 from papyon.util.odict import odict
 
@@ -108,9 +109,15 @@ class SDPMessage(MediaSessionMessage):
 
 class SDPDescription(MediaStreamDescription):
 
+    _candidate_encoder = ICECandidateEncoder()
+
     def __init__(self, name):
         MediaStreamDescription.__init__(self, name, MediaStreamDirection.BOTH)
         self._attributes = odict({"encryption": ["rejected"]})
+
+    @property
+    def candidate_encoder(self):
+        return self._candidate_encoder
 
     @property
     def attributes(self):
@@ -157,10 +164,6 @@ class SDPDescription(MediaStreamDescription):
 
     def is_valid_codec(self, codec):
         return codec.encoding.lower() in VALID_CODECS[self.name]
-
-    def has_active_remote(self):
-        return (self.get_attribute("remote-candidates") or
-           self.get_attribute("remote-candidate"))
 
     def parse_attribute(self, key, value):
         try:
