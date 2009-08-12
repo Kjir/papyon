@@ -407,7 +407,6 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
             self._state = "INCOMING"
             self.start_timeout("response", 30)
             self.request_turn_relays(len(msg.descriptions))
-            self.ring()
         elif self._state == "CONFIRMED":
             self._state = "REINVITED"
             self.reaccept()
