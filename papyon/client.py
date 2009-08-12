@@ -99,6 +99,7 @@ from papyon.event import ClientState, ClientErrorType, \
     AuthenticationError, ProtocolError, EventsDispatcher
 
 import logging
+import uuid
 
 __all__ = ['Client']
 
@@ -221,6 +222,12 @@ class Client(EventsDispatcher):
     @property
     def client_type(self):
         return self._client_type
+
+    @property
+    def machine_guid(self):
+        if not hasattr(self, '_guid'):
+            self._guid = str(uuid.uuid4())
+        return self._guid
 
     def login(self, account, password):
         """Login to the server.

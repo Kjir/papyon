@@ -178,8 +178,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         pm = '<Data>'\
                 '<PSM>%s</PSM>'\
                 '<CurrentMedia>%s</CurrentMedia>'\
-                '<MachineGuid>{CAFEBABE-DEAD-BEEF-BAAD-FEEDDEADC0DE}</MachineGuid>'\
-            '</Data>' % (message, cm)
+                '<MachineGuid>%s</MachineGuid>'\
+            '</Data>' % (message, cm, self._client.machine_guid.upper())
         self._send_command('UUX', payload=pm)
         self._client.profile._server_property_changed("personal-message",
                 personal_message)
@@ -681,10 +681,15 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             return
 
         clear_token = tokens[SSO.LiveService.MESSENGER_CLEAR]
+        token = clear_token.security_token
         blob = clear_token.mbi_crypt(nonce)
+        if self._protocol_version >= 18:
+            arguments = ("SSO", "S", token, blob, "{%s}" %
+                    self._client.machine_guid.upper())
+        else:
+            arguments = ("SSO", "S", token, blob)
 
-        self._send_command("USR",
-                ("SSO", "S", clear_token.security_token, blob))
+        self._send_command("USR", arguments)
 
     def _address_book_state_changed_cb(self, address_book, pspec):
         MAX_PAYLOAD_SIZE = 7500

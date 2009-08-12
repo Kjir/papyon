@@ -281,6 +281,8 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
     def _connect_cb(self, transport):
         self._state = ProtocolState.OPENING
         account = self._client.profile.account
+        if self._client.protocol_version >= 18:
+            account += ";{%s}" % self._client.machine_guid
         if self.__key is not None:
             arguments = (account, self.__key, self.__session_id)
             self._send_command('ANS', arguments)
