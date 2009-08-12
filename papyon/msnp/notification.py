@@ -158,7 +158,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 ('MFN', urllib.quote(display_name)))
 
     @throttled(2000, LastElementQueue())
-    def set_personal_message(self, personal_message='', current_media=None):
+    def set_personal_message(self, personal_message='', current_media=None,
+            signature_sound=None):
         """Sets the new personal message
 
             @param personal_message: the new personal message
@@ -168,6 +169,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             cm ='\\0Music\\01\\0{0} - {1}\\0%s\\0%s\\0\\0' % \
                 (xml_utils.escape(current_media[0]), 
                  xml_utils.escape(current_media[1]))
+
+        if signature_sound is not None:
+            signature_sound = xml_utils.escape(signature_sound)
+            ss = '<SignatureSound>%s</SignatureSound>' % signature_sound
 
         message = xml_utils.escape(personal_message)
         pm = '<Data>'\
@@ -468,7 +473,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             logger.warning("Contact (network_id=%d) %s not found" % \
                     (network_id, account))
         for contact in contacts:
-            cm = ElementTree.fromstring(command.payload).find("./CurrentMedia")
+            tree = ElementTree.fromstring(command.payload)
+            cm = tree.find("./CurrentMedia")
             if cm is not None and cm.text is not None:
                 parts = cm.text.split('\\0')
                 if parts[1] == 'Music' and parts[2] == '1':
@@ -479,12 +485,19 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     contact._server_property_changed("current-media", None)
             else:
                 contact._server_property_changed("current-media", None)
-            pm = ElementTree.fromstring(command.payload).find("./PSM")
+            pm = tree.find("./PSM")
             if pm is not None and pm.text is not None:
                 pm = pm.text.encode("utf-8")
             else:
                 pm = ""
             contact._server_property_changed("personal-message", pm)
+            ss = tree.find("./SignatureSound")
+            if ss is not None and ss.text is not None:
+                ss = ss.text.encode("utf-8")
+            else:
+                ss = None
+            contact._server_property_changed("signature-sound", ss)
+
     # --------- Contact List -------------------------------------------------
     def _handle_ADL(self, command):
         if command.transaction_id == 0: # incoming ADL from the server

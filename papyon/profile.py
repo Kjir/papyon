@@ -360,6 +360,7 @@ class Profile(gobject.GObject):
         self._privacy = Privacy.BLOCK
         self._personal_message = ""
         self._current_media = None
+        self._signature_sound = None
 
         self.client_id = ClientCapabilities(7)
         #self.client_id.supports_sip_invite = True
@@ -457,6 +458,19 @@ class Profile(gobject.GObject):
         return locals()
 
     @rw_property
+    def signature_sound():
+        """The sound played when you are connecting
+            @type: string"""
+        def fset(self, signature_sound):
+            if signature_sound == self._signature_sound:
+                return
+            self.__pending_set_personal_message[2] = signature_sound
+            self._ns_client.set_personal_message(*self.__pending_set_personal_message)
+        def fget(self):
+            return self._signature_sound
+        return locals()
+
+    @rw_property
     def msn_object():
         """The MSNObject attached to your contact, this MSNObject represents the
         display picture to be shown to your peers
@@ -548,6 +562,11 @@ class Contact(gobject.GObject):
                 "The current media that the user wants to display",
                 gobject.PARAM_READABLE),
 
+            "signature-sound": (gobject.TYPE_PYOBJECT,
+                "Signature sound",
+                "The sound played by others' client when the user connects",
+                gobject.PARAM_READABLE),
+
             "presence": (gobject.TYPE_STRING,
                 "Presence",
                 "The presence to show to others",
@@ -596,6 +615,7 @@ class Contact(gobject.GObject):
         self._presence = Presence.OFFLINE
         self._personal_message = ""
         self._current_media = None
+        self._signature_sound = None
         self._groups = set()
 
         self._memberships = memberships
@@ -676,6 +696,12 @@ class Contact(gobject.GObject):
         """Contact current media
             @rtype: (artist: string, track: string)"""
         return self._current_media
+
+    @property
+    def signature_sound():
+        """Contact signature sound
+            @type: string"""
+        return self._signature_sound
 
     @property
     def groups(self):
