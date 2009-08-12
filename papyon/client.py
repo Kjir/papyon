@@ -110,7 +110,8 @@ class Client(EventsDispatcher):
         @sort: __init__, login, logout, state, profile, address_book,
                 msn_object_store, oim_box, spaces"""
 
-    def __init__(self, server, proxies={}, transport_class=DirectConnection):
+    def __init__(self, server, proxies={}, transport_class=DirectConnection,
+            version=15):
         """Initializer
 
             @param server: the Notification server to connect to.
@@ -133,7 +134,7 @@ class Client(EventsDispatcher):
         self._transport = transport_class(server, ServerType.NOTIFICATION,
                 self._proxies)
         self._protocol = msnp.NotificationProtocol(self, self._transport,
-                self._proxies)
+                self._proxies, version)
 
         self._switchboard_manager = SwitchboardManager(self)
         self._switchboard_manager.register_handler(SwitchboardConversation)
@@ -212,6 +213,10 @@ class Client(EventsDispatcher):
     @property
     def local_ip(self):
         return self._transport.sockname[0]
+
+    @property
+    def protocol_version(self):
+        return self._protocol._protocol_version
 
     def login(self, account, password):
         """Login to the server.

@@ -93,7 +93,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 gobject.PARAM_READABLE)
             }
 
-    def __init__(self, client, transport, proxies={}):
+    def __init__(self, client, transport, proxies={}, version=15):
         """Initializer
 
             @param client: the parent instance of L{client.Client}
@@ -109,7 +109,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         BaseProtocol.__init__(self, client, transport, proxies)
         gobject.GObject.__init__(self)
         self.__state = ProtocolState.CLOSED
-        self._protocol_version = 0
+        self._protocol_version = version
         self._url_callbacks = {} # tr_id=>callback
 
     # Properties ------------------------------------------------------------
@@ -269,10 +269,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 ProtocolConstant.CVR + (self._client.profile.account,))
 
     def _handle_CVR(self, command):
-        if self._protocol_version >= 15:
-            method = 'SSO'
-        else:
-            method = 'TWN'
+        method = 'SSO'
         self._send_command('USR',
                 (method, 'I', self._client.profile.account))
 
@@ -497,14 +494,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     profile[name] = value.strip()
             self._client.profile._server_property_changed("profile", profile)
 
-            if self._protocol_version < 15:
-                #self._send_command('SYN', ('0', '0'))
-                raise NotImplementedError, "Missing Implementation, please fix"
-            else:
-                self._send_command("BLP",
-                        (self._client.profile.privacy,))
-                self._state = ProtocolState.SYNCHRONIZING
-                self._client.address_book.sync()
+            self._send_command("BLP",
+                    (self._client.profile.privacy,))
+            self._state = ProtocolState.SYNCHRONIZING
+            self._client.address_book.sync()
         elif content_type[0] in \
                 ('text/x-msmsgsinitialmdatanotification', \
                  'text/x-msmsgsoimnotification'):
@@ -643,7 +636,11 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _connect_cb(self, transport):
         self.__switchboard_callbacks = PriorityQueue()
         self._state = ProtocolState.OPENING
-        self._send_command('VER', ProtocolConstant.VER)
+        versions = []
+        for version in ProtocolConstant.VER:
+            if version <= self._protocol_version:
+                versions.append("MSNP%i" % version)
+        self._send_command('VER', versions)
 
     def _disconnect_cb(self, transport, reason):
         self._state = ProtocolState.CLOSED
