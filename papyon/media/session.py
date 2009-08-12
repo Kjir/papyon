@@ -108,6 +108,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
 
         for stream in self._streams[:]:
             self.remove_stream(stream)
+        self.clear_pending_streams()
 
     def create_stream(self, name, direction, created_locally=False):
         """Create a new media stream with the given name and direction.
