@@ -25,7 +25,7 @@ class MediaCandidate(object):
 
     def __init__(self, foundation=None, component_id=None, transport=None,
                  priority=None, username=None, password=None, type=None,
-                 ip=None, port=None, base_ip=None, base_port=None, relay = False):
+                 ip=None, port=None, base_ip=None, base_port=None):
         self.foundation = foundation
         self.component_id = component_id
         self.transport = transport
@@ -37,7 +37,6 @@ class MediaCandidate(object):
         self.port = port
         self.base_ip = base_ip
         self.base_port = base_port
-        self.relay = relay
 
     def __eq__(self, other):
         return (self.foundation == other.foundation and

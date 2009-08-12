@@ -175,16 +175,16 @@ class MediaStream(gobject.GObject, EventsDispatcher):
 
     def get_default_address(self):
         """Returns the default address. We use the active local candidate if
-           there is one selected, else we are using the first relay candidate."""
+           there is one selected, else we are using the default candidate."""
 
         ip = None
         port = None
         rtcp = None
 
         active = self._local_candidate_id
-        relay = self.search_relay()
-        if not active and relay:
-            active = relay.foundation
+        default = self.search_default_candidate()
+        if not active and default:
+            active = default.foundation
 
         for candidate in self._local_candidates:
             if candidate.foundation == active and \
@@ -197,18 +197,18 @@ class MediaStream(gobject.GObject, EventsDispatcher):
 
         return ip, port, rtcp
 
-    def search_relay(self):
+    def search_default_candidate(self):
         """Returns the first relay found in the local candidates or the
            candidate with the lowest priority."""
-        relay = None
+        default = None
         for candidate in self._local_candidates:
             if candidate.transport != "UDP":
                 continue
-            if candidate.relay:
+            if candidate.type == "relay":
                 return candidate
-            if not relay or candidate.priority < relay.priority:
-                relay = candidate
-        return relay
+            if not default or candidate.priority < default.priority:
+                default = candidate
+        return default
 
     # The following functions need to be called by some kind of media stream
     # handler. See L{papyon.media.conference.StreamHandler} for a default

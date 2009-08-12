@@ -143,10 +143,10 @@ class ICECandidateParser(object):
 
         if draft is 19:
             cand.priority = int(cand.priority)
-            cand.relay = (cand.priority < 0.5)
         if draft is 6:
             cand.priority = int(float(cand.priority) * 1000)
-            cand.relay = (cand.type == "relay")
+            if cand.priority < 0.5:
+                cand.type = "relay"
 
         cand.component_id = int(cand.component_id)
         cand.username = fix_b64_padding(cand.username)
