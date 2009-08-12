@@ -3,7 +3,7 @@
 # papyon - a python client library for Msn
 #
 # Copyright (C) 2005-2007 Ali Sabil <ali.sabil@gmail.com>
-# Copyright (C) 2005-2006 Ole André Vadla Ravnås <oleavr@gmail.com> 
+# Copyright (C) 2005-2006 Ole André Vadla Ravnås <oleavr@gmail.com>
 # Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -28,7 +28,7 @@ from message import Message
 import papyon.profile
 
 import logging
-import urllib 
+import urllib
 import gobject
 
 __all__ = ['SwitchboardProtocol']
@@ -38,7 +38,7 @@ logger = logging.getLogger('protocol:switchboard')
 
 class SwitchboardProtocol(BaseProtocol, gobject.GObject):
     """Protocol used to communicate with the Switchboard Server
-        
+
         @undocumented: do_get_property, do_set_property
         @group Handlers: _handle_*, _default_handler, _error_handler
 
@@ -48,7 +48,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             "message-received": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
-            
+
             "message-sent": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -94,7 +94,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
 
             @param transport: The transport to use to speak the protocol
             @type transport: L{transport.BaseTransport}
-            
+
             @param session_id: the session to join if any
             @type session_id: string
 
@@ -114,7 +114,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self.__inviting = False
 
         self.__invitations = {}
-    
+
     # Properties ------------------------------------------------------------
     def __get_state(self):
         return self.__state
@@ -132,7 +132,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             self.notify("inviting")
     inviting = property(__get_inviting)
     _inviting = property(__get_inviting, __set_inviting)
-        
+
     def do_get_property(self, pspec):
         if pspec.name == "state":
             return self.__state
@@ -143,11 +143,11 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
 
     def do_set_property(self, pspec, value):
         raise AttributeError, "unknown property %s" % pspec.name
-    
+
     # Public API -------------------------------------------------------------
     def invite_user(self, contact):
         """Invite user to join in the conversation
-            
+
             @param contact: the contact to invite
             @type contact: L{profile.Contact}"""
         assert(self.state == ProtocolState.OPEN)
@@ -157,7 +157,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
 
     def send_message(self, message, ack, callback=None, cb_args=()):
         """Send a message to all contacts in this switchboard
-        
+
             @param message: the message to send
             @type message: L{message.Message}"""
         assert(self.state == ProtocolState.OPEN)
@@ -192,7 +192,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self._state = ProtocolState.SYNCHRONIZING
         self._state = ProtocolState.SYNCHRONIZED
         self._state = ProtocolState.OPEN
-    
+
     def _handle_OUT(self, command):
         pass
     # --------- Invitation ---------------------------------------------------
@@ -229,7 +229,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         if len(self.__invitations) == 0:
             self._inviting = False
 
-    def _handle_CAL(self, command): 
+    def _handle_CAL(self, command):
         # this should be followed by a JOI, so we only change
         # the self._inviting state until we get the actual JOI
         del self.__invitations[command.transaction_id]
@@ -258,7 +258,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             contact = contacts[0]
         message = Message(contact, command.payload)
         self.emit("message-received", message)
-        
+
     def _handle_ACK(self, command):
         self.emit("message-delivered", command)
 
@@ -267,7 +267,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
 
     def _error_handler(self, error):
         """Handles errors
-        
+
             @param error: an error command object
             @type error: L{command.Command}
         """

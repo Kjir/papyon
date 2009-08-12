@@ -53,7 +53,7 @@ class SwitchboardClient(object):
     @staticmethod
     def _can_handle_message(message, switchboard_client=None):
         return False
-    
+
     # properties
     @property
     def total_participants(self):
@@ -84,7 +84,7 @@ class SwitchboardClient(object):
 
     _switchboard = property(__get_switchboard, __set_switchboard)
     switchboard = property(__get_switchboard)
-    
+
     # protected
     def _send_message(self, content_type, body, headers={},
             ack=msnp.MessageAcknowledgement.HALF, callback=None, cb_args=()):
@@ -185,7 +185,7 @@ class SwitchboardClient(object):
 
 class SwitchboardManager(gobject.GObject):
     """Switchboard management
-        
+
         @undocumented: do_get_property, do_set_property
         @group Handlers: _handle_*, _default_handler, _error_handler"""
     __gsignals__ = {
@@ -311,7 +311,7 @@ class SwitchboardManager(gobject.GObject):
                     except KeyError:
                         break
                 del self._pending_switchboards[switchboard]
-            
+
             # Orphaned Handlers
             for handler in list(self._orphaned_handlers):
                 switchboard_participants = set(switchboard.participants.values())
@@ -364,4 +364,3 @@ class SwitchboardManager(gobject.GObject):
                 handler._switchboard = switchboard
                 self.emit("handler-created", handler_class, handler)
                 handler._on_message_received(message)
-

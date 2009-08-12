@@ -146,18 +146,15 @@ class Client(EventsDispatcher):
         
         self._msn_object_store = MSNObjectStore(self)
         self._p2p_session_manager.register_handler(self._msn_object_store)
-        
-        
 
         self._external_conversations = {}
 
         self._sso = None
-        
         self._profile = None
         self._address_book = None
         self._oim_box = None
         self._mailbox = None
-        
+
         self.__die = False
         self.__connect_transport_signals()
         self.__connect_protocol_signals()
@@ -174,7 +171,7 @@ class Client(EventsDispatcher):
     @property
     def webcam_handler(self):
         return self._webcam_handler
-    
+
     @property
     def profile(self):
         """The profile of the current user
@@ -297,19 +294,19 @@ class Client(EventsDispatcher):
         self.profile.connect("notify::personal-message", property_changed)
         self.profile.connect("notify::current-media", property_changed)
         self.profile.connect("notify::msn-object", property_changed)
-    
+
     def __connect_mailbox_signals(self):
         """Connect mailbox signals"""
         def new_mail_received(mailbox, mail):
             self._dispatch("on_mailbox_new_mail_received", mail)
-        
+
         def unread_changed(mailbox, unread_count, initial):
             method_name = "on_mailbox_unread_mail_count_changed"
             self._dispatch(method_name, unread_count, initial)
-            
+
         self.mailbox.connect("unread-mail-count-changed", unread_changed)
         self.mailbox.connect("new-mail-received", new_mail_received)
-        
+
     def __connect_contact_signals(self, contact):
         """Connect contact signals"""
         def event(contact, *args):

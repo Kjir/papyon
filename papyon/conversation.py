@@ -42,7 +42,7 @@ logger = logging.getLogger('conversation')
 def Conversation(client, contacts):
     """Factory function used to create the appropriate conversation with the
     given contacts.
-    
+
     This is the method you need to use to start a conversation with both MSN
     users and Yahoo! users.
         @attention: you can only talk to one Yahoo! contact at a time, and you
@@ -89,10 +89,10 @@ class ConversationInterface(object):
         """Sends an user typing notification to the contacts on this
         conversation."""
         raise NotImplementedError
-    
+
     def invite_user(self, contact):
         """Request a contact to join in the conversation.
-            
+
             @param contact: the contact to invite.
             @type contact: L{Contact<papyon.profile.Contact>}"""
         raise NotImplementedError
@@ -104,7 +104,7 @@ class ConversationInterface(object):
 
 class ConversationMessage(object):
     """A Conversation message sent or received
-    
+
         @ivar display_name: the display name to show for the sender of this message
         @type display_name: utf-8 encoded string
 
@@ -120,7 +120,7 @@ class ConversationMessage(object):
     """
     def __init__(self, content, formatting=None, msn_objects={}):
         """Initializer
-        
+
             @param content: the content of the message
             @type content: utf-8 encoded string
 
@@ -136,9 +136,9 @@ class ConversationMessage(object):
         self.msn_objects = msn_objects
 
 class TextFormat(object):
-    
+
     DEFAULT_FONT = 'MS Sans Serif'
-    
+
     # effects
     NO_EFFECT = 0
     BOLD = 1
@@ -189,7 +189,7 @@ class TextFormat(object):
     @property
     def font(self):
         return self._font
-    
+
     @property
     def style(self):
         return self._style
@@ -214,8 +214,8 @@ class TextFormat(object):
     def family(self):
         return self._family
 
-    def __init__(self, font=DEFAULT_FONT, style=NO_EFFECT, color='0', 
-                 charset=DEFAULT_CHARSET, family=FF_DONTCARE, 
+    def __init__(self, font=DEFAULT_FONT, style=NO_EFFECT, color='0',
+                 charset=DEFAULT_CHARSET, family=FF_DONTCARE,
                  pitch=DEFAULT_PITCH, right_alignment=False):
         self._font = font
         self._style = style
@@ -224,7 +224,7 @@ class TextFormat(object):
         self._pitch = pitch
         self._family = family
         self._right_alignment = right_alignment
-    
+
     def __parse(self, format):
         for property in format.split(';'):
             key, value =  [p.strip(' \t|').upper() \
@@ -256,24 +256,24 @@ class TextFormat(object):
 
     def __str__(self):
         style = ''
-        if self._style & TextFormat.BOLD == TextFormat.BOLD: 
+        if self._style & TextFormat.BOLD == TextFormat.BOLD:
             style += 'B'
-        if self._style & TextFormat.ITALIC == TextFormat.ITALIC: 
+        if self._style & TextFormat.ITALIC == TextFormat.ITALIC:
             style += 'I'
-        if self._style & TextFormat.UNDERLINE == TextFormat.UNDERLINE: 
+        if self._style & TextFormat.UNDERLINE == TextFormat.UNDERLINE:
             style += 'U'
-        if self._style & TextFormat.STRIKETHROUGH == TextFormat.STRIKETHROUGH: 
+        if self._style & TextFormat.STRIKETHROUGH == TextFormat.STRIKETHROUGH:
             style += 'S'
-        
+
         color = '%s%s%s' % (self._color[4:6], self._color[2:4], self._color[0:2])
 
-        format = 'FN=%s; EF=%s; CO=%s; CS=%s; PF=%d%d'  % (quote(self._font), 
+        format = 'FN=%s; EF=%s; CO=%s; CS=%s; PF=%d%d'  % (quote(self._font),
                                                            style, color,
                                                            self._charset,
                                                            self._family,
                                                            self._pitch)
         if self._right_alignment: format += '; RL=1'
-        
+
         return format
 
     def __repr__(self):
@@ -303,7 +303,7 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
         body = message.content.encode("utf-8")
         ack = msnp.MessageAcknowledgement.HALF
         headers = {}
-        if message.formatting is not None: 
+        if message.formatting is not None:
             headers["X-MMS-IM-Format"] = str(message.formatting)
 
         self._send_message(content_type, body, headers, ack)
@@ -320,13 +320,13 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
         headers = { "TypingUser" : self._client.profile.account.encode('UTF_8') }
         ack = msnp.MessageAcknowledgement.NONE
         self._send_message(content_type, body, headers, ack)
-    
+
     def invite_user(self, contact):
         raise NotImplementedError
 
     def leave(self):
         raise NotImplementedError
-    
+
     def _send_message(self, content_type, body, headers={},
             ack=msnp.MessageAcknowledgement.HALF):
         raise NotImplementedError
@@ -336,7 +336,7 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
 
     def _on_contact_left(self, contact):
         self._dispatch("on_conversation_user_left", contact)
-    
+
     def _on_message_received(self, message):
         sender = message.sender
         message_type = message.content_type[0]
@@ -361,7 +361,7 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
             self.__last_received_msn_objects = {}
         elif message_type == 'text/x-msmsgscontrol':
             self._dispatch("on_conversation_user_typing", sender)
-        elif message_type in ['text/x-mms-emoticon', 
+        elif message_type in ['text/x-mms-emoticon',
                               'text/x-mms-animemoticon']:
             msn_objects = {}
             parts = message.body.split('\t')
@@ -388,7 +388,7 @@ class ExternalNetworkConversation(AbstractConversation):
         self.participants = set(contacts)
         client._register_external_conversation(self)
         gobject.idle_add(self._open)
-    
+
     def _open(self):
         for contact in self.participants:
             self._on_contact_joined(contact)
@@ -420,7 +420,7 @@ class SwitchboardConversation(AbstractConversation, SwitchboardClient):
     def __init__(self, client, contacts):
         SwitchboardClient.__init__(self, client, contacts, priority=0)
         AbstractConversation.__init__(self, client)
-    
+
     @staticmethod
     def _can_handle_message(message, switchboard_client=None):
         content_type = message.content_type[0]
@@ -433,7 +433,7 @@ class SwitchboardConversation(AbstractConversation, SwitchboardClient):
 
     def invite_user(self, contact):
         """Request a contact to join in the conversation.
-            
+
             @param contact: the contact to invite.
             @type contact: L{profile.Contact}"""
         SwitchboardClient._invite_user(self, contact)
@@ -445,5 +445,3 @@ class SwitchboardConversation(AbstractConversation, SwitchboardClient):
     def _send_message(self, content_type, body, headers={},
             ack=msnp.MessageAcknowledgement.HALF):
         SwitchboardClient._send_message(self, content_type, body, headers, ack)
-
-

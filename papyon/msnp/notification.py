@@ -167,7 +167,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         cm = ''
         if current_media is not None:
             cm ='\\0Music\\01\\0{0} - {1}\\0%s\\0%s\\0\\0' % \
-                (xml_utils.escape(current_media[0]), 
+                (xml_utils.escape(current_media[0]),
                  xml_utils.escape(current_media[1]))
 
         if signature_sound is not None:
@@ -346,7 +346,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     (self._sso_cb, command.arguments[3]),
                     (lambda *args: self.emit("authentication-failed"),),
                     SSO.LiveService.MESSENGER_CLEAR)
-                
+
                 self._client.address_book.connect("notify::state",
                     self._address_book_state_changed_cb)
 
@@ -427,7 +427,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         contacts = self._client.address_book.contacts.\
                 search_by_network_id(network_id).\
                 search_by_account(account)
-        
+
         if len(contacts) == 0:
             logger.warning("Contact (network_id=%d) %s not found" % \
                     (network_id, account))
@@ -476,7 +476,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _handle_UBX(self,command): # contact infos
         if not command.payload:
             return
-        
+
         idx, network_id, account = self._parse_account(command)
 
         contacts = self._client.address_book.contacts.\
@@ -564,7 +564,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     if start < end:
                         mailbox_unread = int(mail_data[start:end])
                         self._client.mailbox._initial_set(mailbox_unread)
-                        
         elif content_type[0] == 'text/x-msmsgsinitialemailnotification':
             #Initial mail (obsolete by MSNP11)
             pass
@@ -596,7 +595,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 self._client.mailbox._unread_mail_decreased(delta)
             elif dest == 'ACTIVE':
                 self._client.mailbox._unread_mail_increased(delta)
-    
+
     def _handle_UBM(self, command):
         idx, network_id, account = self._parse_account(command)
 
@@ -613,9 +612,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             self.emit("unmanaged-message-received", contact, message)
 
     # --------- Urls ---------------------------------------------------------
-    
-    def _build_url_post_data(self, 
-                message_url="/cgi-bin/HoTMaiL", 
+
+    def _build_url_post_data(self,
+                message_url="/cgi-bin/HoTMaiL",
                 post_url='https://loginnet.passport.com/ppsecure/md5auth.srf?',
                 post_id='2'):
 
@@ -626,9 +625,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         sid = profile['sid']
         auth = profile['MSPAuth']
         creds = hashlib.md5(auth + sl + password).hexdigest()
-        
+
         post_data = dict([
-            ('mode', 'ttl'),            
+            ('mode', 'ttl'),
             ('login', account.split('@')[0]),
             ('username', account),
             ('sid', sid),
@@ -646,7 +645,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         tr_id = command.transaction_id
         if tr_id in self._url_callbacks:
             message_url, post_url, post_id = command.arguments
-            post_url, form_dict = self._build_url_post_data(message_url, 
+            post_url, form_dict = self._build_url_post_data(message_url,
                                                             post_url, post_id)
             callback = self._url_callbacks[tr_id]
             del self._url_callbacks[tr_id]
@@ -731,7 +730,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 if size >= MAX_PAYLOAD_SIZE:
                     payloads[-1] += '</d></ml>'
                     payloads.append('<ml l="1"><d n="%s">' % domain)
-                payloads[-1] += node 
+                payloads[-1] += node
             payloads[-1] += '</d>'
         payloads[-1] += '</ml>'
 
