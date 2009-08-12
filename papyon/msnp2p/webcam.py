@@ -215,15 +215,13 @@ class WebcamSessionMessage(MediaSessionMessage):
     def producer(self):
         return self._producer
 
-    def create_stream_description(self, name="video"):
-        desc = WebcamStreamDescription(self._id, self._producer)
-        self._descriptions.append(desc)
-        return desc
+    def _create_stream_description(self, stream):
+        return WebcamStreamDescription(stream, self._id, self._producer)
 
     def parse(self, body):
         tree = ElementTree.fromstring(body)
         self._id = int(tree.find("session").text)
-        desc = self.create_stream_description()
+        desc = self._create_stream_description(None)
         for node in tree.findall("tcp/*"):
             if node.tag == "tcpport":
                 desc.ports.append(int(node.text))
@@ -257,10 +255,10 @@ class WebcamStreamDescription(MediaStreamDescription):
 
     _candidate_encoder = WebcamCandidateEncoder()
 
-    def __init__(self, sid, producer):
+    def __init__(self, stream, sid, producer):
         direction = producer and MediaStreamDirection.SENDING or \
                 MediaStreamDirection.RECEIVING
-        MediaStreamDescription.__init__(self, "video", direction)
+        MediaStreamDescription.__init__(self, stream, "video", direction)
         self._ips = []
         self._ports = []
         self._rid = None

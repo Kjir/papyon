@@ -114,20 +114,6 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         """Close the stream"""
         self._dispatch("on_stream_closed")
 
-    def build_description(self, desc):
-        """Build the stream description from its infos. We also encode the
-           candidates into it using the MediaCandidateEncoder. Descriptions
-           are eventually sent to the other participants of the call using
-           a L{papyon.media.message.MediaSessionMessage}.
-
-           @param desc: Stream description to complete
-           @type desc: L{papyon.media.message.MediaStreamDescription}"""
-
-        desc._ip, desc._port, desc._rtcp = self.get_default_address()
-        desc.set_codecs(self._local_codecs)
-        self._encoder.encode_candidates(self, desc)
-        return desc
-
     def parse_description(self, desc):
         """Parse the stream infos from a description (codecs and
            candidates).

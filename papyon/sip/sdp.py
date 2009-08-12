@@ -41,10 +41,8 @@ class SDPMessage(MediaSessionMessage):
             return self._descriptions[0].ip
         return self._ip
 
-    def create_stream_description(self, name):
-        desc = SDPDescription(name)
-        self._descriptions.append(desc)
-        return desc
+    def _create_stream_description(self, stream):
+        return SDPDescription(stream)
 
     def __str__(self):
         out = []
@@ -82,7 +80,8 @@ class SDPMessage(MediaSessionMessage):
                 if key == 'o':
                     self._ip = val.split()[5]
                 elif key == 'm':
-                    desc = self.create_stream_description(val.split()[0])
+                    desc = SDPDescription(name=val.split()[0],
+                            direction=MediaStreamDirection.BOTH)
                     desc.port = int(val.split()[1])
                     desc.ip = self.ip # default IP address
                     desc.rtcp = desc.port + 1 # default RTCP port
@@ -104,15 +103,13 @@ class SDPMessage(MediaSessionMessage):
                 self._descriptions = []
                 raise ValueError('Invalid value "%s" for field "%s"' % (val, key))
 
-        return self._descriptions
-
 
 class SDPDescription(MediaStreamDescription):
 
     _candidate_encoder = ICECandidateEncoder()
 
-    def __init__(self, name):
-        MediaStreamDescription.__init__(self, name, MediaStreamDirection.BOTH)
+    def __init__(self, stream=None, name=None, direction=None):
+        MediaStreamDescription.__init__(self, stream, name, direction)
         self._attributes = odict({"encryption": ["rejected"]})
 
     @property

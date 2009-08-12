@@ -215,8 +215,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
 
         msg = self._msg_class(*args)
         for stream in self._streams:
-            desc = msg.create_stream_description(stream.name)
-            stream.build_description(desc)
+            msg.build_description(stream)
         return str(msg)
 
     def parse_body(self, body, initial=False):

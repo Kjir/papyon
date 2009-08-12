@@ -25,7 +25,7 @@ __all__ = ['MediaSessionMessage', 'MediaStreamDescription']
 class MediaSessionMessage(object):
     """Class representing messages sent between call participants. It contains
        the different media descriptions. Different implementations need to
-       override create_stream_description, parse and __str__ functions."""
+       override _create_stream_description, parse and __str__ functions."""
 
     def __init__(self):
         self._descriptions = []
@@ -35,7 +35,13 @@ class MediaSessionMessage(object):
         """Media stream descriptions"""
         return self._descriptions
 
-    def create_stream_description(self):
+    def build_description(self, stream):
+        """Create a description for given stream and append it to this message."""
+        desc = self._create_stream_description(stream)
+        self._descriptions.append(desc)
+        return desc
+
+    def _create_stream_description(self, stream):
         raise NotImplementedError
 
     def parse(self, body):
@@ -55,14 +61,18 @@ class MediaStreamDescription(object):
        If the stream only accept a specific set of codecs, the function
        is_valid_codec must be overriden as well."""
 
-    def __init__(self, name, direction):
+    def __init__(self, stream=None, name=None, direction=None):
         self._name = name
         self._direction = direction
+        self._session_type = None
         self._codecs = []
 
         self._ip = ""
         self._port = 0
         self._rtcp = 0
+
+        if stream is not None:
+            self._build(stream)
 
     @property
     def name(self):
@@ -129,6 +139,17 @@ class MediaStreamDescription(object):
                 candidates[0] = self.candidate_encoder.get_default_candidates(self)
             return candidates
         return [], []
+
+    def _build(self, stream):
+        local_candidates = stream.get_active_local_candidates()
+        remote_candidates = stream.get_active_remote_candidates()
+
+        self._name = stream.name
+        self._direction = stream.direction
+        self._session_type = stream.session.type
+        self._ip, self._port, self._rtcp = stream.get_default_address()
+        self.set_codecs(stream.get_local_codecs())
+        self.set_candidates(local_candidates, remote_candidates)
 
     def __repr__(self):
         return "<Media Description: %s>" % self.name
