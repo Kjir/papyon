@@ -20,6 +20,7 @@
 
 from papyon.gnet.constants import *
 from papyon.gnet.io.ssl_tcp import SSLTCPClient
+from papyon.media.relay import MediaRelay
 from papyon.service.SingleSignOn import *
 from papyon.util.decorator import rw_property
 
@@ -174,7 +175,7 @@ class TURNClient(gobject.GObject):
                 self.request_shared_secret_with_integrity(realm, nonce)
 
         elif msg.type == "SHARED-SECRET-RESPONSE":
-            relay = TURNRelay()
+            relay = MediaRelay()
             for attr in msg.attributes:
                 if attr.type == "USERNAME":
                     relay.username = base64.b64encode(attr.value)
@@ -299,19 +300,6 @@ class TURNAttribute(object):
         attr = struct.pack("!HH", self._type, len(self._value))
         attr += self._value
         return attr
-
-
-class TURNRelay(object):
-
-    def __init__(self):
-        self.username = None
-        self.password = None
-        self.ip = None
-        self.port = None
-
-    def __repr__(self):
-        return "<TURN Relay: %s %i username=\"%s\" password=\"%s\">" % (self.ip,
-                self.port, self.username, self.password)
 
 
 if __name__ == "__main__":

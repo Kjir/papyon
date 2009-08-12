@@ -18,11 +18,15 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from call import *
-from candidate import *
-from codec import *
-from constants import *
-from message import *
-from relay import *
-from session import *
-from stream import *
+
+class MediaRelay(object):
+
+    def __init__(self):
+        self.username = None
+        self.password = None
+        self.ip = ""
+        self.port = 0
+
+    def __repr__(self):
+        return "<Media Relay: %s %i username=\"%s\" password=\"%s\">" % (self.ip,
+                self.port, self.username, self.password)

@@ -203,7 +203,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         """Set the relay info on each stream.
 
            @param relays: List of relays
-           @type relays: list"""
+           @type relays: list of L{papyon.media.MediaRelay}"""
 
         idx = 0
         for stream in self._pending_streams:
