@@ -131,7 +131,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
 
     def add_stream(self, stream):
         """Add a stream to the session and signal it that we are ready to
-           handle its signals. If the call is not ready yet, use
+           handle its signals. If the call is not ready yet, you should use
            add_pending_stream instead.
 
            @param stream: Stream to add
@@ -142,7 +142,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         self._streams.append(stream)
         self._signals[stream.name] = [sp, sr]
         self._dispatch("on_stream_added", stream)
-        stream.process()
+        stream.activate()
         return stream
 
     def get_stream(self, name):
@@ -181,10 +181,10 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         logger.debug("Add %s stream to pending list" % stream.name)
         self._pending_streams.append(stream)
 
-    def process_pending_streams(self):
-        """Process all streams in the pending list."""
+    def activate_pending_streams(self):
+        """Activate all streams in the pending list."""
 
-        logger.debug("Process all streams in pending list")
+        logger.debug("Activate all streams in the pending list")
         for stream in self._pending_streams:
             self.add_stream(stream)
         self.clear_pending_streams()
@@ -225,7 +225,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
     def parse_body(self, body, initial=False):
         """Parse the received session message and create media streams
            accordingly. The created streams are added to the pending list and
-           we need to call process_pending_streams when the call is ready to
+           we need to call activate_pending_streams when the call is ready to
            handle the streams signals.
 
            @param body: Session message body

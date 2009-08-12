@@ -140,14 +140,23 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         # remote active one.
         if desc.has_active_remote():
             self._remote_candidate_id = candidates[0].foundation
-        elif self._active:
-            self.process()
+
+        self.process()
+
+    def activate(self):
+        """Function called once the stream handler is ready to handle the
+           stream signals."""
+        self._active = True
+        self.process()
 
     def process(self):
-        """Function called once the stream handler is ready to handle the
-           stream signals. Emit the signals if we have any pending ones."""
+        """Emit signals if we need to. (i.e. if we have received the list
+           of remote codecs or remote candidates. Only do it once the
+           stream handler is ready (self._active == True)."""
 
-        self._active = True
+        if not self._active:
+            return
+
         if self._remote_codecs:
             self._dispatch("on_remote_codecs_received", self._remote_codecs)
         if self._remote_candidates:
