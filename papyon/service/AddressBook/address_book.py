@@ -232,7 +232,7 @@ class AddressBook(gobject.GObject):
             contacts = address_book.contacts
             groups = address_book.groups
             for group in groups:
-                g = profile.Group(group.Id, group.Name.encode("utf-8"))
+                g = profile.Group(group.Id, group.Name)
                 self.groups.add(g)
             for contact in contacts:
                 c = self.__build_contact(contact, Membership.FORWARD)
