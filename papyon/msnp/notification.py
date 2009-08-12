@@ -260,6 +260,18 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         tr_id = self._send_command('URL', url_command_args)
         self._url_callbacks[tr_id] = callback
 
+    def _parse_account(self, command, idx=0):
+        if self._protocol_version >= 18:
+            temp = command.arguments[idx].split(":")
+            network_id = int(temp[0])
+            account = temp[1]
+        else:
+            account = command.arguments[idx]
+            idx += 1
+            network_id = int(command.arguments[idx])
+        idx += 1
+        return idx, network_id, account
+
 
     # Handlers ---------------------------------------------------------------
     # --------- Connection ---------------------------------------------------
@@ -373,8 +385,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._handle_NLN(command)
 
     def _handle_FLN(self,command):
-        network_id = int(command.arguments[1])
-        account = command.arguments[0]
+        idx, network_id, account = self._parse_account(command)
 
         contacts = self._client.address_book.contacts.\
                 search_by_network_id(network_id).\
@@ -389,8 +400,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     profile.Presence.OFFLINE)
 
     def _handle_NLN(self,command):
-        network_id = int(command.arguments[2])
-        account = command.arguments[1]
+        idx, network_id, account = self._parse_account(command, 1)
 
         contacts = self._client.address_book.contacts.\
                 search_by_network_id(network_id).\
@@ -399,23 +409,33 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         if len(contacts) == 0:
             logger.warning("Contact (network_id=%d) %s not found" % \
                     (network_id, account))
+
+        presence = command.arguments[0]
+        display_name = urllib.unquote(command.arguments[idx])
+        idx += 1
+        caps = command.arguments[idx].split(":")
+        idx += 1
+        capabilities = int(caps[0])
+        if len(caps) > 0:
+            extra_capabilities = int(caps[1])
+
+        msn_object = None
+        icon_url = None
+        if len(command.arguments) > idx:
+            if command.arguments[idx] != '0':
+                msn_object = papyon.p2p.MSNObject.parse(self._client,
+                               urllib.unquote(command.arguments[idx]))
+        idx += 1
+        if len(command.arguments) > idx:
+            icon_url = command.arguments[idx]
+
         for contact in contacts:
-            presence = command.arguments[0]
-            display_name = urllib.unquote(command.arguments[3])
-            capabilities = int(command.arguments[4])
             contact._server_property_changed("presence", presence)
             contact._server_property_changed("display-name", display_name)
             contact._server_property_changed("client-capabilities", capabilities)
-            if len(command.arguments) >= 6:
-                if command.arguments[5] != '0':
-                    msn_object = papyon.p2p.MSNObject.parse(self._client,
-                                   urllib.unquote(command.arguments[5]))
-                    contact._server_property_changed("msn-object", msn_object)
-                elif command.arguments[5] == '0':
-                    contact._server_property_changed("msn-object", None)
-                elif len(command.arguments) > 6:
-                    icon_url = command.arguments[6]
-                    contact._server_attribute_changed('icon_url', icon_url)
+            contact._server_property_changed("msn-object", msn_object)
+            if icon_url is not None:
+                contact._server_attribute_changed('icon_url', icon_url)
 
     # --------- Display name and co ------------------------------------------
     def _handle_PRP(self, command):
@@ -438,8 +458,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         if not command.payload:
             return
         
-        network_id = int(command.arguments[1])
-        account = command.arguments[0] 
+        idx, network_id, account = self._parse_account(command)
 
         contacts = self._client.address_book.contacts.\
                 search_by_network_id(network_id).\
@@ -552,8 +571,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 self._client.mailbox._unread_mail_increased(delta)
     
     def _handle_UBM(self, command):
-        network_id = int(command.arguments[1])
-        account = command.arguments[0]
+        idx, network_id, account = self._parse_account(command)
 
         contacts = self._client.address_book.contacts.\
                 search_by_network_id(network_id).\
