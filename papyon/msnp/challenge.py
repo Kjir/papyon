@@ -30,12 +30,12 @@ def _msn_challenge(data):
         @type data: string
     """
     import struct
-    import md5
+    import hashlib
     def little_endify(value, c_type="L"):
         """Transform the given value into little endian"""
         return struct.unpack(">" + c_type, struct.pack("<" + c_type, value))[0]
 
-    md5_digest = md5.md5(data + ProtocolConstant.PRODUCT_KEY).digest()
+    md5_digest = hashlib.md5(data + ProtocolConstant.PRODUCT_KEY).digest()
     # Make array of md5 string ints
     md5_integers = struct.unpack("<llll", md5_digest)
     md5_integers = [(x & 0x7fffffff) for x in md5_integers]
