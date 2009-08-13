@@ -56,6 +56,22 @@ class CommandPrinter(object):
             result += "\n" + repr(Message(None, str(command.payload)))
         return result
 
+    def _print_UUM(self):
+        command = self.command
+        result = self._print_default_header()
+
+        if command.payload is not None:
+            result += "\n" + repr(command.payload)
+        return result
+
+    def _print_UBM(self):
+        command = self.command
+        result = self._print_default_header()
+
+        if command.payload is not None:
+            result += "\n" + repr(Message(None, command.payload))
+        return result
+
     def _print_QRY(self):
         command = self.command
         result = self._print_default_header()
