@@ -197,7 +197,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         pass
     # --------- Invitation ---------------------------------------------------
     def __participant_join(self, account, display_name, client_id):
-        if self._client.protocol_version >= 18:
+        if self._client.protocol_version >= 16:
             if account.split(";")[0] == self._client.profile.account:
                 return # ignore our own user
         contacts = self._client.address_book.contacts.\
@@ -286,7 +286,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
     def _connect_cb(self, transport):
         self._state = ProtocolState.OPENING
         account = self._client.profile.account
-        if self._client.protocol_version >= 18:
+        if self._client.protocol_version >= 16:
             account += ";{%s}" % self._client.machine_guid
         if self.__key is not None:
             arguments = (account, self.__key, self.__session_id)

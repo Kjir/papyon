@@ -696,7 +696,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         clear_token = tokens[SSO.LiveService.MESSENGER_CLEAR]
         token = clear_token.security_token
         blob = clear_token.mbi_crypt(nonce)
-        if self._protocol_version >= 18:
+        if self._protocol_version >= 16:
             arguments = ("SSO", "S", token, blob, "{%s}" %
                     self._client.machine_guid.upper())
         else:

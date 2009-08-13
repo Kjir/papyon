@@ -20,7 +20,7 @@
 __all__ = ["ProtocolConstant", "ClientTypes"]
 
 class ProtocolConstant(object):
-    VER = (18, 15)
+    VER = (18, 16, 15)
     CVR = ('0x0409', 'winnt', '5.1', 'i386', 'MSNMSGR', '8.1.0178', 'msmsgs')
     PRODUCT_ID = "PROD0114ES4Z%Q5W"
     PRODUCT_KEY = "PK}_A_0N_K%O?A9S"
