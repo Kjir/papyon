@@ -96,6 +96,10 @@ class P2PSession(gobject.GObject):
     def peer(self):
         return self._peer
 
+    def set_receive_data_buffer(self, buffer, total_size):
+        blob = MessageBlob(self._application_id, buffer, total_size, self.id)
+        self._session_manager._transport_manager.register_writable_blob(blob)
+
     def _invite(self, context):
         body = SLPSessionRequestBody(self._euf_guid, self._application_id,
                 context, self._id)
