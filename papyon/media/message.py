@@ -45,7 +45,15 @@ class MediaSessionMessage(object):
         raise NotImplementedError
 
 class MediaStreamDescription(object):
-    """Class representing a media stream description."""
+    """Class representing a media stream description : name, direction and
+       codecs. Implementations of this class might also contain informations
+       about transport candidates. Such implementation should also override
+       the property "candidate_encoder" to return a subclass of
+       L{papyon.media.candidate.MediaCandidateEncoder} to encode and decode
+       these informations.
+
+       If the stream only accept a specific set of codecs, the function
+       is_valid_codec must be overriden as well."""
 
     def __init__(self, name, direction):
         self._name = name
