@@ -241,6 +241,12 @@ class MessageBlob(object):
     def is_control_blob(self):
         return False
 
+    def read_data(self):
+        self.data.seek(0, 0)
+        data = self.data.read()
+        self.data.seek(0, 0)
+        return data
+
     def get_chunk(self, max_size):
         blob_offset = self.transferred
 

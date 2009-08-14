@@ -77,12 +77,11 @@ class P2PSessionManager(gobject.GObject):
     def _blob_to_session(self, blob):
         # Check to see if it's a signaling message
         if blob.session_id == 0:
-            blob.data.seek(0, 0)
-            slp_data = blob.data.read()
-            blob.data.seek(0, 0)
+            slp_data = blob.read_data()
             try:
                 message = SLPMessage.build(slp_data)
             except ParseError:
+                print slp_data
                 logger.warning('Received blob with SessionID=0 and non SLP data')
                 raise SLPError("Non SLP data for blob with null sessionID")
             session_id = message.body.session_id
@@ -125,13 +124,9 @@ class P2PSessionManager(gobject.GObject):
 
         # The session could not be found, create a new one if necessary
         if session is None:
-            # Parse the SLP message. We know it's an SLP because if it was a data packet
-            # we would have received a ProtocolError exception
-            blob.data.seek(0, 0)
-            slp_data = blob.data.read()
-            blob.data.seek(0, 0)
 
             # No need to 'try', if it was invalid, we would have received an SLPError
+            slp_data = blob.read_data()
             message = SLPMessage.build(slp_data)
             session_id = message.body.session_id
 

@@ -194,15 +194,14 @@ class P2PSession(gobject.GObject):
         if blob.session_id == 0:
             # FIXME: handle the signaling correctly
             return
-
-        if blob.total_size == 4 and \
-                blob.data.read() == ('\x00' * 4):
+        data = blob.read_data()
+        if blob.total_size == 4 and data == ('\x00' * 4):
             self._on_data_preparation_blob_sent(blob)
         else:
             self._on_data_blob_sent(blob)
 
     def _on_blob_received(self, blob):
-        data = blob.data.read()
+        data = blob.read_data()
 
         if blob.session_id == 0:
             message = SLPMessage.build(data)
