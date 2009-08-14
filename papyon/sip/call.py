@@ -214,7 +214,7 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
         session_type = connection.tunneled and MediaSessionType.TUNNELED_SIP \
                 or MediaSessionType.SIP
         SIPBaseCall.__init__(self, connection, client, id)
-        MediaCall.__init__(self, session_type, SDPMessage)
+        MediaCall.__init__(self, session_type)
         EventsDispatcher.__init__(self)
 
         self._incoming = (id is not None)
@@ -259,10 +259,11 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
         return m
 
     def build_invite_request(self, uri, to):
+        message = SDPMessage(session=self.media_session)
         request = self.build_request("INVITE", uri, to, incr=True)
         request.add_header("Ms-Conversation-ID", "f=%s" % self.conversation_id)
         request.add_header("Contact", self.build_invite_contact())
-        request.set_content(self.media_session.build_body(), "application/sdp")
+        request.set_content(str(message), "application/sdp")
         return request
 
     def invite(self):
@@ -294,8 +295,9 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
     def answer(self, status):
         response = self.build_response(self._invite, status)
         if status == 200:
+            message = SDPMessage(session=self.media_session)
             response.add_header("Contact", self.build_invite_contact())
-            response.set_content(self.media_session.build_body(), "application/sdp")
+            response.set_content(str(message), "application/sdp")
         self.send(response)
 
     def ring(self):
@@ -395,8 +397,9 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
         self.answer(100)
 
         try:
+            message = SDPMessage(body=invite.body)
             initial = self._state is None
-            msg = self.media_session.parse_body(invite.body, initial)
+            self.media_session.process_remote_message(message, initial)
         except:
             logger.error("Malformed body in incoming call invitation")
             self.reject(488)
@@ -405,7 +408,7 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
         if self._state is None:
             self._state = "INCOMING"
             self.start_timeout("response", 30)
-            self.request_turn_relays(len(msg.descriptions))
+            self.request_turn_relays(len(message.descriptions))
         elif self._state == "CONFIRMED":
             self._state = "REINVITED"
             self.reaccept()
@@ -450,7 +453,8 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
         elif response.status is 200:
             self._state = "CONFIRMED"
             try:
-                self.media_session.parse_body(response.body)
+                message = SDPMessage(body=response.body)
+                self.media_session.process_remote_message(message)
             except:
                 logger.error("Malformed body in invite response")
                 self.send_bye()

@@ -49,7 +49,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
             ())
     }
 
-    def __init__(self, type, msg_class):
+    def __init__(self, type):
         """Initialize the session
 
            @param type: Session type
@@ -60,7 +60,6 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         gobject.GObject.__init__(self)
         EventsDispatcher.__init__(self)
         self._type = type
-        self._msg_class = msg_class
 
         self._streams = []
         self._pending_streams = []
@@ -71,6 +70,12 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         """Whether this session contain a video stream or not
            @rtype: bool"""
         return (self.get_stream("video") is not None)
+
+    @property
+    def streams(self):
+        """List of streams
+           @rtype: list of L{papyon.media.stream.MediaStream}"""
+        return self._streams
 
     @property
     def prepared(self):
@@ -207,47 +212,29 @@ class MediaSession(gobject.GObject, EventsDispatcher):
             stream.relays = relays[idx:idx+2]
             idx += 2
 
-    def build_body(self, *args):
-        """Create a session message containing all stream descriptions to send
-           to the other call participants. (e.g. an SDP message)
-
-           @returns the message body (string)"""
-
-        msg = self._msg_class(*args)
-        for stream in self._streams:
-            msg.build_description(stream)
-        return str(msg)
-
-    def parse_body(self, body, initial=False):
+    def process_remote_message(self, msg, initial=False):
         """Parse the received session message and create media streams
            accordingly. The created streams are added to the pending list and
            we need to call activate_pending_streams when the call is ready to
            handle the streams signals.
 
-           @param body: Session message body
-           @type body: string
+           @param msg: Session message received from a peer
+           @type msg: L{papyon.media.message.MediaSessionMessage}
            @param initial: Whether or not this is the first message received
            @type initial: boolean"""
 
-        msg = self._msg_class()
-        try:
-            if not msg.parse(body):
-                raise ValueError("Session message does not contain any information")
-            for desc in msg.descriptions:
-                stream = self.get_stream(desc.name)
-                if stream is None:
-                    if initial:
-                        stream = self.create_stream(desc.name, desc.direction)
-                        self.add_pending_stream(stream)
-                    else:
-                        raise ValueError('Invalid stream "%s" in session message' % desc.name)
-                stream.process_remote_description(desc)
-        except Exception, err:
-            import traceback
-            traceback.print_exc()
-            logger.error(err)
-            raise
-        return msg
+        if not msg.descriptions:
+            raise ValueError("Session message does not contain any information")
+
+        for desc in msg.descriptions:
+            stream = self.get_stream(desc.name)
+            if stream is None:
+                if initial:
+                    stream = self.create_stream(desc.name, desc.direction)
+                    self.add_pending_stream(stream)
+                else:
+                    raise ValueError('Invalid stream "%s" in session message' % desc.name)
+            stream.process_remote_description(desc)
 
     def on_stream_prepared(self, stream):
         if self.prepared:

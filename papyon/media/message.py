@@ -25,26 +25,29 @@ __all__ = ['MediaSessionMessage', 'MediaStreamDescription']
 class MediaSessionMessage(object):
     """Class representing messages sent between call participants. It contains
        the different media descriptions. Different implementations need to
-       override _create_stream_description, parse and __str__ functions."""
+       override _create_stream_description, _parse and __str__ functions."""
 
-    def __init__(self):
+    def __init__(self, session=None, body=None):
         self._descriptions = []
+        if session is not None:
+            self._build(session)
+        elif body is not None:
+            self._parse(body)
 
     @property
     def descriptions(self):
         """Media stream descriptions"""
         return self._descriptions
 
-    def build_description(self, stream):
-        """Create a description for given stream and append it to this message."""
-        desc = self._create_stream_description(stream)
-        self._descriptions.append(desc)
-        return desc
-
     def _create_stream_description(self, stream):
         raise NotImplementedError
 
-    def parse(self, body):
+    def _build(self, session):
+        for stream in session.streams:
+            desc = self._create_stream_description(stream)
+            self._descriptions.append(desc)
+
+    def _parse(self, body):
         raise NotImplementedError
 
     def __str__(self):

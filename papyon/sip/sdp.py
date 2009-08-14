@@ -31,8 +31,8 @@ logger = logging.getLogger('SDP')
 
 class SDPMessage(MediaSessionMessage):
 
-    def __init__(self):
-        MediaSessionMessage.__init__(self)
+    def __init__(self, session=None, body=None):
+        MediaSessionMessage.__init__(session, body)
         self._ip = ""
 
     @property
@@ -62,7 +62,7 @@ class SDPMessage(MediaSessionMessage):
 
         return "\r\n".join(out) + "\r\n\r\n"
 
-    def parse(self, message):
+    def _parse(self, message):
         desc = None
 
         for line in message.splitlines():

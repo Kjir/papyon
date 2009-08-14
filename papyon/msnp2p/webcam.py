@@ -53,7 +53,7 @@ class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
 
         P2PSession.__init__(self, session_manager, peer, euf_guid,
                 ApplicationID.WEBCAM, message)
-        MediaCall.__init__(self, type, WebcamSessionMessage)
+        MediaCall.__init__(self, type)
         EventsDispatcher.__init__(self)
 
         self._producer = producer
@@ -154,13 +154,15 @@ class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
             return
         logger.info("Send XML for session %i", self._session_id)
         self._xml_needed = False
-        body = self.media_session.build_body(self._session_id, self._producer)
-        self.send_data(body)
+        message = WebcamSessionMessage(session=self.media_session,
+                id=self._session_id, producer=self._producer)
+        self.send_data(str(message))
 
     def _handle_xml(self, data):
+        message = WebcamSessionMessage(body=data, producer=self._producer)
         initial = not self._producer
-        msg = self.media_session.parse_body(data, initial)
-        self._session_id = msg.id
+        self.media_session.process_remote_message(message, initial)
+        self._session_id = message.id
         logger.info("Received XML data for session %i", self._session_id)
         if self._producer:
             self.send_binary_viewer_data()
@@ -202,8 +204,8 @@ class WebcamCandidateEncoder(MediaCandidateEncoder):
 
 class WebcamSessionMessage(MediaSessionMessage):
 
-    def __init__(self, id=0, producer=False):
-        MediaSessionMessage.__init__(self)
+    def __init__(self, session=None, body=None, id=0, producer=False):
+        MediaSessionMessage.__init__(self, session, body)
         self._id = id
         self._producer = producer
 
@@ -218,7 +220,7 @@ class WebcamSessionMessage(MediaSessionMessage):
     def _create_stream_description(self, stream):
         return WebcamStreamDescription(stream, self._id, self._producer)
 
-    def parse(self, body):
+    def _parse(self, body):
         tree = ElementTree.fromstring(body)
         self._id = int(tree.find("session").text)
         desc = self._create_stream_description(None)
