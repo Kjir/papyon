@@ -23,6 +23,7 @@ from papyon.media.constants import *
 
 import gobject
 import logging
+import weakref
 
 logger = logging.getLogger('Media:Stream')
 
@@ -47,9 +48,11 @@ class MediaStream(gobject.GObject, EventsDispatcher):
             ())
     }
 
-    def __init__(self, name, direction, created):
+    def __init__(self, session, name, direction, created):
         """Initialize the media stream.
 
+           @param session: Session that contains this stream
+           @type session: L{papyon.media.session.MediaSession}
            @param name: Stream name
            @type name: string
            @param direction: Stream direction
@@ -59,6 +62,7 @@ class MediaStream(gobject.GObject, EventsDispatcher):
 
         gobject.GObject.__init__(self)
         EventsDispatcher.__init__(self)
+        self._session = weakref.ref(session)
         self._name = name
         self._active = False
         self._created = created
@@ -72,6 +76,11 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         self._remote_candidate_id = None
         self._remote_candidates = []
         self.relays = []
+
+    @property
+    def session(self):
+        """Parent session"""
+        return self._session()
 
     @property
     def name(self):
