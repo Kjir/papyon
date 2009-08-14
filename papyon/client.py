@@ -413,6 +413,8 @@ class Client(EventsDispatcher):
             event_args = args[:-1]
             if event_name == "contact-added":
                 self.__connect_contact_signals(event_args[0])
+                # Call the old event name to be backward compatible
+                self._dispatch("on_addressbook_messenger_contact_added", *event_args)
             method_name = "on_addressbook_%s" % event_name.replace("-", "_")
             self._dispatch(method_name, *event_args)
         def error(address_book, error_code):
@@ -425,7 +427,6 @@ class Client(EventsDispatcher):
         def connect_signal(name):
             self.address_book.connect(name, event, name)
 
-        connect_signal("messenger-contact-added")
         connect_signal("contact-added")
         connect_signal("contact-deleted")
         connect_signal("contact-blocked")
