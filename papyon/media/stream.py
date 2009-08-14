@@ -114,11 +114,11 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         """Close the stream"""
         self._dispatch("on_stream_closed")
 
-    def parse_description(self, desc):
-        """Parse the stream infos from a description (codecs and
-           candidates).
+    def process_remote_description(self, desc):
+        """Set remote stream informations (candidates, codecs) from the given
+           stream description.
 
-           @param desc: Media stream description to parse
+           @param desc: Remote stream description to process
            @type desc: L{papyon.media.message.MediaStreamDescription}"""
 
         self._remote_codecs = desc.valid_codecs

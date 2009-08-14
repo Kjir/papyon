@@ -241,7 +241,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
                         self.add_pending_stream(stream)
                     else:
                         raise ValueError('Invalid stream "%s" in session message' % desc.name)
-                stream.parse_description(desc)
+                stream.process_remote_description(desc)
         except Exception, err:
             import traceback
             traceback.print_exc()
