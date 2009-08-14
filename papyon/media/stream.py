@@ -158,6 +158,11 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         if self._remote_candidates:
             self._dispatch("on_remote_candidates_received", self._remote_candidates)
 
+    def get_local_codecs(self):
+        """Returns the list of possible local codecs for this stream."""
+
+        return self._local_codecs
+
     def get_active_local_candidates(self):
         """Returns the active local candidates or all the candidates if there
            isn't any active one. This list is meant to be sent to the other
