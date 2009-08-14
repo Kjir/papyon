@@ -7,6 +7,7 @@ Fixes:
   * No longer disconnect the client when an non-critical address
     book error is triggered (Bugs #14371, #15869)
   * Fixed sending of messages to contacts using Microsoft Messenger for Mac
+  * Fixed some encoding issues with Python 2.6 loggin (only supports unicode)
 
 papyon-0.4.1 (2009-07-28)
 =========================
