@@ -174,6 +174,9 @@ class P2PSession(gobject.GObject):
                 call_id=self._call_id)
         message.body = body
         self._send_p2p_data(message)
+        self._dispose()
+
+    def _dispose(self):
         self._session_manager._unregister_session(self)
 
     def _send_p2p_data(self, data_or_file, is_file=False):
