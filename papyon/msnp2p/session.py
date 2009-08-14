@@ -27,10 +27,13 @@ import papyon.util.element_tree as ElementTree
 
 import gobject
 import base64
+import logging
 import random
 import uuid
 
 __all__ = ['P2PSession']
+
+logger = logging.getLogger('msnp2p:session')
 
 MAX_INT32 = 0x7fffffff
 MAX_INT16 = 0x7fff
@@ -39,7 +42,7 @@ MAX_INT16 = 0x7fff
 class P2PSession(gobject.GObject):
 
     __gsignals__ = {
-            "transfer-completed" : (gobject.SIGNAL_RUN_FIRST,
+            "completed" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,))
     }
@@ -223,12 +226,14 @@ class P2PSession(gobject.GObject):
         pass
 
     def _on_data_blob_sent(self, blob):
+        logger.info("Session data transfer completed")
         blob.data.seek(0, 0)
-        self.emit("transfer-completed", blob.data)
+        self.emit("completed", blob.data)
 
     def _on_data_blob_received(self, blob):
+        logger.info("Session data transfer completed")
         blob.data.seek(0, 0)
-        self.emit("transfer-completed", blob.data)
+        self.emit("completed", blob.data)
         self._close()
 
     # Methods to implement in different P2P applications

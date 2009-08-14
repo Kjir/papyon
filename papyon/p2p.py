@@ -219,7 +219,7 @@ class MSNObjectStore(object):
         session = MSNObjectSession(self._client._p2p_session_manager,
                 peer, message.body.application_id, message)
 
-        handle_id = session.connect("transfer-completed",
+        handle_id = session.connect("completed",
                         self._incoming_session_transfer_completed)
         self._incoming_sessions[session] = handle_id
         try:
@@ -246,7 +246,7 @@ class MSNObjectStore(object):
 
         session = MSNObjectSession(self._client._p2p_session_manager,
                 msn_object._creator, application_id)
-        handle_id = session.connect("transfer-completed",
+        handle_id = session.connect("completed",
                 self._outgoing_session_transfer_completed)
         self._outgoing_sessions[session] = \
                 (handle_id, callback, errback, msn_object)
