@@ -28,6 +28,9 @@ class AddressBookEventInterface(BaseEventInterface):
     def on_addressbook_messenger_contact_added(self, contact):
         pass
 
+    def on_addressbook_contact_added(self, contact):
+        pass
+
     def on_addressbook_contact_deleted(self, contact):
         pass
 
