@@ -6,8 +6,6 @@ gory details.
 
 Dependencies
 ============
-python (>= 2.4)
+python (>= 2.5)
 python-gobject (>=2.10)
-ElementTree (>=1.2.0) or cElementTree (>=1.0.5) or python (>= 2.5)
 pyOpenSSL (>=0.6)
-pyCrypto (>=2.0.0)
