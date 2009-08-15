@@ -1,6 +1,10 @@
 papyon-0.4.2 (UNRELEASED)
 =========================
 
+Enhancements:
+  * Bumped minimal required Python version to 2.5
+  * Dropped dependency on pyCrypto
+
 Fixes:
   * Fixed crash when FindMemberships response is empty (Bug #23039)
   * Fixed crash when accepting contact invites (Bugs #18514, #19229)
