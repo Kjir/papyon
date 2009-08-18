@@ -489,7 +489,7 @@ class AddressBook(gobject.GObject):
 
         if (not contact.IsMessengerUser) and (external_email is not None):
             display_name = contact.DisplayName
-            if display_name == "":
+            if not display_name:
                 display_name = external_email.Email
 
             if not is_messenger_enabled:
@@ -516,9 +516,9 @@ class AddressBook(gobject.GObject):
             return None
         else:
             display_name = contact.DisplayName
-            if display_name == "":
+            if not display_name:
                 display_name = contact.QuickName
-            if display_name == "":
+            if not display_name:
                 display_name = contact.PassportName
 
             if not contact.IsMessengerUser:
