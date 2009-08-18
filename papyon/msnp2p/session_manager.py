@@ -124,8 +124,6 @@ class P2PSessionManager(gobject.GObject):
             message = SLPMessage.build(slp_data)
             session_id = message.body.session_id
 
-            logger.info("blob has SLP (%d):\n%s" % (session_id, message))
-
             # Make sure the SLP has a session_id, otherwise, it means it's invite
             # if it's a signaling SLP and the call-id could not be matched to
             # an existing session

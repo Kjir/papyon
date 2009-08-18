@@ -77,12 +77,13 @@ class Message(HTTPMessage):
         else:
             tlp_header = self.body[:48]
             tlp_footer = self.body[-4:]
+            tlp_session_id = struct.unpack("<L", self.body[0:4])[0]
             tlp_flags = struct.unpack("<L", self.body[28:32])[0]
             body = self.body[48:-4]
 
             message += "\t" + debug.hexify_string(tlp_header).replace("\r\n", "\n\t")
 
-            if tlp_flags == 0:
+            if tlp_flags == 0 or tlp_session_id == 0:
                 message += "\n\t" + debug.escape_string(body).\
                         replace("\r\n", "\\r\\n\n\t")
             elif len(body) > 0:
