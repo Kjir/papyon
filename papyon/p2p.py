@@ -146,12 +146,15 @@ class MSNObject(object):
         except:
             raise ParseError('Invalid MSNObject')
 
-        try:
-            creator = client.address_book.contacts.\
-                search_by_account(element["Creator"]).\
-                search_by_network_id(NetworkID.MSN)[0]
-        except IndexError:
-            creator = None
+        if element["Creator"] == client.profile.account:
+            creator = client.profile
+        else:
+            try:
+                creator = client.address_book.contacts.\
+                    search_by_account(element["Creator"]).\
+                    search_by_network_id(NetworkID.MSN)[0]
+            except IndexError:
+                creator = None
 
         size = int(element["Size"])
         type = int(element["Type"])
