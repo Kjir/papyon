@@ -36,42 +36,38 @@ class ClientEvents(papyon.event.ClientEventInterface):
         if state == papyon.event.ClientState.CLOSED:
             self._client.quit()
         elif state == papyon.event.ClientState.OPEN:
-            self._client.profile.display_name = "Kimbix"
-            self._client.profile.personal_message = "Testing papyon, and freeing the pandas!"
+            self._client.profile.display_name = "Papyon"
 
-#             path = '/home/jprieur/projects/papyon.rewrite/papyon/service/ContentRoaming/test.jpeg'
-#             f = open(path, 'r')
-#             old_pos = f.tell()
-#             f.seek(0, 2)
-#             size = f.tell()
-#             f.seek(old_pos,0)
-
-#             msn_object = \
-#                 papyon.p2p.MSNObject(self._client.profile,
-#                                     size, papyon.p2p.MSNObjectType.DISPLAY_PICTURE,
-#                                     0, "lalala")
-#             msn_object._data = StringIO.StringIO(f.read())
-
-            self._client.profile.presence_msn_object = papyon.Presence.ONLINE, None
+            path = self._client.msn_object_path
+            f = open(path, 'r')
+            old_pos = f.tell()
+            f.seek(0, 2)
+            size = f.tell()
+            f.seek(old_pos,0)
+            msn_object = \
+                papyon.p2p.MSNObject(self._client.profile,
+                                    size, papyon.p2p.MSNObjectType.DISPLAY_PICTURE,
+                                    0, "lalala", data=f)
+            self._client.profile.presence_msn_object = papyon.Presence.ONLINE, msn_object
             self._client.profile.personal_message_current_media = "yo!", None
-
-            gobject.timeout_add(5000, self._client.request_display_picture)
+ 
+            #gobject.timeout_add(3000, self._client.request_display_picture)
 
     def on_client_error(self, error_type, error):
         print "ERROR :", error_type, " ->", error
 
 class Client(papyon.Client):
-    def __init__(self, account, quit, http_mode=False):
+    def __init__(self, account, msn_object_path, quit, http_mode=False):
         server = ('messenger.hotmail.com', 1863)
         self.quit = quit
         self.account = account
+        self.msn_object_path = msn_object_path
         if http_mode:
             from papyon.transport import HTTPPollConnection
             papyon.Client.__init__(self, server, get_proxies(), HTTPPollConnection)
         else:
             papyon.Client.__init__(self, server, proxies = get_proxies())
         self.client_event_handler = ClientEvents(self)
-        self._p2p_session_manager = P2PSessionManager(self)
         gobject.idle_add(self._connect)
 
     def _connect(self):
@@ -118,6 +114,11 @@ def main():
     else:
         passwd = sys.argv[2]
 
+    if len(sys.argv) < 4:
+        path = raw_input('Display picture path: ')
+    else:
+        path = sys.argv[3]
+
     mainloop = gobject.MainLoop(is_running=True)
 
     def quit():
@@ -128,7 +129,7 @@ def main():
 
     signal.signal(signal.SIGTERM, sigterm_cb)
 
-    n = Client((account, passwd), quit, http_mode)
+    n = Client((account, passwd), path, quit, http_mode)
 
     while mainloop.is_running():
         try:
