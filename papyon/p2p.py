@@ -98,7 +98,6 @@ class MSNObject(object):
         self._type = type
         self._location = location
         self._friendly = friendly
-        self._checksum_sha = shac
 
         if shad is None:
             if data is None:
@@ -106,6 +105,9 @@ class MSNObject(object):
             shad = self.__compute_data_hash(data)
         self._data_sha = shad
         self.__data = data
+        if shac is None:
+            shac = self.__compute_checksum()
+        self._checksum_sha = shac
         self._repr = None
 
     def __ne__(self, other):
