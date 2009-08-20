@@ -95,9 +95,12 @@ class TURNClient(gobject.GObject):
 
     def __init__(self, sso, account):
         gobject.GObject.__init__(self)
+        self._signals = []
         self._transport = SSLTCPClient(self.host, self.port)
-        self._transport.connect("notify::status", self.on_status_changed)
-        self._transport.connect("received", self.on_message_received)
+        self._signals.append(self._transport.connect("notify::status",
+            self.on_status_changed))
+        self._signals.append(self._transport.connect("received",
+            self.on_message_received))
         self._answered = False
         self._msg_queue = []
         self._requests = {}
@@ -201,6 +204,8 @@ class TURNClient(gobject.GObject):
             self._answered = True
             self._requests = {}
             self._msg_queue = []
+            for signal_id in self._signals:
+                self._transport.disconnect(signal_id)
             self.emit("requests-answered", self._relays)
 
 
