@@ -174,6 +174,9 @@ class TURNClient(gobject.GObject):
             del self._requests[msg.id]
 
         if msg.type == "SHARED-SECRET-ERROR":
+            error_msg = None
+            realm = None
+            nonce = None
             for attr in msg.attributes:
                 if attr.type == "REALM":
                     realm = attr.value
@@ -182,8 +185,9 @@ class TURNClient(gobject.GObject):
                 elif attr.type == "ERROR-CODE":
                     error_msg = attr.value[4:]
             if error_msg == "Unauthorized":
-                self.request_shared_secret_with_integrity(None, None, realm, nonce)
-                return
+                if realm is not None or nonce is not None:
+                    self.request_shared_secret_with_integrity(None, None, realm, nonce)
+                    return
 
         elif msg.type == "SHARED-SECRET-RESPONSE":
             relay = MediaRelay()
@@ -201,7 +205,6 @@ class TURNClient(gobject.GObject):
 
         if not self._requests:
             self._answer()
-            self._transport.close()
 
     def on_timeout(self):
         self._answer()
@@ -218,6 +221,7 @@ class TURNClient(gobject.GObject):
                 gobject.source_remove(self._src)
                 self._src = None
             self.emit("requests-answered", self._relays)
+        self._transport.close()
 
 
 class TURNMessage(object):
