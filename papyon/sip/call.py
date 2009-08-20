@@ -593,7 +593,8 @@ class SIPRegistration(SIPBaseCall):
 
         self._state = "UNREGISTERING"
         self._pending_unregister = False
-        gobject.source_remove(self._src)
+        if self._src is not None:
+            gobject.source_remove(self._src)
         self._src = None
         self._sso.RequestMultipleSecurityTokens((self.unregister_cb,), None,
                 LiveService.MESSENGER_SECURE)
