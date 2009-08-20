@@ -209,7 +209,7 @@ class SIPMessageParser(gobject.GObject):
             a, b, c = line.split(" ", 2)
             if a == self.version:
                 code = int(b)
-                self._message = SIPResponse(code, a)
+                self._message = SIPResponse(code, c)
             elif c == self.version:
                 self._message = SIPRequest(a, b)
             self._state = "headers"
