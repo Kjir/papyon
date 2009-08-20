@@ -395,8 +395,6 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
 
         try:
             message = SDPMessage(body=invite.body)
-            initial = self._state is None
-            self.media_session.process_remote_message(message, initial)
         except:
             logger.error("Malformed body in incoming call invitation")
             self.reject(488)
@@ -405,12 +403,13 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
         if self._state is None:
             self._state = "INCOMING"
             self.start_timeout("response", 50)
+            self.media_session.process_remote_message(message, True)
             self.media_session.process_pending_streams()
         elif self._state == "CONFIRMED":
             self._state = "REINVITED"
+            self.media_session.process_remote_message(message, False)
             self.reaccept()
         else:
-            self.media_session.clear_pending_streams()
             self.answer(488) # not acceptable here
 
     def on_ack_received(self, ack):
