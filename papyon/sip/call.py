@@ -548,6 +548,7 @@ class SIPRegistration(SIPBaseCall):
         self._src = None
         self._request = None
         self._pending_unregister = False
+        self._tokens = {}
 
     @property
     def registered(self):
@@ -569,13 +570,14 @@ class SIPRegistration(SIPBaseCall):
         if self._state in ("REGISTERING", "REGISTERED", "CANCELLED"):
             return
         self._state = "REGISTERING"
-        self._sso.RequestMultipleSecurityTokens((self.register_cb,), None,
-                LiveService.MESSENGER_SECURE)
+        self._do_register(None, None)
 
-    def register_cb(self, tokens):
+    @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
+    def _do_register(self, callback, errback):
+        # Check if state changed while requesting security token
         if self._state != "REGISTERING":
             return
-        auth = "msmsgs:RPS_%s" % tokens[LiveService.MESSENGER_SECURE]
+        auth = "msmsgs:RPS_%s" % self._tokens[LiveService.MESSENGER_SECURE]
         auth = base64.b64encode(auth).replace("\n", "")
         self._request = self.build_register_request(900, auth)
         self.send(self._request, True)
@@ -596,11 +598,11 @@ class SIPRegistration(SIPBaseCall):
         if self._src is not None:
             gobject.source_remove(self._src)
         self._src = None
-        self._sso.RequestMultipleSecurityTokens((self.unregister_cb,), None,
-                LiveService.MESSENGER_SECURE)
+        self._do_unregister(None, None)
 
-    def unregister_cb(self, tokens):
-        auth = "%s:%s" % (self._account, tokens[LiveService.MESSENGER_SECURE])
+    @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
+    def _do_unregister(self, callback, errback):
+        auth = "%s:%s" % (self._account, self._tokens[LiveService.MESSENGER_SECURE])
         auth = base64.encodestring(auth).replace("\n", "")
         request = self.build_register_request(0, auth)
         self.send(request, True)
