@@ -201,17 +201,6 @@ class MediaSession(gobject.GObject, EventsDispatcher):
 
         self._pending_streams = []
 
-    def set_relay_info(self, relays):
-        """Set the relay info on each stream.
-
-           @param relays: List of relays
-           @type relays: list of L{papyon.media.MediaRelay}"""
-
-        idx = 0
-        for stream in self._pending_streams:
-            stream.relays = relays[idx:idx+2]
-            idx += 2
-
     def process_remote_message(self, msg, initial=False):
         """Parse the received session message and create media streams
            accordingly. The created streams are added to the pending list and

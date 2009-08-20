@@ -267,11 +267,8 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
         return request
 
     def invite(self):
-        if not self._relay_requested:
-            self._relay_requested = True
-            self.request_turn_relays(len(self.media_session._pending_streams))
-            return
         if not self.media_session.prepared:
+            self.media_session.process_pending_streams()
             return
         logger.info("Send call invitation to %s", self._peer.account)
         self._state = "CALLING"
@@ -408,7 +405,7 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
         if self._state is None:
             self._state = "INCOMING"
             self.start_timeout("response", 50)
-            self.request_turn_relays(len(message.descriptions))
+            self.media_session.process_pending_streams()
         elif self._state == "CONFIRMED":
             self._state = "REINVITED"
             self.reaccept()
@@ -522,15 +519,13 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
         self.dispose()
 
     def request_turn_relays(self, streams_count):
+        # FIXME Request TURN relays before to send invite or to accept an
         turn_client = TURNClient(self._client._sso, self._account)
         turn_client.connect("requests-answered", self.on_turn_relays_discovered)
         turn_client.request_shared_secret(None, None, streams_count * 2)
 
     def on_turn_relays_discovered(self, turn_client, relays):
         logger.debug("Discovered %i TURN relays" % len(relays))
-        if relays:
-            self.media_session.set_relay_info(relays)
-        self.media_session.process_pending_streams()
 
 
 class SIPRegistration(SIPBaseCall):
