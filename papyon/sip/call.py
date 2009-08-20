@@ -303,7 +303,7 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
     def ring(self):
         if self._invite is None :
             return
-        self.start_timeout("response", 30)
+        self.start_timeout("response", 50)
         self.answer(180)
         self._dispatch("on_call_incoming")
 
@@ -407,7 +407,7 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
 
         if self._state is None:
             self._state = "INCOMING"
-            self.start_timeout("response", 30)
+            self.start_timeout("response", 50)
             self.request_turn_relays(len(message.descriptions))
         elif self._state == "CONFIRMED":
             self._state = "REINVITED"
