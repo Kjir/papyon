@@ -130,12 +130,12 @@ class MediaSessionHandler(MediaSessionEventInterface):
                     codecs = s["session"].get_property("codecs")
                     name = media_names[s["session"].get_property("media-type")]
                     stream = self._client.get_stream(name)
-                    stream.set_local_codecs(convert_codecs(codecs))
+                    stream.set_local_codecs(convert_fs_codecs(codecs))
             if s.has_name("farsight-new-local-candidate"):
                 logger.debug("New local candidate")
                 ret = gst.BUS_DROP
                 name = media_names[s["stream"].get_property("session").get_property("media-type")]
-                candidate = convert_candidate(s["candidate"])
+                candidate = convert_fs_candidate(s["candidate"])
                 stream = self._client.get_stream(name)
                 stream.new_local_candidate(candidate)
             if s.has_name("farsight-local-candidates-prepared"):
@@ -189,11 +189,11 @@ class MediaStreamHandler(MediaStreamEventInterface):
         del self.fsstream
 
     def on_remote_candidates_received(self, candidates):
-        candidates = convert_fs_candidates(candidates)
+        candidates = convert_media_candidates(candidates)
         self.fsstream.set_remote_candidates(candidates)
 
     def on_remote_codecs_received(self, codecs):
-        codecs = convert_fs_codecs(codecs, self._client.name)
+        codecs = convert_media_codecs(codecs, self._client.name)
         self.fsstream.set_remote_codecs(codecs)
 
     def on_src_pad_added(self, stream, pad, codec, pipeline):
@@ -212,7 +212,7 @@ def create_notifier(pipeline):
     notifier.set_properties_from_file(filename)
     return notifier
 
-def convert_candidate(fscandidate):
+def convert_fs_candidate(fscandidate):
     candidate = MediaCandidate()
     candidate.ip = fscandidate.ip
     candidate.port = fscandidate.port
@@ -227,7 +227,7 @@ def convert_candidate(fscandidate):
     candidate.base_port = fscandidate.base_port
     return candidate
 
-def convert_fs_candidates(candidates):
+def convert_media_candidates(candidates):
     fscandidates = []
     for candidate in candidates:
         for k,v in protos.iteritems():
@@ -257,7 +257,7 @@ def build_codecs(type):
         codecs.append(codec)
     return codecs
 
-def convert_codecs(fscodecs):
+def convert_fs_codecs(fscodecs):
     codecs = []
     for fscodec in fscodecs:
         codec = MediaCodec()
@@ -268,7 +268,7 @@ def convert_codecs(fscodecs):
         codecs.append(codec)
     return codecs
 
-def convert_fs_codecs(codecs, name):
+def convert_media_codecs(codecs, name):
     fscodecs = []
     media_type = media_types[name]
     for codec in codecs:
