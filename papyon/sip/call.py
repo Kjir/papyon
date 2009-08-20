@@ -118,7 +118,7 @@ class SIPBaseCall(gobject.GObject):
     def parse_uri(self, message, name):
         header = message.get_header(name)
         if header is not None:
-            return re.search("<sip:([^>]*)>", header).group(1)
+            return re.search("<([^>]*)>", header).group(1)
 
     def parse_sip(self, message, name):
         header = message.get_header(name)
@@ -276,8 +276,8 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
         logger.info("Send call invitation to %s", self._peer.account)
         self._state = "CALLING"
         self._early = False
-        self._uri = self._peer.account
-        self._remote = "<sip:%s>" % self._uri
+        self._uri = "sip:%s" % self._peer.account
+        self._remote = "<%s>" % self._uri
         self._invite = self.build_invite_request(self._uri, self._remote)
         self.start_timeout("invite", 30)
         self.send(self._invite)
@@ -554,7 +554,7 @@ class SIPRegistration(SIPBaseCall):
         return (self._state == "REGISTERED")
 
     def build_register_request(self, timeout, auth):
-        uri = self._account.split('@')[1]
+        uri = "sip:%s" % self._account.split('@')[1]
         to =  "<sip:%s>" % self._account
         request = self.build_request("REGISTER", uri, to, incr=1)
         request.add_header("ms-keep-alive", "UAC;hop-hop=yes")

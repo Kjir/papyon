@@ -135,7 +135,7 @@ class SIPRequest(SIPMessage):
         return self._uri
 
     def get_header_line(self):
-        return "%s sip:%s SIP/2.0" % (self._code, self._uri)
+        return "%s %s SIP/2.0" % (self._code, self._uri)
 
     def __repr__(self):
         return "<SIP Request %d:%s %s>" % (id(self), self._code, self._uri)
@@ -211,7 +211,7 @@ class SIPMessageParser(gobject.GObject):
                 code = int(b)
                 self._message = SIPResponse(code, a)
             elif c == self.version:
-                self._message = SIPRequest(a, b[4:])
+                self._message = SIPRequest(a, b)
             self._state = "headers"
 
         if self._state == "headers":
