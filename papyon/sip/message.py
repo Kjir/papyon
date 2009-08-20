@@ -243,6 +243,9 @@ class SIPMessageParser(gobject.GObject):
         try:
             line, self._buffer = self._buffer.split("\r\n", 1)
         except:
+            # Incomplete line: all lines have to end with '\r\n'
+            # Don't return anything, maybe the rest of the line would arrive in
+            # another packet
             return None
         return line
 
