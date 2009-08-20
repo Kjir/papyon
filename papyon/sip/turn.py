@@ -121,19 +121,19 @@ class TURNClient(gobject.GObject):
             msg = TURNMessage("SHARED-SECRET-REQUEST", attrs)
             self.send(msg)
 
-    def request_shared_secret_with_integrity(self, realm, nonce):
+    @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
+    def request_shared_secret_with_integrity(self, callback, errcb, realm, nonce):
         token = self._tokens[LiveService.MESSENGER_SECURE]
         attrs = [TURNAttribute("USERNAME", "RPS_%s\x00\x00\x00" % token),
                  TURNAttribute("REALM", realm),
                  TURNAttribute("NONCE", nonce)]
         msg = TURNMessage("SHARED-SECRET-REQUEST", attrs, 24)
-        hmac = self.build_message_integrity(msg, nonce)
+        hmac = self.build_message_integrity(msg, token, nonce)
         msg.attributes.append(TURNAttribute("MESSAGE-INTEGRITY", hmac))
         msg.extra_size = 0
         self.send(msg)
 
-    def build_message_integrity(self, msg, nonce):
-        token = self._tokens[LiveService.MESSENGER_SECURE]
+    def build_message_integrity(self, msg, token, nonce):
         nonce = nonce.strip("\"")
         m = md5.new()
         m.update("RPS_%s\x00\x00\x00:" % token)
@@ -172,7 +172,8 @@ class TURNClient(gobject.GObject):
                 elif attr.type == "ERROR-CODE":
                     error_msg = attr.value[4:]
             if error_msg == "Unauthorized":
-                self.request_shared_secret_with_integrity(realm, nonce)
+                self.request_shared_secret_with_integrity(None, None, realm, nonce)
+                return
 
         elif msg.type == "SHARED-SECRET-RESPONSE":
             relay = MediaRelay()
