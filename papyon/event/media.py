@@ -26,6 +26,8 @@ L{MediaStream<papyon.media.MediaStream> object."""
 
 from papyon.event import BaseEventInterface
 
+import weakref
+
 __all__ = ["MediaSessionEventInterface", "MediaStreamEventInterface"]
 
 
@@ -38,6 +40,7 @@ class MediaSessionEventInterface(BaseEventInterface):
             @param session: the media session we want to be notified for its events
             @type session: L{MediaSession<papyon.media.MediaSession>}"""
         BaseEventInterface.__init__(self, session)
+        self._session = weakref.proxy(session)
 
     def on_stream_added(self, stream):
         """Called when a new stream is added to the session
@@ -67,6 +70,7 @@ class MediaStreamEventInterface(BaseEventInterface):
             @param stream: the media stream we want to be notified for its events
             @type stream: L{MediaStream<papyon.media.MediaStream>}"""
         BaseEventInterface.__init__(self, stream)
+        self._stream = weakref.proxy(stream)
 
     def on_stream_closed(self):
         """Called when the stream is closing"""

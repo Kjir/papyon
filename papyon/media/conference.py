@@ -97,7 +97,7 @@ class MediaSessionHandler(MediaSessionEventInterface):
         bus = self._pipeline.get_bus()
         bus.add_signal_watch()
         bus.connect("message", self.on_bus_message)
-        if self._client.type is MediaSessionType.WEBCAM:
+        if self._session.type is MediaSessionType.WEBCAM:
             name = "fsmsnconference"
         else:
             name = "fsrtpconference"
@@ -111,9 +111,9 @@ class MediaSessionHandler(MediaSessionEventInterface):
         logger.debug("Stream \"%s\" added" % stream.name)
         handler = MediaStreamHandler(stream)
         handler.setup(self._conference, self._pipeline, self._participant,
-                self._client.type)
+                self._session.type)
         self._handlers.append(handler)
-        if self._client.type is MediaSessionType.WEBCAM:
+        if self._session.type is MediaSessionType.WEBCAM:
             stream.set_local_codecs([])
 
     def on_bus_message(self, bus, msg):
@@ -129,28 +129,28 @@ class MediaSessionHandler(MediaSessionEventInterface):
                 if ready:
                     codecs = s["session"].get_property("codecs")
                     name = media_names[s["session"].get_property("media-type")]
-                    stream = self._client.get_stream(name)
+                    stream = self._session.get_stream(name)
                     stream.set_local_codecs(convert_fs_codecs(codecs))
             if s.has_name("farsight-new-local-candidate"):
                 logger.debug("New local candidate")
                 ret = gst.BUS_DROP
                 name = media_names[s["stream"].get_property("session").get_property("media-type")]
                 candidate = convert_fs_candidate(s["candidate"])
-                stream = self._client.get_stream(name)
+                stream = self._session.get_stream(name)
                 stream.new_local_candidate(candidate)
             if s.has_name("farsight-local-candidates-prepared"):
                 logger.debug("Local candidates are prepared")
                 ret = gst.BUS_DROP
                 type = s["stream"].get_property("session").get_property("media-type")
                 name = media_names[type]
-                stream = self._client.get_stream(name)
+                stream = self._session.get_stream(name)
                 stream.local_candidates_prepared()
             if s.has_name("farsight-new-active-candidate-pair"):
                 logger.debug("New active candidate pair")
                 ret = gst.BUS_DROP
                 type = s["stream"].get_property("session").get_property("media-type")
                 name = media_names[type]
-                stream = self._client.get_stream(name)
+                stream = self._session.get_stream(name)
                 local = s["local-candidate"]
                 remote = s["remote-candidate"]
                 stream.new_active_candidate_pair(local.foundation, remote.foundation)
@@ -171,16 +171,16 @@ class MediaStreamHandler(MediaStreamEventInterface):
             #FIXME Add TURN relays
             params = {"stun-ip" : "64.14.48.28", "stun-port" : 3478,
                     "compatibility-mode" : compatibility_mode,
-                    "controlling-mode": self._client.controlling}
+                    "controlling-mode": self._stream.controlling}
         else:
             params = {}
-        media_type = media_types[self._client.name]
+        media_type = media_types[self._stream.name]
         self.fssession = conference.new_session(media_type)
-        self.fssession.set_codec_preferences(build_codecs(self._client.name))
+        self.fssession.set_codec_preferences(build_codecs(self._stream.name))
         self.fsstream = self.fssession.new_stream(participant,
-                self._client.direction, "nice", params)
+                self._stream.direction, "nice", params)
         self.fsstream.connect("src-pad-added", self.on_src_pad_added, pipeline)
-        source = make_source(self._client.name)
+        source = make_source(self._stream.name)
         pipeline.add(source)
         source.get_pad("src").link(self.fssession.get_property("sink-pad"))
         pipeline.set_state(gst.STATE_PLAYING)
@@ -193,11 +193,11 @@ class MediaStreamHandler(MediaStreamEventInterface):
         self.fsstream.set_remote_candidates(candidates)
 
     def on_remote_codecs_received(self, codecs):
-        codecs = convert_media_codecs(codecs, self._client.name)
+        codecs = convert_media_codecs(codecs, self._stream.name)
         self.fsstream.set_remote_codecs(codecs)
 
     def on_src_pad_added(self, stream, pad, codec, pipeline):
-        sink = make_sink(self._client.name)
+        sink = make_sink(self._stream.name)
         pipeline.add(sink)
         sink.set_state(gst.STATE_PLAYING)
         pad.link(sink.get_pad("sink"))
