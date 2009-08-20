@@ -98,6 +98,7 @@ class TURNClient(gobject.GObject):
         self._transport = SSLTCPClient(self.host, self.port)
         self._transport.connect("notify::status", self.on_status_changed)
         self._transport.connect("received", self.on_message_received)
+        self._answered = False
         self._msg_queue = []
         self._requests = {}
         self._relays = []
@@ -153,6 +154,8 @@ class TURNClient(gobject.GObject):
         if self._transport.status == IoStatus.OPEN:
             while self._msg_queue:
                 self.send(self._msg_queue.pop())
+        elif self._transport.status == IoStatus.CLOSED:
+            self._answer()
 
     def on_message_received(self, transport, data, length):
         msg = TURNMessage()
@@ -190,7 +193,14 @@ class TURNClient(gobject.GObject):
             self._relays.append(relay)
 
         if not self._requests:
+            self._answer()
             self._transport.close()
+
+    def _answer(self):
+        if not self._answered:
+            self._answered = True
+            self._requests = {}
+            self._msg_queue = []
             self.emit("requests-answered", self._relays)
 
 
