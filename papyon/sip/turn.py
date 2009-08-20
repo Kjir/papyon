@@ -82,6 +82,8 @@ ATTRIBUTE_TYPES = {
     32804: "REFRESH-INTERVAL"
 }
 
+REQUEST_TIMEOUT = 5000 # milliseconds
+
 class TURNClient(gobject.GObject):
 
     host = "relay.voice.messenger.msn.com"
@@ -102,6 +104,7 @@ class TURNClient(gobject.GObject):
         self._signals.append(self._transport.connect("received",
             self.on_message_received))
         self._answered = False
+        self._src = None
         self._msg_queue = []
         self._requests = {}
         self._relays = []
@@ -119,6 +122,7 @@ class TURNClient(gobject.GObject):
 
     @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
     def request_shared_secret(self, callback, errcb, count=4):
+        self._src = gobject.timeout_add(REQUEST_TIMEOUT, self.on_timeout)
         for _ in range(count):
             token = self._tokens[LiveService.MESSENGER_SECURE]
             attrs = [TURNAttribute("USERNAME", "RPS_%s\x00\x00\x00" % token)]
@@ -199,6 +203,10 @@ class TURNClient(gobject.GObject):
             self._answer()
             self._transport.close()
 
+    def on_timeout(self):
+        self._answer()
+        return False
+
     def _answer(self):
         if not self._answered:
             self._answered = True
@@ -206,6 +214,9 @@ class TURNClient(gobject.GObject):
             self._msg_queue = []
             for signal_id in self._signals:
                 self._transport.disconnect(signal_id)
+            if self._src is not None:
+                gobject.source_remove(self._src)
+                self._src = None
             self.emit("requests-answered", self._relays)
 
 
