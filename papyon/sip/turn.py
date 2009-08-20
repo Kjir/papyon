@@ -35,52 +35,50 @@ import struct
 import sys
 import uuid
 
-MESSAGE_TYPES = {
-    1: "BINDING-REQUEST",
-    2: "SHARED-SECRET-REQUEST",
-    3: "ALLOCATE-REQUEST",
-    257: "BINDING-RESPONSE",
-    258: "SHARED-SECRET-RESPONSE",
-    259: "ALLOCATE-RESPONSE",
-    273: "BINDING-ERROR",
-    274: "SHARED-SECRET-ERROR",
-    275: "ALLOCATE-ERROR"
-}
+class MessageTypes(object):
+    BINDING-REQUEST = 1
+    SHARED-SECRET-REQUEST = 2
+    ALLOCATE-REQUEST = 3
+    BINDING-RESPONSE = 257
+    SHARED-SECRET-RESPONSE = 258
+    ALLOCATE-RESPONSE = 259
+    BINDING-ERROR = 273
+    SHARED-SECRET-ERROR = 274
+    ALLOCATE-ERROR = 275
 
-ATTRIBUTE_TYPES = {
-    1: "MAPPED-ADDRESS",
-    2: "RESPONSE_ADDRESS",
-    3: "CHANGE_REQUEST",
-    4: "SOURCE_ADDRESS",
-    5: "CHANGED-ADDRESS",
-    6: "USERNAME",
-    7: "PASSWORD",
-    8: "MESSAGE-INTEGRITY",
-    9: "ERROR-CODE",
-    10: "UNKNOWN-ATTRIBUTES",
-    11: "REFLECTED-FROM",
-    12: "TRANSPORT-PREFERENCES",
-    13: "LIFETIME",
-    14: "ALTERNATE-SERVER",
-    15: "MAGIC-COOKIE",
-    16: "BANDWIDTH",
-    17: "MORE-AVAILABLE",
-    18: "REMOTE-ADDRESS",
-    19: "DATA",
-    20: "REALM",
-    21: "NONCE",
-    22: "RELAY-ADDRESS",
-    23: "REQUESTED-ADDRESS-TYPE",
-    24: "REQUESTED-PORT",
-    25: "REQUESTED-TRANSPORT",
-    26: "XOR-MAPPED-ADDRESS",
-    27: "TIMER-VAL",
-    28: "REQUESTED-IP",
-    29: "FINGERPRINT",
-    32802: "SERVER",
-    32803: "ALTERNATE-SERVER",
-    32804: "REFRESH-INTERVAL"
-}
+class AttributeTypes(object):
+    MAPPED_ADDRESS = 1
+    RESPONSE_ADDRESS = 2
+    CHANGE_REQUEST = 3
+    SOURCE_ADDRESS = 4
+    CHANGED_ADDRESS = 5
+    USERNAME = 6
+    PASSWORD = 7
+    MESSAGE_INTEGRITY = 8
+    ERROR_CODE = 9
+    UNKNOWN_ATTRIBUTES = 10
+    REFLECTED_FROM = 11
+    TRANSPORT_PREFERENCES = 12
+    LIFETIME = 13
+    ALTERNATE_SERVER = 14
+    MAGIC_COOKIE = 15
+    BANDWIDTH = 16
+    MORE_AVAILABLE = 17
+    REMOTE_ADDRESS = 18
+    DATA = 19
+    REALM = 20
+    NONCE = 21
+    RELAY_ADDRESS = 22
+    REQUESTED_ADDRESS_TYPE = 23
+    REQUESTED_PORT = 24
+    REQUESTED_TRANSPORT = 25
+    XOR_MAPPED_ADDRESS = 26
+    TIMER_VAL = 27
+    REQUESTED_IP = 28
+    FINGERPRINT = 29
+    SERVER = 32802
+    ALTERNATE_SERVER = 32803
+    REFRESH_INTERVAL = 32804
 
 REQUEST_TIMEOUT = 5000 # milliseconds
 
@@ -125,19 +123,21 @@ class TURNClient(gobject.GObject):
         self._src = gobject.timeout_add(REQUEST_TIMEOUT, self.on_timeout)
         for _ in range(count):
             token = self._tokens[LiveService.MESSENGER_SECURE]
-            attrs = [TURNAttribute("USERNAME", "RPS_%s\x00\x00\x00" % token)]
-            msg = TURNMessage("SHARED-SECRET-REQUEST", attrs)
+            username = "RPS_%s\x00\x00\x00" % token
+            attrs = [TURNAttribute(AttributeTypes.USERNAME, username)]
+            msg = TURNMessage(MessageTypes.SHARED_SECRET_REQUEST, attrs)
             self.send(msg)
 
     @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
     def request_shared_secret_with_integrity(self, callback, errcb, realm, nonce):
         token = self._tokens[LiveService.MESSENGER_SECURE]
-        attrs = [TURNAttribute("USERNAME", "RPS_%s\x00\x00\x00" % token),
-                 TURNAttribute("REALM", realm),
-                 TURNAttribute("NONCE", nonce)]
-        msg = TURNMessage("SHARED-SECRET-REQUEST", attrs, 24)
+        username = "RPS_%s\x00\x00\x00" % token
+        attrs = [TURNAttribute(AttributeTypes.USERNAME, username),
+                 TURNAttribute(AttributeTypes.REALM, realm),
+                 TURNAttribute(AttributeTypes.NONCE, nonce)]
+        msg = TURNMessage(MessageTypes.SHARED_SECRET_REQUEST, attrs, 24)
         hmac = self.build_message_integrity(msg, token, nonce)
-        msg.attributes.append(TURNAttribute("MESSAGE-INTEGRITY", hmac))
+        msg.attributes.append(TURNAttribute(AttributeTypes.MESSAGE_INTEGRITY, hmac))
         msg.extra_size = 0
         self.send(msg)
 
@@ -173,30 +173,30 @@ class TURNClient(gobject.GObject):
         else:
             del self._requests[msg.id]
 
-        if msg.type == "SHARED-SECRET-ERROR":
+        if msg.type == MessageTypes.SHARED_SECRET_ERROR:
             error_msg = None
             realm = None
             nonce = None
             for attr in msg.attributes:
-                if attr.type == "REALM":
+                if attr.type == AttributeTypes.REALM
                     realm = attr.value
-                elif attr.type == "NONCE":
+                elif attr.type == AttributeTypes.NONCE:
                     nonce = attr.value
-                elif attr.type == "ERROR-CODE":
+                elif attr.type == AttributeTypes.ERROR_CODE:
                     error_msg = attr.value[4:]
             if error_msg == "Unauthorized":
                 if realm is not None or nonce is not None:
                     self.request_shared_secret_with_integrity(None, None, realm, nonce)
                     return
 
-        elif msg.type == "SHARED-SECRET-RESPONSE":
+        elif msg.type == MessageTypes.SHARED_SECRET_RESPONSE:
             relay = MediaRelay()
             for attr in msg.attributes:
-                if attr.type == "USERNAME":
+                if attr.type == AttributeTypes.USERNAME:
                     relay.username = base64.b64encode(attr.value)
-                elif attr.type == "PASSWORD":
+                elif attr.type == AttributeTypes.PASSWORD:
                     relay.password = base64.b64encode(attr.value)
-                elif attr.type == "ALTERNATE-SERVER":
+                elif attr.type == AttributeTypes.ALTERNATE_SERVER:
                     server = struct.unpack("!HHcccc", attr.value)
                     ip = map(lambda x: ord(x), server[2:6])
                     relay.ip = "%i.%i.%i.%i" % tuple(ip)
@@ -236,17 +236,6 @@ class TURNMessage(object):
     def id(self):
         return self._id
 
-    @rw_property
-    def type():
-        def fget(self):
-            return MESSAGE_TYPES.get(self._type, None)
-        def fset(self, value):
-            self._type = None
-            for k,v in MESSAGE_TYPES.iteritems():
-                if v == value:
-                    self._type = k
-        return locals()
-
     @property
     def attributes(self):
         return self._attributes
@@ -277,7 +266,7 @@ class TURNMessage(object):
 
     def parse(self, msg):
         hdr = struct.unpack("!HH4I", msg[0:20])
-        self._type = hdr[0]
+        self.type = hdr[0]
         self.merge_id(hdr[2:])
 
         msg = msg[20:]
@@ -292,7 +281,7 @@ class TURNMessage(object):
         for attr in self._attributes:
             msg += str(attr)
         id = self.split_id()
-        hdr = struct.pack("!HH4I", self._type, len(msg) + self._extra_size,
+        hdr = struct.pack("!HH4I", self.type, len(msg) + self._extra_size,
                           id[0], id[1], id[2], id[3])
         return (hdr + msg)
 
@@ -303,32 +292,20 @@ class TURNAttribute(object):
         self.type = type
         self._value = value
 
-    @rw_property
-    def type():
-        def fget(self):
-            return ATTRIBUTE_TYPES.get(self._type, None)
-        def fset(self, value):
-            self._type = None
-            for k,v in ATTRIBUTE_TYPES.iteritems():
-                if v == value:
-                    self._type = k
-                    break
-        return locals()
-
     @property
     def value(self):
         return self._value
 
     def parse(self, msg):
         type, size = struct.unpack("!HH", msg[0:4])
-        self._type = type
+        self.type = type
         self._value = msg[4:size+4]
 
     def __len__(self):
         return len(self._value) + 4
 
     def __str__(self):
-        attr = struct.pack("!HH", self._type, len(self._value))
+        attr = struct.pack("!HH", self.type, len(self._value))
         attr += self._value
         return attr
 
