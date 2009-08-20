@@ -156,9 +156,25 @@ class SIPTunneledTransport(SIPBaseTransport):
     def on_notification_received(self, protocol, type, notification):
         if type is not UserNotificationTypes.TUNNELED_SIP:
             return
-        doc = xml.dom.minidom.parseString(notification.payload)
-        chunk = doc.getElementsByTagName("msg")[0].firstChild.data
-        chunk = base64.b64decode(chunk)
-        self.log_message("<<", chunk)
-        self._parser.append(chunk)
-        doc.unlink()
+        message = notification.payload
+        try:
+            doc = xml.dom.minidom.parseString(message)
+            sip = doc.firstChild
+            if sip is None or sip.tagName != 'sip':
+                raise ValueError("Expected node was 'sip' but is %r" % sip)
+            msg = sip.firstChild
+            if msg is None or msg.tagName != 'msg':
+                raise ValueError("Expected node was 'msg' but is %r" % msg)
+            chunk = msg.firstChild.data
+            if "e" in sip.attributes.keys():
+                encoding = sip.attributes["e"].value
+                if encoding == "base64":
+                    chunk = base64.b64decode(chunk)
+                else:
+                    raise ValueError("Unknown message encoding %s" % encoding)
+        except Exception, err:
+            logger.warning("Invalid tunneled SIP message: %s" % message)
+            logger.exception(err)
+        else:
+            self.log_message("<<", chunk)
+            self._parser.append(chunk)
