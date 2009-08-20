@@ -268,7 +268,6 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
 
     def invite(self):
         if not self.media_session.prepared:
-            self.media_session.process_pending_streams()
             return
         logger.info("Send call invitation to %s", self._peer.account)
         self._state = "CALLING"
@@ -404,7 +403,6 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
             self._state = "INCOMING"
             self.start_timeout("response", 50)
             self.media_session.process_remote_message(message, True)
-            self.media_session.process_pending_streams()
         elif self._state == "CONFIRMED":
             self._state = "REINVITED"
             self.media_session.process_remote_message(message, False)

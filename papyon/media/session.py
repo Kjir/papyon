@@ -62,7 +62,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         self._type = type
 
         self._streams = []
-        self._pending_streams = []
+        self._processing_message = False
         self._signals = {}
 
     @property
@@ -81,7 +81,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
     def prepared(self):
         """Are all streams prepared
            @rtype: bool"""
-        if self._pending_streams:
+        if self._processing_message:
             return False
         for stream in self._streams:
             if not stream.prepared:
@@ -92,7 +92,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
     def ready(self):
         """Are all streams ready
            @rtype: bool"""
-        if self._pending_streams:
+        if self._processing_message:
             return False
         for stream in self._streams:
             if not stream.ready:
@@ -110,12 +110,10 @@ class MediaSession(gobject.GObject, EventsDispatcher):
 
         for stream in self._streams[:]:
             self.remove_stream(stream)
-        self.clear_pending_streams()
 
     def create_stream(self, name, direction, created_locally=False):
         """Create a new media stream with the given name and direction.
-           The created stream need to be added to the session using add_stream
-           or add_pending_stream if the call is not ready yet.
+           The created stream need to be added to the session using add_stream.
 
            @param name: Name of the stream (e.g. audio, video...)
            @type name: string
@@ -133,8 +131,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
 
     def add_stream(self, stream):
         """Add a stream to the session and signal it that we are ready to
-           handle its signals. If the call is not ready yet, you should use
-           add_pending_stream instead.
+           handle its signals.
 
            @param stream: Stream to add
            @type stream: L{papyon.media.stream.MediaStream}"""
@@ -173,39 +170,11 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         self._streams.remove(stream)
         self._dispatch("on_stream_removed", stream)
 
-    def add_pending_stream(self, stream):
-        """Add a stream to the pending list when the call is not ready yet for
-           some reason and we don't want the 'prepared' or 'ready' signals to
-           be emitted. For example, if we are parsing a session message, we
-           don't want the 'prepared' signal to be emitted immediatly after the
-           first stream has been parsed."""
-
-        logger.debug("Add %s stream to pending list" % stream.name)
-        self._pending_streams.append(stream)
-
-    def activate_pending_streams(self):
-        """Activate all streams in the pending list."""
-
-        logger.debug("Activate all streams in the pending list")
-        for stream in self._pending_streams:
-            self.add_stream(stream)
-        self.clear_pending_streams()
-        if self.prepared:
-            self.emit("prepared")
-        if self.ready:
-            self.emit("ready")
-
-    def clear_pending_streams(self):
-        """Clear the pending list (e.g. an error caused all streams to be
-           invalid."""
-
-        self._pending_streams = []
-
     def process_remote_message(self, msg, initial=False):
         """Parse the received session message and create media streams
-           accordingly. The created streams are added to the pending list and
-           we need to call activate_pending_streams when the call is ready to
-           handle the streams signals.
+           accordingly. The created streams are added but we only emit the
+           'prepared' and 'ready' signals once all the descriptions are
+           processed. 
 
            @param msg: Session message received from a peer
            @type msg: L{papyon.media.message.MediaSessionMessage}
@@ -215,15 +184,25 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         if not msg.descriptions:
             raise ValueError("Session message does not contain any information")
 
+        self._processing_message = True
+
         for desc in msg.descriptions:
             stream = self.get_stream(desc.name)
             if stream is None:
                 if initial:
                     stream = self.create_stream(desc.name, desc.direction)
-                    self.add_pending_stream(stream)
+                    self.add_stream(stream)
                 else:
                     raise ValueError('Invalid stream "%s" in session message' % desc.name)
             stream.process_remote_description(desc)
+
+        self._processing_message = False
+
+        if initial:
+            if self.prepared:
+                self.emit("prepared")
+            if self.ready:
+                self.emit("ready")
 
     def on_stream_prepared(self, stream):
         if self.prepared:

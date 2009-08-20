@@ -168,7 +168,6 @@ class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
             self.send_binary_viewer_data()
         else:
             self._send_xml()
-        self.media_session.process_pending_streams()
 
 class WebcamCandidateEncoder(MediaCandidateEncoder):
 
