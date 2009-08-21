@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2006  Ali Sabil <ali.sabil@gmail.com>
+# Copyright (C) 2009  Collabora Ltd.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,17 +19,39 @@
 
 """Some missing weak refs"""
 
-from weakref import WeakKeyDictionary
-from sets import Set
+from weakref import WeakValueDictionary
 
 __all__ = ['WeakSet']
 
-class WeakSet(Set):
-    def __init__(self, iterable=None):
-        Set.__init__(self)
-        self._data = WeakKeyDictionary()
-        if iterable is not None:
-            self._update(iterable)
+class WeakSet(object):
+
+    def __init__(self):
+        self._data = WeakValueDictionary()
+
+    def add(self, obj):
+        self._data[id(obj)] = obj
+
+    def remove(self, obj):
+        try:
+            del self._data[id(obj)]
+        except:
+            raise KeyError(obj)
+
+    def discard(self, obj):
+        try:
+            self.remove(obj)
+        except:
+            return
+
+    def __iter__(self):
+        for obj in self._data.values():
+            yield obj
+
+    def __len__(self):
+        return len(self._data)
+
+    def __contains__(self, obj):
+        return id(obj) in self._data
 
     def __hash__(self):
         raise TypeError, "Can't hash a WeakSet."
