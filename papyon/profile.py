@@ -34,7 +34,7 @@ __all__ = ['Profile', 'Contact', 'Group',
         'Presence', 'Membership', 'ContactType', 'Privacy', 'NetworkID', 'ClientCapabilities']
 
 
-class ClientCapabilities(object):
+class ClientCapabilities(gobject.GObject):
     """Capabilities of the client. This allow adverstising what the User Agent
     is capable of, for example being able to receive video stream, and being
     able to receive nudges...
@@ -114,6 +114,12 @@ class ClientCapabilities(object):
         @undocumented: __getattr__, __setattr__, __str__
         """
 
+    __gsignals__ =  {
+            "capability-changed": (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object, object)),
+            }
+
     MSNC = [0x0,        # MSNC0
             0x10000000, # MSNC1
             0x20000000, # MSNC2
@@ -172,6 +178,7 @@ class ClientCapabilities(object):
             @type msnc: integer < 11 and >= 0
 
             @param client_id: the full client ID"""
+        gobject.GObject.__init__(self)
         caps = client_id.split(":")
         capabilities = int(caps[0])
         if len(caps) > 1:
@@ -195,16 +202,22 @@ class ClientCapabilities(object):
     def __setattr__(self, name, value):
         if name in self._CAPABILITIES:
             mask = self._CAPABILITIES[name]
+            old_value = bool(self.capabilities & mask)
             if value:
                 object.__setattr__(self, 'capabilities', self.capabilities | mask)
             else:
                 object.__setattr__(self, 'capabilities', self.capabilities & ~mask)
+            if value != old_value
+                self.emit('capability-changed', name, value)
         elif name in self._EXTRA:
             mask = self._EXTRA[name]
+            old_value = bool(self.extra & mask)
             if value:
                 object.__setattr__(self, 'extra', self.extra | mask)
             else:
                 object.__setattr__(self, 'extra', self.extra & ~mask)
+            if value != old_value
+                self.emit('capability-changed', name, value)
         else:
             raise AttributeError("object 'ClientCapabilities' has no attribute '%s'" % name)
 
@@ -394,10 +407,11 @@ class Profile(gobject.GObject):
         self.client_id = ClientCapabilities(10)
         self.client_id.supports_sip_invite = True
         #self.client_id.supports_tunneled_sip = True
+        self._client_id.connect("capability-changed", self._client_capability_changed)
 
         self._msn_object = None
 
-        self.__pending_set_presence = [self._presence, self.client_id, self._msn_object]
+        self.__pending_set_presence = [self._presence, self._client_id, self._msn_object]
         self.__pending_set_personal_message = [self._personal_message, self._current_media]
 
     @property
@@ -423,6 +437,12 @@ class Profile(gobject.GObject):
         """The user identifier in a GUID form
             @rtype: GUID string"""
         return "00000000-0000-0000-0000-000000000000"
+
+    @property
+    def client_id(self):
+        """The user capabilities
+            @rtype: ClientCapabilities"""
+        return self._client_id
 
     @rw_property
     def display_name():
@@ -551,6 +571,10 @@ class Profile(gobject.GObject):
 
     def request_profile_url(self, callback):
         self._ns_client.send_url_request(('PROFILE', '0x0409'), callback)
+
+    def _client_capability_changed(self, name, value):
+        self.__pending_set_presence[1] = self._client_id
+        self._ns_client.set_presence(*self.__pending_set_presence)
 
     def _server_property_changed(self, name, value):
         attr_name = "_" + name.lower().replace("-", "_")

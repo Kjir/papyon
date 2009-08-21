@@ -13,6 +13,7 @@ Fixes:
     book error is triggered (Bugs #14371, #15869)
   * Fixed sending of messages to contacts using Microsoft Messenger for Mac
   * Fixed some encoding issues with Python 2.6 loggin (only supports unicode)
+  * Send new client capabilities to the server when changed (Bug #13982)
 
 papyon-0.4.1 (2009-07-28)
 =========================
