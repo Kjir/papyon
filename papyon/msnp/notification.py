@@ -487,6 +487,34 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
         idx, network_id, account = self._parse_account(command)
 
+        try:
+            tree = ElementTree.fromstring(command.payload)
+        except:
+            logger.error("Invalid XML data in received UBX command")
+            return
+
+        cm = tree.find("./CurrentMedia")
+        if cm is not None and cm.text is not None:
+            parts = cm.text.split('\\0')
+            if parts[1] == 'Music' and parts[2] == '1':
+                cm = (parts[4].encode("utf-8"), parts[5].encode("utf-8"))
+            elif parts[2] == '0':
+                cm = None
+        else:
+            cm = None
+
+        pm = tree.find("./PSM")
+        if pm is not None and pm.text is not None:
+            pm = pm.text.encode("utf-8")
+        else:
+            pm = ""
+
+        ss = tree.find("./SignatureSound")
+        if ss is not None and ss.text is not None:
+            ss = ss.text.encode("utf-8")
+        else:
+            ss = None
+
         contacts = self._client.address_book.contacts.\
                 search_by_network_id(network_id).\
                 search_by_account(account)
@@ -494,30 +522,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         if len(contacts) == 0:
             logger.warning("Contact (network_id=%d) %s not found" % \
                     (network_id, account))
+
         for contact in contacts:
-            tree = ElementTree.fromstring(command.payload)
-            cm = tree.find("./CurrentMedia")
-            if cm is not None and cm.text is not None:
-                parts = cm.text.split('\\0')
-                if parts[1] == 'Music' and parts[2] == '1':
-                    cm = (parts[4].encode("utf-8"), parts[5].encode("utf-8"))
-                    contact._server_property_changed("current-media", cm)
-                    continue
-                elif parts[2] == '0':
-                    contact._server_property_changed("current-media", None)
-            else:
-                contact._server_property_changed("current-media", None)
-            pm = tree.find("./PSM")
-            if pm is not None and pm.text is not None:
-                pm = pm.text.encode("utf-8")
-            else:
-                pm = ""
+            contact._server_property_changed("current-media", cm)
             contact._server_property_changed("personal-message", pm)
-            ss = tree.find("./SignatureSound")
-            if ss is not None and ss.text is not None:
-                ss = ss.text.encode("utf-8")
-            else:
-                ss = None
             contact._server_property_changed("signature-sound", ss)
 
     def _handle_UUN(self,command): # UBN acknowledgment
