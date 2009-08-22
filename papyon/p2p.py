@@ -29,7 +29,7 @@ from msnp2p.msnobject import MSNObjectSession
 from msnp2p.webcam import WebcamSession
 from msnp2p import EufGuid, ApplicationID
 from msnp2p.exceptions import ParseError
-from profile import NetworkID
+from profile import NetworkID, Contact, Profile
 
 import papyon.util.element_tree as ElementTree
 import papyon.util.string_io as StringIO
@@ -93,6 +93,9 @@ class MSNObject(object):
             @param data: file object to the data represented by this MSNObject
             @type data: File
         """
+        # Backward compatible with older clients that pass a Contact/Profile
+        if type(creator) is Contact or type(creator) is Profile:
+            creator = creator.account
         self._creator = creator
         self._size = size
         self._type = type
@@ -146,16 +149,7 @@ class MSNObject(object):
         except:
             raise ParseError('Invalid MSNObject')
 
-        if element["Creator"] == client.profile.account:
-            creator = client.profile
-        else:
-            try:
-                creator = client.address_book.contacts.\
-                    search_by_account(element["Creator"]).\
-                    search_by_network_id(NetworkID.MSN)[0]
-            except IndexError:
-                creator = None
-
+        creator = element["Creator"]
         size = int(element["Size"])
         type = int(element["Type"])
         location = xml.unescape(element["Location"])
@@ -167,8 +161,7 @@ class MSNObject(object):
         if shac is not None:
             shac = base64.b64decode(shac)
 
-        result = MSNObject(creator, size, type, location, \
-                             friendly, shad, shac)
+        result = MSNObject(creator, size, type, location, friendly, shad, shac)
         result._repr = xml_data
         return result
 
@@ -184,7 +177,7 @@ class MSNObject(object):
 
     def __compute_checksum(self):
         input = "Creator%sSize%sType%sLocation%sFriendly%sSHA1D%s" % \
-            (self._creator.account, str(self._size), str(self._type),\
+            (self._creator, str(self._size), str(self._type),\
                  str(self._location), base64.b64encode(self._friendly), \
                  base64.b64encode(self._data_sha))
         return hashlib.sha1(input).hexdigest()
@@ -196,7 +189,7 @@ class MSNObject(object):
         if self._repr is not None:
             return self._repr
         dump = "<msnobj Creator=%s Type=%s SHA1D=%s Size=%s Location=%s Friendly=%s/>" % \
-            (xml.quoteattr(self._creator.account),
+            (xml.quoteattr(self._creator),
                 xml.quoteattr(str(self._type)),
                 xml.quoteattr(base64.b64encode(self._data_sha)),
                 xml.quoteattr(str(self._size)),
