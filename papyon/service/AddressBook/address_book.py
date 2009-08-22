@@ -259,6 +259,12 @@ class AddressBook(gobject.GObject):
             return None
         return contacts[0]
 
+    def search_or_build_contact(self, account, network_id):
+        contact = self.search_contact(account, network_id)
+        if contact is None:
+            contact = profile.Contact(None, network_id, account, account)
+        return contact
+
     def check_pending_invitations(self):
         cp = scenario.CheckPendingInviteScenario(self._sharing,
                  (self.__update_memberships,),
