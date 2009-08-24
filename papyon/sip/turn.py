@@ -87,8 +87,9 @@ class TURNClient(gobject.GObject):
     host = "relay.voice.messenger.msn.com"
     port = 443
 
+    # Signal emitted when all requests were answered or failed
     __gsignals__ = {
-        'requests-answered': (gobject.SIGNAL_RUN_FIRST,
+        'done': (gobject.SIGNAL_RUN_FIRST,
             gobject.TYPE_NONE,
             (object,))
     }
@@ -162,7 +163,7 @@ class TURNClient(gobject.GObject):
             while self._msg_queue:
                 self.send(self._msg_queue.pop())
         elif self._transport.status == IoStatus.CLOSED:
-            self._answer()
+            self._done()
 
     def on_message_received(self, transport, data, length):
         msg = TURNMessage()
@@ -204,13 +205,13 @@ class TURNClient(gobject.GObject):
             self._relays.append(relay)
 
         if not self._requests:
-            self._answer()
+            self._done()
 
     def on_timeout(self):
-        self._answer()
+        self._done()
         return False
 
-    def _answer(self):
+    def _done(self):
         if not self._answered:
             self._answered = True
             self._requests = {}
@@ -220,7 +221,7 @@ class TURNClient(gobject.GObject):
             if self._src is not None:
                 gobject.source_remove(self._src)
                 self._src = None
-            self.emit("requests-answered", self._relays)
+            self.emit("done", self._relays)
         self._transport.close()
 
 
