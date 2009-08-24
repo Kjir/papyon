@@ -418,7 +418,7 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
             self._state = "CONFIRMED"
 
     def on_cancel_received(self, cancel):
-        if self._incoming:
+        if self.incoming and not self.answered:
             self.reject(487)
         response = self.build_response(cancel, 200)
         self.send(response)
