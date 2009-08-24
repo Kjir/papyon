@@ -29,7 +29,6 @@ import getpass
 import gobject
 import hashlib
 import hmac
-import md5
 import random
 import struct
 import sys
@@ -144,7 +143,7 @@ class TURNClient(gobject.GObject):
 
     def build_message_integrity(self, msg, token, nonce):
         nonce = nonce.strip("\"")
-        m = md5.new()
+        m = hashlib.md5()
         m.update("RPS_%s\x00\x00\x00:" % token)
         m.update("%s:%s" % (nonce, self._account))
         key = m.digest() + ("\x00" * 16)
