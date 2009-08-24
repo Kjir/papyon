@@ -36,15 +36,15 @@ import sys
 import uuid
 
 class MessageTypes(object):
-    BINDING-REQUEST = 1
-    SHARED-SECRET-REQUEST = 2
-    ALLOCATE-REQUEST = 3
-    BINDING-RESPONSE = 257
-    SHARED-SECRET-RESPONSE = 258
-    ALLOCATE-RESPONSE = 259
-    BINDING-ERROR = 273
-    SHARED-SECRET-ERROR = 274
-    ALLOCATE-ERROR = 275
+    BINDING_REQUEST = 1
+    SHARED_SECRET_REQUEST = 2
+    ALLOCATE_REQUEST = 3
+    BINDING_RESPONSE = 257
+    SHARED_SECRET_RESPONSE = 258
+    ALLOCATE_RESPONSE = 259
+    BINDING_ERROR = 273
+    SHARED_SECRET_ERROR = 274
+    ALLOCATE_ERROR = 275
 
 class AttributeTypes(object):
     MAPPED_ADDRESS = 1
@@ -179,7 +179,7 @@ class TURNClient(gobject.GObject):
             realm = None
             nonce = None
             for attr in msg.attributes:
-                if attr.type == AttributeTypes.REALM
+                if attr.type == AttributeTypes.REALM:
                     realm = attr.value
                 elif attr.type == AttributeTypes.NONCE:
                     nonce = attr.value
