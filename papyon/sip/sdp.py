@@ -32,7 +32,7 @@ logger = logging.getLogger('SDP')
 class SDPMessage(MediaSessionMessage):
 
     def __init__(self, session=None, body=None):
-        MediaSessionMessage.__init__(session, body)
+        MediaSessionMessage.__init__(self, session, body)
         self._ip = ""
 
     @property
