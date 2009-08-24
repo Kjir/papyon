@@ -125,7 +125,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
            @returns the new stream"""
 
         logger.debug("Create stream %s" % name)
-        stream = MediaStream(self, name, direction, created)
+        stream = MediaStream(self, name, direction, created_locally)
         self._dispatch("on_stream_created", stream)
         return stream
 
