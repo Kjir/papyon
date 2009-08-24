@@ -67,7 +67,7 @@ class MSNObjectType(object):
 
 class MSNObject(object):
     "Represents an MSNObject."
-    def __init__(self, creator, size, type, location, friendly,
+    def __init__(self, creator, size, typ, location, friendly,
                  shad=None, shac=None, data=None):
         """Initializer
 
@@ -77,8 +77,8 @@ class MSNObject(object):
             @param size: the total size of the data represented by this MSNObject
             @type size: int
 
-            @param type: the type of the data
-            @type type: L{MSNObjectType}
+            @param typ: the type of the data
+            @type typ: L{MSNObjectType}
 
             @param location: a filename for the MSNObject
             @type location: utf-8 encoded string
@@ -98,7 +98,7 @@ class MSNObject(object):
             creator = creator.account
         self._creator = creator
         self._size = size
-        self._type = type
+        self._type = typ
         self._location = location
         self._friendly = friendly
 
