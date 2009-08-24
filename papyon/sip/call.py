@@ -21,6 +21,7 @@
 from papyon.event import EventsDispatcher
 from papyon.media import MediaCall, MediaSessionType
 from papyon.profile import Presence
+from papyon.service.SingleSignOn import *
 from papyon.sip.constants import *
 from papyon.sip.message import SIPRequest, SIPResponse
 from papyon.sip.sdp import SDPMessage
