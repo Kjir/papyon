@@ -33,19 +33,13 @@ class MediaCall(object):
        media session is prepared, we might send a message with the media
        details."""
 
-    def __init__(self, session_type, candidate_encoder_class, session_msg_call):
+    def __init__(self, session_type):
         """Initialize the media call.
 
            @param session_type: Type of session (SIP, webcam...)
-           @type session_type: L{papyon.media.constants.MediaSessionType}
-           @param candidate_encoder_class: Class used to encode candidates
-           @type candidate_encoder_class: subclass of
-                L{papyon.media.candidate.MediaCandidateEncoder}
-           @type session_msg_call: Class used to build/parse session messages
-           @param session_msg_call: L{papyon.media.message.MediaSessionMessage}"""
+           @type session_type: L{papyon.media.constants.MediaSessionType}"""
 
-        self._media_session = MediaSession(session_type,
-                candidate_encoder_class, session_msg_call)
+        self._media_session = MediaSession(session_type)
 
         self._signals = []
         self._signals.append(self._media_session.connect("prepared",
