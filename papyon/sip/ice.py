@@ -45,13 +45,13 @@ class ICECandidateEncoder(MediaCandidateEncoder):
                 desc.add_attribute("ice-ufrag", local_candidates[0].username)
                 desc.add_attribute("ice-pwd", local_candidates[0].password)
             for candidate in local_candidates:
-                attribute = ICECandidateBuilder.build_candidate(self.draft, candidate)
+                attribute = ICECandidateBuilder.build_candidate(draft, candidate)
                 desc.add_attribute("candidate", attribute)
 
         if remote_candidates:
             if draft is 6:
                 remote_candidates = remote_candidates[0:1]
-            list = [ICECandidateBuilder.build_remote_id(self.draft, candidate) \
+            list = [ICECandidateBuilder.build_remote_id(draft, candidate) \
                     for candidate in remote_candidates]
             name = (len(list) > 1 and "remote-candidates") or "remote-candidate"
             desc.add_attribute(name, " ".join(list))
