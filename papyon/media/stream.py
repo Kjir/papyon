@@ -122,15 +122,18 @@ class MediaStream(gobject.GObject, EventsDispatcher):
            @type desc: L{papyon.media.message.MediaStreamDescription}"""
 
         self._remote_codecs = desc.valid_codecs
-        local_candidates, remote_candidates = desc.get_candidates()
-        if local_candidates:
-            self._remote_candidates.extend(local_candidates)
 
-        # If the media description has remote candidates, the active pair
-        # has already been selected and the first candidate should be the
-        # remote active one.
+        # Remote candidates are the local ones from the remote description
+        # (and vice versa)
+        remote_candidates, local_candidates = desc.get_candidates()
         if remote_candidates:
-            self._remote_candidate_id = candidates[0].foundation
+            self._remote_candidates.extend(remote_candidates)
+
+        # If the media description contains a local candidate, the active pair
+        # has already been selected and the first remote candidate should be the
+        # remote active one.
+        if local_candidates:
+            self._remote_candidate_id = remote_candidates[0].foundation
 
         self.process()
 
