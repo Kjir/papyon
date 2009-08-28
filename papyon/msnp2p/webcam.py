@@ -204,9 +204,9 @@ class WebcamCandidateEncoder(MediaCandidateEncoder):
 class WebcamSessionMessage(MediaSessionMessage):
 
     def __init__(self, session=None, body=None, id=0, producer=False):
-        MediaSessionMessage.__init__(self, session, body)
         self._id = id
         self._producer = producer
+        MediaSessionMessage.__init__(self, session, body)
 
     @property
     def id(self):
@@ -260,11 +260,11 @@ class WebcamStreamDescription(MediaStreamDescription):
     def __init__(self, stream, sid, producer):
         direction = producer and MediaStreamDirection.SENDING or \
                 MediaStreamDirection.RECEIVING
-        MediaStreamDescription.__init__(self, stream, "video", direction)
         self._ips = []
         self._ports = []
         self._rid = None
         self._sid = sid
+        MediaStreamDescription.__init__(self, stream, "video", direction)
 
     @property
     def candidate_encoder(self):

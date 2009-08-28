@@ -32,8 +32,8 @@ logger = logging.getLogger('SDP')
 class SDPMessage(MediaSessionMessage):
 
     def __init__(self, session=None, body=None):
-        MediaSessionMessage.__init__(self, session, body)
         self._ip = ""
+        MediaSessionMessage.__init__(self, session, body)
 
     @property
     def ip(self):
@@ -110,8 +110,8 @@ class SDPDescription(MediaStreamDescription):
     _candidate_encoder = ICECandidateEncoder()
 
     def __init__(self, stream=None, name=None, direction=None):
-        MediaStreamDescription.__init__(self, stream, name, direction)
         self._attributes = odict({"encryption": ["rejected"]})
+        MediaStreamDescription.__init__(self, stream, name, direction)
 
     @property
     def candidate_encoder(self):
