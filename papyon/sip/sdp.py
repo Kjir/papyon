@@ -86,6 +86,7 @@ class SDPMessage(MediaSessionMessage):
                     desc.ip = self.ip # default IP address
                     desc.rtcp = desc.port + 1 # default RTCP port
                     desc.payload_types = val.split()[3:]
+                    self.descriptions.append(desc)
                 elif key == 'c':
                     if desc is None:
                         self._ip = val.split()[2]

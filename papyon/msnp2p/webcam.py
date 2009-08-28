@@ -223,6 +223,7 @@ class WebcamSessionMessage(MediaSessionMessage):
         tree = ElementTree.fromstring(body)
         self._id = int(tree.find("session").text)
         desc = self._create_stream_description(None)
+        self.descriptions.append(desc)
         for node in tree.findall("tcp/*"):
             if node.tag == "tcpport":
                 desc.ports.append(int(node.text))
