@@ -185,9 +185,9 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         """Returns the default address. We use the active local candidate if
            there is one selected, else we are using the default candidate."""
 
-        ip = None
-        port = None
-        rtcp = None
+        ip = ""
+        port = 0
+        rtcp = 0
 
         active = self._local_candidate_id
         default = self.search_default_candidate()
