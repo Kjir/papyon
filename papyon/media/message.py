@@ -70,9 +70,9 @@ class MediaStreamDescription(object):
         self._session_type = None
         self._codecs = []
 
-        self._ip = ""
-        self._port = 0
-        self._rtcp = 0
+        self.ip = ""
+        self.port = 0
+        self.rtcp = 0
 
         if stream is not None:
             self._build(stream)
@@ -84,18 +84,6 @@ class MediaStreamDescription(object):
     @property
     def direction(self):
         return self._direction
-
-    @property
-    def ip(self):
-        return self._ip
-
-    @property
-    def port(self):
-        return self._port
-
-    @property
-    def rtcp(self):
-        return self._rtcp
 
     @property
     def candidate_encoder(self):
@@ -150,7 +138,7 @@ class MediaStreamDescription(object):
         self._name = stream.name
         self._direction = stream.direction
         self._session_type = stream.session.type
-        self._ip, self._port, self._rtcp = stream.get_default_address()
+        self.ip, self.port, self.rtcp = stream.get_default_address()
         self.set_codecs(stream.get_local_codecs())
         self.set_candidates(local_candidates, remote_candidates)
 
