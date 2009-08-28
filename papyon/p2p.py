@@ -231,9 +231,13 @@ class MSNObjectStore(object):
                 return session
         session.reject()
 
-    def request(self, msn_object, callback, errback=None):
+    def request(self, msn_object, callback, errback=None, peer=None):
         if msn_object._data is not None:
             callback[0](msn_object, *callback[1:])
+
+        if peer is None:
+            peer = self._client.address_book.search_contact(msn_object._creator,
+                    NetworkID.MSN)
 
         if msn_object._type == MSNObjectType.CUSTOM_EMOTICON:
             application_id = ApplicationID.CUSTOM_EMOTICON_TRANSFER
@@ -243,7 +247,7 @@ class MSNObjectStore(object):
             raise NotImplementedError
 
         session = MSNObjectSession(self._client._p2p_session_manager,
-                msn_object._creator, application_id)
+                peer, application_id)
         handle_id = session.connect("completed",
                 self._outgoing_session_transfer_completed)
         self._outgoing_sessions[session] = \
