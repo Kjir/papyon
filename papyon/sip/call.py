@@ -450,8 +450,9 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
             try:
                 message = SDPMessage(body=response.body)
                 self.media_session.process_remote_message(message)
-            except:
+            except Exception, err:
                 logger.error("Malformed body in invite response")
+                logger.exception(err)
                 self.send_bye()
             else:
                 logger.info("Call invitation has been accepted")
