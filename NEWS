@@ -4,6 +4,7 @@ papyon-0.4.2 (UNRELEASED)
 Enhancements:
   * Bumped minimal required Python version to 2.5
   * Dropped dependency on pyCrypto
+  * Added support for audio and video conferences
 
 Fixes:
   * Fixed crash when FindMemberships response is empty (Bug #23039)
