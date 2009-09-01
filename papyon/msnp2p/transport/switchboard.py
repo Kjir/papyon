@@ -29,7 +29,7 @@ import logging
 
 __all__ = ['SwitchboardP2PTransport']
 
-logger = logging.getLogger('msnp2p:transport')
+logger = logging.getLogger('papyon.msnp2p.transport')
 
 
 class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):

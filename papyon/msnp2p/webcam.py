@@ -40,7 +40,7 @@ from papyon.media.constants import MediaStreamDirection, MediaSessionType
 
 __all__ = ['WebcamSession']
 
-logger = logging.getLogger("msnp2p:webcam")
+logger = logging.getLogger("papyon.msnp2p.webcam")
 
 class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
 

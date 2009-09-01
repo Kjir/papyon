@@ -25,7 +25,7 @@ import logging
 
 __all__ = ['BaseProtocol']
 
-logger = logging.getLogger('protocol')
+logger = logging.getLogger('papyon.protocol')
 
 class ProtocolState(object):
     CLOSED = 0

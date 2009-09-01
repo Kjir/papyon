@@ -25,7 +25,7 @@ import gobject
 import logging
 import weakref
 
-logger = logging.getLogger('Media:Stream')
+logger = logging.getLogger('papyon.media.stream')
 
 __all__ = ['MediaStream']
 

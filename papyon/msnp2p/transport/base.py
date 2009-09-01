@@ -26,7 +26,7 @@ import weakref
 
 __all__ = ['BaseP2PTransport']
 
-logger = logging.getLogger('msnp2p:transport')
+logger = logging.getLogger('papyon.msnp2p.transport')
 
 class BaseP2PTransport(gobject.GObject):
     __gsignals__ = {

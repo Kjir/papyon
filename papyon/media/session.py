@@ -24,7 +24,7 @@ from papyon.media.stream import *
 import gobject
 import logging
 
-logger = logging.getLogger('Media:Session')
+logger = logging.getLogger('papyon.media.session')
 
 __all__ = ['MediaSession']
 

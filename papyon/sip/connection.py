@@ -27,7 +27,7 @@ import logging
 
 __all__ = ['SIPConnection', 'SIPTunneledConnection']
 
-logger = logging.getLogger('SIP:connection')
+logger = logging.getLogger('papyon.sip.connection')
 
 
 class SIPBaseConnection(gobject.GObject):

@@ -30,7 +30,7 @@ import logging
 
 __all__ = ['SOAPService', 'SOAPResponse']
 
-logger = logging.getLogger('Service')
+logger = logging.getLogger('papyon.service')
 
 def url_split(url, default_scheme='http'):
     from urlparse import urlsplit, urlunsplit

@@ -35,7 +35,7 @@ import uuid
 
 __all__ = ['SIPCall', 'SIPRegistration']
 
-logger = logging.getLogger('SIP:call')
+logger = logging.getLogger('papyon.sip.call')
 
 
 class SIPBaseCall(gobject.GObject):

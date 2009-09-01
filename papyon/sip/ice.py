@@ -24,7 +24,7 @@ from papyon.util.encoding import *
 
 import logging
 
-logger = logging.getLogger('ICE')
+logger = logging.getLogger('papyon.sip.ice')
 
 class ICECandidateEncoder(MediaCandidateEncoder):
     """Class to encode and decode ICE media candidates from a SDP message.

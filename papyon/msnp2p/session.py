@@ -33,7 +33,7 @@ import uuid
 
 __all__ = ['P2PSession']
 
-logger = logging.getLogger('msnp2p:session')
+logger = logging.getLogger('papyon.msnp2p.session')
 
 MAX_INT32 = 0x7fffffff
 MAX_INT16 = 0x7fff

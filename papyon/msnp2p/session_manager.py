@@ -32,7 +32,7 @@ import logging
 
 __all__ = ['P2PSessionManager']
 
-logger = logging.getLogger('msnp2p:session-manager')
+logger = logging.getLogger('papyon.msnp2p.session_manager')
 
 class P2PSessionManager(gobject.GObject):
     __gsignals__ = {

@@ -47,7 +47,7 @@ import xml.sax.saxutils as xml_utils
 
 __all__ = ['NotificationProtocol']
 
-logger = logging.getLogger('protocol:notification')
+logger = logging.getLogger('papyon.protocol.notification')
 
 
 class NotificationProtocol(BaseProtocol, gobject.GObject):

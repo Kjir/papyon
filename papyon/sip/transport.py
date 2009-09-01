@@ -28,7 +28,7 @@ import gobject
 import logging
 import xml.dom.minidom
 
-logger = logging.getLogger('SIP:transport')
+logger = logging.getLogger('papyon.sip.transport')
 
 class SIPBaseTransport(gobject.GObject):
     """Base class for SIP transports."""

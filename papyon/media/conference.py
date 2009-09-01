@@ -30,7 +30,7 @@ import gst
 import logging
 import sys
 
-logger = logging.getLogger("Media:Conference")
+logger = logging.getLogger("papyon.media.conference")
 
 codecs_definitions = {
     "audio" : [

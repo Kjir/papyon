@@ -33,7 +33,7 @@ import gobject
 
 __all__ = ['SwitchboardProtocol']
 
-logger = logging.getLogger('protocol:switchboard')
+logger = logging.getLogger('papyon.protocol.switchboard')
 
 
 class SwitchboardProtocol(BaseProtocol, gobject.GObject):

@@ -27,7 +27,7 @@ import logging
 
 __all__ = ['P2PTransportManager']
 
-logger = logging.getLogger('msnp2p:transport')
+logger = logging.getLogger('papyon.msnp2p.transport')
 
 
 class P2PTransportManager(gobject.GObject):

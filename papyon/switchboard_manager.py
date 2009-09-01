@@ -34,7 +34,7 @@ from papyon.event import ConversationErrorType, ContactInviteError, MessageError
 
 __all__ = ['SwitchboardManager']
 
-logger = logging.getLogger('protocol:switchboard_manager')
+logger = logging.getLogger('papyon.protocol.switchboard_manager')
 
 class SwitchboardClient(object):
     def __init__(self, client, contacts, priority=99):

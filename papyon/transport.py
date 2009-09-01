@@ -39,7 +39,7 @@ import gobject
 
 __all__=['ServerType', 'DirectConnection']
 
-logger = logging.getLogger('Transport')
+logger = logging.getLogger('papyon.transport')
 
 class ServerType(object):
     SWITCHBOARD = 'SB'

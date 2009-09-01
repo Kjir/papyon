@@ -40,7 +40,7 @@ import logging
 
 __all__ = ['OfflineMessagesBox', 'OfflineMessage']
 
-logger = logging.getLogger('Service')
+logger = logging.getLogger('papyon.service')
 
 class OfflineMessagesStorage(list):
     def __init__(self, initial_set=()):

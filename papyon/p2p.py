@@ -43,7 +43,7 @@ import logging
 
 __all__ = ['MSNObjectType', 'MSNObject', 'MSNObjectStore', 'WebcamHandler']
 
-logger = logging.getLogger('p2p')
+logger = logging.getLogger('papyon.p2p')
 
 class MSNObjectType(object):
     """Represent the various MSNObject types"""

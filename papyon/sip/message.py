@@ -26,7 +26,7 @@ import logging
 
 __all__ = ['SIPMessage', 'SIPRequest', 'SIPResponse', 'SIPMessageParser']
 
-logger = logging.getLogger('SIP:parser')
+logger = logging.getLogger('papyon.sip.parser')
 
 
 class SIPMessage(object):

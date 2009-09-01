@@ -28,7 +28,7 @@ import logging
 
 __all__ = ['RSI']
 
-logger = logging.getLogger('Service')
+logger = logging.getLogger('papyon.service')
 
 class RSI(SOAPService):
     def __init__(self, sso, proxies=None):

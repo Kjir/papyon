@@ -28,7 +28,7 @@ __all__ = ['MessageBlob']
 
 MAX_INT32 = 2147483647
 
-logger = logging.getLogger('msnp2p:transport')
+logger = logging.getLogger('papyon.msnp2p.transport')
 
 def _generate_id(max=MAX_INT32):
     """

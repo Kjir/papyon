@@ -26,7 +26,7 @@ from papyon.util.odict import odict
 
 import logging
 
-logger = logging.getLogger('SDP')
+logger = logging.getLogger('papyon.sip.sdp')
 
 
 class SDPMessage(MediaSessionMessage):
