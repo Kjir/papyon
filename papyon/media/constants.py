@@ -42,7 +42,8 @@ XCAPS = {
 }
 
 VALID_CODECS = {
-    "audio" : ["x-msrta", "siren", "g7221", "g723", "pcma", "pcmu", "red", "telephone-event"],
+    "audio" : ["x-msrta", "siren", "g7221", "g723", "pcma", "pcmu", "red",
+        "telephone-event", "speex"],
     "video" : ["x-rtvc1", "h263"]
 }
 
