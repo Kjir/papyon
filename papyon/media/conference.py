@@ -97,7 +97,8 @@ class MediaSessionHandler(MediaSessionEventInterface):
         bus = self._pipeline.get_bus()
         bus.add_signal_watch()
         bus.connect("message", self.on_bus_message)
-        if self._session.type is MediaSessionType.WEBCAM:
+        if self._session.type is MediaSessionType.WEBCAM_RECV or\
+           self._session.type is MediaSessionType.WEBCAM_SEND:
             name = "fsmsnconference"
         else:
             name = "fsrtpconference"
@@ -105,7 +106,7 @@ class MediaSessionHandler(MediaSessionEventInterface):
         self._participant = self._conference.new_participant("")
         self._pipeline.add(self._conference)
         self._pipeline.set_state(gst.STATE_PLAYING)
-        self._notifier = create_notifier(self._pipeline)
+        #FIXME Create FsElementAddedNotifier
 
     def on_stream_added(self, stream):
         logger.debug("Stream \"%s\" added" % stream.name)
@@ -113,7 +114,8 @@ class MediaSessionHandler(MediaSessionEventInterface):
         handler.setup(self._conference, self._pipeline, self._participant,
                 self._session.type)
         self._handlers.append(handler)
-        if self._session.type is MediaSessionType.WEBCAM:
+        if self._session.type is MediaSessionType.WEBCAM_RECV or\
+           self._session.type is MediaSessionType.WEBCAM_SEND:
             stream.set_local_codecs([])
 
     def on_bus_message(self, bus, msg):
@@ -170,7 +172,7 @@ class MediaStreamHandler(MediaStreamEventInterface):
                 compatibility_mode = 2
             params = {"stun-ip" : "64.14.48.28", "stun-port" : 3478,
                     "compatibility-mode" : compatibility_mode,
-                    "controlling-mode": self._stream.controlling,
+                    "controlling-mode": self._stream.created_locally,
                     "relay-info": self._stream.relays}
         else:
             params = {}
@@ -205,8 +207,7 @@ class MediaStreamHandler(MediaStreamEventInterface):
 
 # Farsight utility functions
 
-def create_notifier(pipeline):
-    filename = "/home/lfrb/Development/papyon/papyon/sip/gstelements.conf"
+def create_notifier(pipeline, filename):
     notifier = farsight.ElementAddedNotifier()
     notifier.add(pipeline)
     notifier.set_properties_from_file(filename)
