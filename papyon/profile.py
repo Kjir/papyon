@@ -207,7 +207,7 @@ class ClientCapabilities(gobject.GObject):
                 object.__setattr__(self, 'capabilities', self.capabilities | mask)
             else:
                 object.__setattr__(self, 'capabilities', self.capabilities & ~mask)
-            if value != old_value
+            if value != old_value:
                 self.emit('capability-changed', name, value)
         elif name in self._EXTRA:
             mask = self._EXTRA[name]
@@ -216,7 +216,7 @@ class ClientCapabilities(gobject.GObject):
                 object.__setattr__(self, 'extra', self.extra | mask)
             else:
                 object.__setattr__(self, 'extra', self.extra & ~mask)
-            if value != old_value
+            if value != old_value:
                 self.emit('capability-changed', name, value)
         else:
             raise AttributeError("object 'ClientCapabilities' has no attribute '%s'" % name)
